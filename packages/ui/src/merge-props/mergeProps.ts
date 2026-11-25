@@ -70,7 +70,7 @@ export function createMergedView(
   sources: readonly Record<string, any>[],
   hidden: ReadonlySet<PropertyKey> = HIDDEN_NONE,
 ): Record<string, any> {
-  const handlerCache = new Map<string, (event: Event) => void>();
+  const handlerCache = new Map<string, (...args: unknown[]) => unknown>();
   let refCache: ((element: unknown) => void) | undefined;
 
   function has(key: PropertyKey) {
@@ -126,7 +126,7 @@ export function createMergedView(
       }
       let handler = handlerCache.get(key);
       if (!handler) {
-        handler = (event: Event) => runHandlers(sources, key, event);
+        handler = (...args: unknown[]) => runHandlers(sources, key, args);
         handlerCache.set(key, handler);
       }
       return handler;
@@ -184,23 +184,52 @@ function isEventHandlerKey(key: string) {
   );
 }
 
-function callHandler(handler: unknown, event: Event) {
+function callHandler(handler: unknown, args: unknown[]) {
   if (typeof handler === 'function') {
-    handler(event);
-  } else if (Array.isArray(handler) && typeof handler[0] === 'function') {
-    // Solid's bound handler form: `[handler, data]`.
-    handler[0](handler[1], event);
+    return handler(...args);
   }
+  if (Array.isArray(handler) && typeof handler[0] === 'function') {
+    // Solid's bound handler form: `[handler, data]`.
+    return handler[0](handler[1], ...args);
+  }
+  return undefined;
 }
 
-function runHandlers(sources: readonly Record<string, any>[], key: string, event: Event) {
-  const baseUIEvent = makeEventPreventable(event as BaseUIEvent<Event>);
+/**
+ * Whether the first argument of a handler is an event that can carry `preventBaseUIHandler()`.
+ * Non-DOM callbacks (`onValueChange(value)`, `onOpenChange(open, details)`) receive other values.
+ */
+function isPreventableEvent(value: unknown): value is Event {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    typeof (value as Event).preventDefault === 'function'
+  );
+}
+
+function runHandlers(sources: readonly Record<string, any>[], key: string, args: unknown[]) {
+  const event = args[0];
+  const baseUIEvent = isPreventableEvent(event)
+    ? makeEventPreventable(event as BaseUIEvent<Event>)
+    : undefined;
+  let result: unknown;
+  let called = false;
   for (let i = sources.length - 1; i >= 0; i -= 1) {
-    callHandler(sources[i][key], event);
-    if (baseUIEvent.baseUIHandlerPrevented) {
-      return;
+    const handler = sources[i][key];
+    if (handler == null) {
+      continue;
+    }
+    const value = callHandler(handler, args);
+    if (!called) {
+      // The rightmost (external) handler's return value wins, like upstream.
+      called = true;
+      result = value;
+    }
+    if (baseUIEvent?.baseUIHandlerPrevented) {
+      break;
     }
   }
+  return result;
 }
 
 /**

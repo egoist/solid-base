@@ -1,4 +1,4 @@
-import { flush, type Accessor } from 'solid-js';
+import { flush, untrack, type Accessor } from 'solid-js';
 import { createAnimationFrame } from '@egoist/solid-base-utils/animationFrame';
 import { NOOP } from '@egoist/solid-base-utils/empty';
 import { isFiniteAnimation } from '../utils/getFiniteAnimations';
@@ -26,7 +26,8 @@ export function createAnimationsFinished(
   return (fnToExecute: () => void, signal: AbortSignal | null = null) => {
     frame.cancel();
 
-    const resolvedElement = element();
+    // Called from effect `apply` phases: read the (possibly reactive) accessors untracked.
+    const resolvedElement = untrack(element);
     if (resolvedElement == null) {
       return;
     }
@@ -67,7 +68,7 @@ export function createAnimationsFinished(
 
     const waitForStartingStyle =
       typeof waitForStartingStyleRemoved === 'function'
-        ? waitForStartingStyleRemoved()
+        ? untrack(waitForStartingStyleRemoved)
         : waitForStartingStyleRemoved;
 
     if (waitForStartingStyle) {

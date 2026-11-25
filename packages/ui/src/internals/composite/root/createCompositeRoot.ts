@@ -184,9 +184,9 @@ export function createCompositeRoot(
   const list = createCompositeList<any>({ elementsRef, onMapChange });
 
   createEffect(
-    () => [disabledIndices(), highlightedIndex()] as const,
-    ([indices, index]) => {
-      if (indices == null || params.highlightedIndex?.() != null || !hasSetDefaultIndex) {
+    () => [disabledIndices(), highlightedIndex(), params.highlightedIndex?.() != null] as const,
+    ([indices, index, isControlled]) => {
+      if (indices == null || isControlled || !hasSetDefaultIndex) {
         return;
       }
       const elements = elementsRef.current;
@@ -320,7 +320,8 @@ export function createCompositeRoot(
 
   const props: HTMLProps = {
     ref: rootRef,
-    onFocus(event: FocusEvent) {
+    // `focusin` (React's `onFocus`): `focus` doesn't bubble from the items to the root.
+    onFocusIn(event: FocusEvent) {
       const target = getTarget(event);
       if (!rootElement || target == null || !isNativeInput(target)) {
         return;

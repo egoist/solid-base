@@ -82,24 +82,19 @@ export function createButton(parameters: CreateButtonParameters = {}): CreateBut
   // Handles a disabled composite button rendering another button, e.g.
   // <Toolbar.Button disabled render={(props) => <Menu.Trigger {...props} />} />:
   // the `disabled` attribute must be removed from the DOM so the item stays focusable.
-  function updateDisabled() {
-    if (!isButtonElement(element)) {
-      return;
-    }
-    if (
-      isCompositeItem() &&
-      disabled() &&
-      (focusableWhenDisabledProps as { disabled?: boolean }).disabled === undefined &&
-      element.disabled
-    ) {
+  const shouldForceEnabled = () =>
+    isCompositeItem() &&
+    disabled() &&
+    (focusableWhenDisabledProps as { disabled?: boolean }).disabled === undefined;
+
+  function updateDisabled(forceEnabled: boolean) {
+    if (forceEnabled && isButtonElement(element) && element.disabled) {
       element.disabled = false;
     }
   }
 
-  createEffect(
-    () => [disabled(), isCompositeItem(), (focusableWhenDisabledProps as any).disabled] as const,
-    () => updateDisabled(),
-  );
+  // The values are read in the compute phase: the apply phase is untracked.
+  createEffect(shouldForceEnabled, updateDisabled);
 
   if (isDev) {
     createEffect(isNativeButton, (native) => {
@@ -271,7 +266,7 @@ export function createButton(parameters: CreateButtonParameters = {}): CreateBut
 
   const buttonRef = (node: HTMLElement) => {
     element = node;
-    updateDisabled();
+    updateDisabled(shouldForceEnabled());
   };
 
   return { getButtonProps, buttonRef };

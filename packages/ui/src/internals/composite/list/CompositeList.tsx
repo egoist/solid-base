@@ -26,6 +26,8 @@ export interface CompositeListRegistration<Metadata> {
 
 interface Entry<Metadata> extends CompositeListRegistration<Metadata> {
   order: number;
+  /** How many items registered this element (see `register`). */
+  count: number;
 }
 
 export interface CompositeListContextValue<Metadata = any> {
@@ -144,10 +146,23 @@ export function createCompositeList<Metadata = {}>(
 
   const context: CompositeListContextValue<Metadata> = {
     register(element, registration) {
-      entries.set(element, { ...registration, order: (order += 1) });
+      const existing = entries.get(element);
+      if (existing) {
+        // Composed items (e.g. `<Toolbar.Button render={(props) => <Toggle {...props} />} />`)
+        // register the same element twice. The outer item's ref runs first: its registration
+        // wins, like upstream where the parent's layout effect registers last.
+        existing.count += 1;
+        return;
+      }
+      entries.set(element, { ...registration, order: (order += 1), count: 1 });
       scheduleUpdate();
     },
     unregister(element) {
+      const existing = entries.get(element);
+      if (existing && existing.count > 1) {
+        existing.count -= 1;
+        return;
+      }
       if (entries.delete(element)) {
         scheduleUpdate();
       }

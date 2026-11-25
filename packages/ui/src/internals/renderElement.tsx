@@ -104,6 +104,18 @@ export function createRenderElementProps<State extends object>(
     }
   }
 
+  // The tag arm of `dynamic` checks `'children' in props` inside its (tracked) memo. Answering
+  // that check from the last source keeps it from reaching sources with a dynamic key set (such
+  // as the state attributes), which would recreate the element whenever one of their keys
+  // appears or disappears. The children themselves are still resolved lazily, in the insert
+  // effect.
+  const childrenView = createMergedView(list.slice());
+  list.push({
+    get children() {
+      return childrenView.children;
+    },
+  });
+
   return createMergedView(list, HIDDEN_KEYS) as HTMLProps;
 }
 
