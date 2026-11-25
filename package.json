@@ -8,10 +8,10 @@
   ],
   "scripts": {
     "dev": "bun run --filter playground dev",
-    "build": "bun run --filter './packages/*' build",
+    "build": "bun run --filter @egoist/solid-base-utils build && bun run --filter @egoist/solid-base build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@solidjs/testing-library": "1.0.0-rc.2",
