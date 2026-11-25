@@ -1,7 +1,6 @@
 import { Tooltip } from '@egoist/solid-base/tooltip';
 import styles from './tooltip.module.css';
 
-export const title = 'Tooltip';
 
 export default function ExampleTooltip() {
   return (

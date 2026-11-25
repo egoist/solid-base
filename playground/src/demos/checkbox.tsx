@@ -1,7 +1,6 @@
 import { Checkbox } from '@egoist/solid-base/checkbox';
 import styles from './checkbox.module.css';
 
-export const title = 'Checkbox';
 
 export default function ExampleCheckbox() {
   return (

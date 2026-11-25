@@ -1,7 +1,6 @@
 import { Collapsible } from '@egoist/solid-base/collapsible';
 import styles from './collapsible.module.css';
 
-export const title = 'Collapsible';
 
 export default function ExampleCollapsible() {
   return (

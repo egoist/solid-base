@@ -2,7 +2,6 @@ import { For } from 'solid-js';
 import { Toast } from '@egoist/solid-base/toast';
 import styles from './toast.module.css';
 
-export const title = 'Toast';
 
 export default function ExampleToast() {
   return (

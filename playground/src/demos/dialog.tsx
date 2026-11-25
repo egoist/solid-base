@@ -1,7 +1,6 @@
 import { Dialog } from '@egoist/solid-base/dialog';
 import styles from './dialog.module.css';
 
-export const title = 'Dialog';
 
 export default function ExampleDialog() {
   return (

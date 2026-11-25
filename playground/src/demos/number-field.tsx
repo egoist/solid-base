@@ -2,7 +2,6 @@ import { createUniqueId } from 'solid-js';
 import { NumberField } from '@egoist/solid-base/number-field';
 import styles from './number-field.module.css';
 
-export const title = 'Number Field';
 
 export default function ExampleNumberField() {
   const id = createUniqueId();

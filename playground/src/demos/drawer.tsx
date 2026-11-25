@@ -1,7 +1,6 @@
 import { Drawer } from '@egoist/solid-base/drawer';
 import styles from './drawer.module.css';
 
-export const title = 'Drawer';
 
 export default function ExampleDrawer() {
   return (

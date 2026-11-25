@@ -4,7 +4,6 @@ import { Field } from '@egoist/solid-base/field';
 import { Form } from '@egoist/solid-base/form';
 import styles from './form.module.css';
 
-export const title = 'Form';
 
 export default function ExampleForm() {
   const [errors, setErrors] = createSignal<Record<string, string>>({});

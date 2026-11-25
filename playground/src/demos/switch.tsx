@@ -1,7 +1,6 @@
 import { Switch } from '@egoist/solid-base/switch';
 import styles from './switch.module.css';
 
-export const title = 'Switch';
 
 export default function ExampleSwitch() {
   return (

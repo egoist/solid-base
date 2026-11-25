@@ -1,7 +1,6 @@
 import { Meter } from '@egoist/solid-base/meter';
 import styles from './meter.module.css';
 
-export const title = 'Meter';
 
 export default function ExampleMeter() {
   return (

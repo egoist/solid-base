@@ -1,7 +1,6 @@
 import { ScrollArea } from '@egoist/solid-base/scroll-area';
 import styles from './scroll-area.module.css';
 
-export const title = 'Scroll Area';
 
 export default function ExampleScrollArea() {
   return (

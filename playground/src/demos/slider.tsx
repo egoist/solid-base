@@ -1,7 +1,6 @@
 import { Slider } from '@egoist/solid-base/slider';
 import styles from './slider.module.css';
 
-export const title = 'Slider';
 
 export default function ExampleSlider() {
   return (

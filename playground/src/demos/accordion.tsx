@@ -1,7 +1,6 @@
 import { Accordion } from '@egoist/solid-base/accordion';
 import styles from './accordion.module.css';
 
-export const title = 'Accordion';
 
 export default function ExampleAccordion() {
   return (

@@ -3,7 +3,6 @@ import { Checkbox } from '@egoist/solid-base/checkbox';
 import { CheckboxGroup } from '@egoist/solid-base/checkbox-group';
 import styles from './checkbox-group.module.css';
 
-export const title = 'Checkbox Group';
 
 export default function ExampleCheckboxGroup() {
   const id = createUniqueId();

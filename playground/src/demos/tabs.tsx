@@ -1,7 +1,6 @@
 import { Tabs } from '@egoist/solid-base/tabs';
 import styles from './tabs.module.css';
 
-export const title = 'Tabs';
 
 export default function ExampleTabs() {
   return (

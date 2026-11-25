@@ -1,7 +1,6 @@
 import { Popover } from '@egoist/solid-base/popover';
 import styles from './popover.module.css';
 
-export const title = 'Popover';
 
 export default function ExamplePopover() {
   return (

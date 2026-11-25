@@ -1,7 +1,6 @@
 import { AlertDialog } from '@egoist/solid-base/alert-dialog';
 import styles from './alert-dialog.module.css';
 
-export const title = 'Alert Dialog';
 
 export default function ExampleAlertDialog() {
   return (

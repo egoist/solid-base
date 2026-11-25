@@ -1,7 +1,6 @@
 import { Input } from '@egoist/solid-base/input';
 import styles from './input.module.css';
 
-export const title = 'Input';
 
 export default function ExampleInput() {
   return (

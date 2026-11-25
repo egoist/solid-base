@@ -2,7 +2,6 @@ import { For, createUniqueId } from 'solid-js';
 import { OTPField } from '@egoist/solid-base/otp-field';
 import styles from './otp-field.module.css';
 
-export const title = 'OTP Field';
 
 const OTP_LENGTH = 6;
 

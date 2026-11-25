@@ -2,7 +2,6 @@ import { For } from 'solid-js';
 import { Select } from '@egoist/solid-base/select';
 import styles from './select.module.css';
 
-export const title = 'Select';
 
 const apples = [
   { label: 'Gala', value: 'gala' },

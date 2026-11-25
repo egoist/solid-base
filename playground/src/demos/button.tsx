@@ -2,7 +2,6 @@ import { createSignal } from 'solid-js';
 import { Button } from '@egoist/solid-base/button';
 import styles from './button.module.css';
 
-export const title = 'Button';
 
 export default function ExampleButton() {
   const [count, setCount] = createSignal(0);

@@ -2,7 +2,6 @@ import { Show } from 'solid-js';
 import { Toggle } from '@egoist/solid-base/toggle';
 import styles from './toggle.module.css';
 
-export const title = 'Toggle';
 
 export default function ExampleToggle() {
   return (

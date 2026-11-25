@@ -2,7 +2,6 @@ import { For } from 'solid-js';
 import { NavigationMenu } from '@egoist/solid-base/navigation-menu';
 import styles from './navigation-menu.module.css';
 
-export const title = 'Navigation Menu';
 
 export default function ExampleNavigationMenu() {
   return (

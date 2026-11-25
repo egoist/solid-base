@@ -4,7 +4,6 @@ import { ToggleGroup } from '@egoist/solid-base/toggle-group';
 import { Toolbar } from '@egoist/solid-base/toolbar';
 import styles from './toolbar.module.css';
 
-export const title = 'Toolbar';
 
 export default function ExampleToolbar() {
   return (

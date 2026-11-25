@@ -1,7 +1,6 @@
 import { Autocomplete } from '@egoist/solid-base/autocomplete';
 import styles from './autocomplete.module.css';
 
-export const title = 'Autocomplete';
 
 export default function ExampleAutocomplete() {
   return (

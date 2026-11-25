@@ -2,7 +2,6 @@ import { createSignal, onSettled } from 'solid-js';
 import { Progress } from '@egoist/solid-base/progress';
 import styles from './progress.module.css';
 
-export const title = 'Progress';
 
 export default function ExampleProgress() {
   const [value, setValue] = createSignal(20);

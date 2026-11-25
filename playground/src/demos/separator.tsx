@@ -1,7 +1,6 @@
 import { Separator } from '@egoist/solid-base/separator';
 import styles from './separator.module.css';
 
-export const title = 'Separator';
 
 // Links point at this demo's own hash (upstream uses `#`) so clicking them doesn't navigate the
 // hash-routed playground away from the demo.

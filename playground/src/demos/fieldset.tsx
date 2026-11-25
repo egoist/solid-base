@@ -2,7 +2,6 @@ import { Field } from '@egoist/solid-base/field';
 import { Fieldset } from '@egoist/solid-base/fieldset';
 import styles from './fieldset.module.css';
 
-export const title = 'Fieldset';
 
 export default function ExampleFieldset() {
   return (

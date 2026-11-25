@@ -3,7 +3,6 @@ import { Radio } from '@egoist/solid-base/radio';
 import { RadioGroup } from '@egoist/solid-base/radio-group';
 import styles from './radio-group.module.css';
 
-export const title = 'Radio Group';
 
 export default function ExampleRadioGroup() {
   const id = createUniqueId();

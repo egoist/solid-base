@@ -2,7 +2,6 @@ import { createUniqueId } from 'solid-js';
 import { Combobox } from '@egoist/solid-base/combobox';
 import styles from './combobox.module.css';
 
-export const title = 'Combobox';
 
 export default function ExampleCombobox() {
   const id = createUniqueId();

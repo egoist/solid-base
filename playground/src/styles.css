@@ -136,3 +136,8 @@ body {
   border-color: var(--accent);
   color: white;
 }
+
+.loading {
+  color: var(--muted);
+  font-size: 14px;
+}

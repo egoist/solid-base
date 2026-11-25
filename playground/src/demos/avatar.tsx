@@ -1,7 +1,6 @@
 import { Avatar } from '@egoist/solid-base/avatar';
 import styles from './avatar.module.css';
 
-export const title = 'Avatar';
 
 export default function ExampleAvatar() {
   return (

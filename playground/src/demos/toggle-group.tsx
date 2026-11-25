@@ -2,7 +2,6 @@ import { Toggle } from '@egoist/solid-base/toggle';
 import { ToggleGroup } from '@egoist/solid-base/toggle-group';
 import styles from './toggle-group.module.css';
 
-export const title = 'Toggle Group';
 
 export default function ExampleToggleGroup() {
   return (

@@ -1,7 +1,6 @@
 import { Field } from '@egoist/solid-base/field';
 import styles from './field.module.css';
 
-export const title = 'Field';
 
 export default function ExampleField() {
   return (

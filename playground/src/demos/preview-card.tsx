@@ -1,7 +1,6 @@
 import { PreviewCard } from '@egoist/solid-base/preview-card';
 import styles from './preview-card.module.css';
 
-export const title = 'Preview Card';
 
 export default function ExamplePreviewCard() {
   return (
