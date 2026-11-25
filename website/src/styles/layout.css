@@ -1,6 +1,8 @@
 /* ——— Shell ——— */
 
 .shell {
+  /* Portaled popups render after the app: isolate its z-indexes beneath them. */
+  isolation: isolate;
   max-width: var(--frame-width);
   min-height: 100vh;
   margin: 0 auto;

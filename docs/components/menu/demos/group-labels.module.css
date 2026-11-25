@@ -1,0 +1,150 @@
+.Button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem 0 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+  transition:
+    background-color 150ms var(--ease),
+    border-color 150ms var(--ease);
+
+  &:hover {
+    background: var(--surface-raised);
+  }
+
+  &[data-popup-open] {
+    border-color: var(--muted);
+    background: var(--surface-raised);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Positioner {
+  z-index: 50;
+  outline: 0;
+}
+
+.Popup {
+  box-sizing: border-box;
+  min-width: 11rem;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  outline: 0;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 150ms var(--ease-out),
+    scale 150ms var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  &[data-instant] {
+    transition: none;
+  }
+}
+
+.GroupLabel {
+  padding: 0.5rem 0.75rem 0.25rem 2rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: default;
+  user-select: none;
+}
+
+.RadioItem {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.75rem 0 0.5rem;
+  border-radius: calc(var(--radius) - 2px);
+  outline: 0;
+  cursor: default;
+  user-select: none;
+
+  &[data-highlighted] {
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+}
+
+.RadioItemIndicator {
+  grid-column: 1;
+  display: flex;
+  color: var(--accent);
+
+  &[data-unchecked] {
+    visibility: hidden;
+  }
+}
+
+.RadioItemText {
+  grid-column: 2;
+}
+
+.CheckboxItem {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.75rem 0 0.5rem;
+  border-radius: calc(var(--radius) - 2px);
+  outline: 0;
+  cursor: default;
+  user-select: none;
+
+  &[data-highlighted] {
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+}
+
+.CheckboxItemIndicator {
+  grid-column: 1;
+  display: flex;
+  color: var(--accent);
+
+  &[data-unchecked] {
+    visibility: hidden;
+  }
+}
+
+.CheckboxItemText {
+  grid-column: 2;
+}
+
+.Separator {
+  height: 1px;
+  margin: 0.25rem 0.375rem;
+  background: var(--line);
+}

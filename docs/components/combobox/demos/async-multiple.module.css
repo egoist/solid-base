@@ -1,0 +1,229 @@
+.Label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.InputGroup {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 20rem;
+  min-height: 2.25rem;
+  padding: 0.1875rem 0.375rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 150ms var(--ease);
+
+  &:hover {
+    border-color: var(--muted);
+  }
+
+  &:has(.Input:focus-visible) {
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.Chip {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  height: 1.625rem;
+  padding: 0 0.125rem 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  outline: 0;
+  cursor: default;
+
+  &:focus-visible,
+  &[data-highlighted] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+}
+
+.ChipRemove {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: default;
+
+  &:hover {
+    background: var(--line);
+    color: var(--ink);
+  }
+}
+
+.Input {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 6rem;
+  height: 1.625rem;
+  margin: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  outline: 0;
+
+  &::placeholder {
+    color: var(--muted);
+  }
+}
+
+.Positioner {
+  z-index: 50;
+  outline: 0;
+}
+
+.Popup {
+  box-sizing: border-box;
+  width: var(--anchor-width);
+  max-width: var(--available-width);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 150ms var(--ease-out),
+    scale 150ms var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+.Viewport {
+  box-sizing: border-box;
+  max-height: min(var(--available-height), 22rem);
+  padding: 0.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 0.25rem;
+}
+
+.Status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.Spinner {
+  box-sizing: border-box;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1.5px solid var(--accent);
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.List {
+  outline: 0;
+}
+
+.Item {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  min-height: 2rem;
+  padding: 0.375rem 0.625rem 0.375rem 0.5rem;
+  border-radius: calc(var(--radius) - 2px);
+  outline: 0;
+  cursor: default;
+  user-select: none;
+
+  &[data-highlighted] {
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+}
+
+.ItemIndicator {
+  grid-column-start: 1;
+  padding-top: 0.125rem;
+  color: var(--accent);
+}
+
+.ItemText {
+  grid-column-start: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.ItemTitle {
+  font-weight: 500;
+}
+
+.ItemEmail,
+.ItemSubtitle {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.ItemSubtitle {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+
+.Empty {
+  box-sizing: border-box;
+  padding: 0 0.625rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
