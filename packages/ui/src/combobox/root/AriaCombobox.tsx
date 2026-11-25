@@ -44,6 +44,7 @@ import type { State as StoreState } from '../store';
 import { FOCUSABLE_POPUP_PROPS } from '../../utils/popups/popupStoreUtils';
 import { useFieldRootContext } from '../../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { createLabelableId } from '../../internals/labelable-provider/createLabelableId';
 import { createCollatorItemFilter } from './utils';
@@ -358,7 +359,9 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
               forceMounted: false,
               inline: inlineProp(),
               activeIndex: null,
+              activeIndexWrite: 0,
               selectedIndex: null,
+              selectedIndexBase: null,
               listProps: EMPTY_OBJECT as HTMLProps,
               inputProps: EMPTY_OBJECT as HTMLProps,
               itemProps: EMPTY_OBJECT as HTMLProps,
@@ -477,100 +480,145 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
     return currentItems ? flattenLeafItems<Item>(currentItems) : EMPTY_ARRAY;
   });
 
-  const filteredItems = createMemo((): Item[] | Group<Item>[] => {
-    const filteredItemsProp = props.filteredItems;
-    if (filteredItemsProp && !shouldIgnoreExternalFiltering()) {
-      return filteredItemsProp as Item[] | Group<Item>[];
-    }
+  const filteredItems = createMemo(
+    (): Item[] | Group<Item>[] => {
+      const filteredItemsProp = props.filteredItems;
+      if (filteredItemsProp && !shouldIgnoreExternalFiltering()) {
+        return filteredItemsProp as Item[] | Group<Item>[];
+      }
 
-    const currentItems = items();
-    if (!currentItems) {
-      return EMPTY_ARRAY;
-    }
+      const currentItems = items();
+      if (!currentItems) {
+        return EMPTY_ARRAY;
+      }
 
-    const currentLimit = limit();
-    const currentFilterQuery = filterQuery();
-    const currentFilter = filter();
-    const itemToString = filterItemToString();
+      const currentLimit = limit();
+      const currentFilterQuery = filterQuery();
+      const currentFilter = filter();
+      const itemToString = filterItemToString();
 
-    if (isGrouped()) {
-      const groupedItems = currentItems as readonly Group<Item>[];
-      const resultingGroups: Group<Item>[] = [];
-      let currentCount = 0;
+      if (isGrouped()) {
+        const groupedItems = currentItems as readonly Group<Item>[];
+        const resultingGroups: Group<Item>[] = [];
+        let currentCount = 0;
 
-      for (const group of groupedItems) {
-        if (currentLimit > -1 && currentCount >= currentLimit) {
-          break;
-        }
+        for (const group of groupedItems) {
+          if (currentLimit > -1 && currentCount >= currentLimit) {
+            break;
+          }
 
-        const remainingLimit = currentLimit > -1 ? currentLimit - currentCount : Infinity;
-        const itemsToTake =
-          currentFilterQuery === '' ? group.items.slice(0, remainingLimit) : ([] as Item[]);
+          const remainingLimit = currentLimit > -1 ? currentLimit - currentCount : Infinity;
+          const itemsToTake =
+            currentFilterQuery === '' ? group.items.slice(0, remainingLimit) : ([] as Item[]);
 
-        if (currentFilterQuery !== '') {
-          for (const item of group.items) {
-            if (itemsToTake.length >= remainingLimit) {
-              break;
+          if (currentFilterQuery !== '') {
+            for (const item of group.items) {
+              if (itemsToTake.length >= remainingLimit) {
+                break;
+              }
+              if (currentFilter(item, currentFilterQuery, itemToString)) {
+                itemsToTake.push(item);
+              }
             }
-            if (currentFilter(item, currentFilterQuery, itemToString)) {
-              itemsToTake.push(item);
-            }
+          }
+
+          if (itemsToTake.length > 0) {
+            resultingGroups.push({ ...group, items: itemsToTake });
+            currentCount += itemsToTake.length;
           }
         }
 
-        if (itemsToTake.length > 0) {
-          resultingGroups.push({ ...group, items: itemsToTake });
-          currentCount += itemsToTake.length;
+        return resultingGroups;
+      }
+
+      const allItems = flatItems();
+
+      if (currentFilterQuery === '') {
+        return currentLimit > -1 ? allItems.slice(0, currentLimit) : (allItems as Item[]);
+      }
+
+      const limitedItems: Item[] = [];
+      for (const item of allItems) {
+        if (currentLimit > -1 && limitedItems.length >= currentLimit) {
+          break;
+        }
+        if (currentFilter(item, currentFilterQuery, itemToString)) {
+          limitedItems.push(item);
         }
       }
 
-      return resultingGroups;
-    }
-
-    const allItems = flatItems();
-
-    if (currentFilterQuery === '') {
-      return currentLimit > -1 ? allItems.slice(0, currentLimit) : (allItems as Item[]);
-    }
-
-    const limitedItems: Item[] = [];
-    for (const item of allItems) {
-      if (currentLimit > -1 && limitedItems.length >= currentLimit) {
-        break;
-      }
-      if (currentFilter(item, currentFilterQuery, itemToString)) {
-        limitedItems.push(item);
-      }
-    }
-
-    return limitedItems;
-  });
+      return limitedItems;
+    },
+    { name: 'filteredItems', equals: areItemListsEqual },
+  );
 
   /**
    * The filtered items flattened across groups and projected to their selection values.
    */
-  const flatFilteredValues = createMemo((): any[] => {
-    const currentFilteredItems = filteredItems();
-    const window = externalWindow();
-    if (window && currentFilteredItems === props.filteredItems) {
-      return window.values;
-    }
-    const flat = flattenLeafItems<Item>(currentFilteredItems as readonly Item[]);
-    const toValue = itemToValue();
-    return toValue ? flat.map((item) => toValue(item)) : (flat as any[]);
-  });
+  const flatFilteredValues = createMemo(
+    (): any[] => {
+      const currentFilteredItems = filteredItems();
+      const window = externalWindow();
+      if (window && currentFilteredItems === props.filteredItems) {
+        return window.values;
+      }
+      const flat = flattenLeafItems<Item>(currentFilteredItems as readonly Item[]);
+      const toValue = itemToValue();
+      return toValue ? flat.map((item) => toValue(item)) : (flat as any[]);
+    },
+    { name: 'flatFilteredValues', equals: areArraysShallowEqual },
+  );
 
-  // An inline list open on the first render never gets a closed pass of the closed-state sync
-  // effect below, and `items`-prop lists don't self-register their index the way individually
-  // rendered `<Combobox.Item>`s do, so the selected item was never highlighted. Seeding the index
-  // here lets list navigation highlight and scroll to the selection on mount.
-  untrack(() => {
-    if (inlineProp() && open() && hasItems() && selectionMode() !== 'none') {
-      store.set(
-        'selectedIndex',
-        findSelectionIndex(flatFilteredValues(), selectedValue(), isItemEqualToValue(), multiple()),
-      );
+  /**
+   * The index of the selection in an `items` list, derived while the popup is closed (and when
+   * reopening releases a query frozen by an interrupted close). An open popup keeps the index of
+   * the list it opened with, so filtering doesn't move the selection anchor. Each new index is a
+   * new object: a selected index written for it (`setIndices`) wins until the next one.
+   */
+  const syncedSelectedIndex = createMemo<SyncedSelectedIndex | null>(
+    (prev) => {
+      if (selectionMode() === 'none' || !hasItems()) {
+        return null;
+      }
+      const isOpen = open();
+      const currentCloseQuery = closeQuery();
+      const closeQueryReleased =
+        prev != null && prev.closeQuery !== null && currentCloseQuery === null;
+
+      if (isOpen && !closeQueryReleased) {
+        if (prev) {
+          return prev;
+        }
+        // An inline list open on the first render indexes its selection right away, so list
+        // navigation highlights and scrolls to it on mount. A popup open on the first render
+        // starts without one, like a popup that opened.
+        if (!rootStore.select('inline')) {
+          return { index: null, closeQuery: currentCloseQuery };
+        }
+      }
+
+      return {
+        index: findSelectionIndex(
+          flatFilteredValues(),
+          selectedValue(),
+          isItemEqualToValue(),
+          multiple(),
+        ),
+        closeQuery: currentCloseQuery,
+      };
+    },
+    {
+      name: 'AriaCombobox.syncedSelectedIndex',
+      equals: (a, b) => a === b || (a?.index === b?.index && a?.closeQuery === b?.closeQuery),
+    },
+  );
+
+  store.derive('selectedIndex', (stored) => {
+    const synced = syncedSelectedIndex();
+    if (!synced) {
+      return stored;
     }
+    return store.selectValue('selectedIndexBase') === synced ? stored : synced.index;
   });
 
   const fieldRawValue = () => (selectionMode() === 'none' ? inputValue() : selectedValue());
@@ -607,7 +655,29 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
     getValue: () => untrack(fieldStringValue),
     enabled: () => !disabled(),
     name: () => props.name,
+    dirty: () => {
+      const initialValue = field.validityData().initialValue;
+      return selectionMode() === 'none'
+        ? inputValue() !== initialValue
+        : isSelectedValueDirty(selectedValue(), initialValue, isItemEqualToValue());
+    },
+    filled: () => {
+      if (selectionMode() === 'none') {
+        return String(inputValue() ?? '') !== '';
+      }
+      const value = selectedValue();
+      return multiple() ? Array.isArray(value) && value.length > 0 : value != null;
+    },
   });
+
+  // Clears the field's external error and validates the committed value when it changes.
+  createFieldValueChanged(
+    createMemo(fieldRawValue, { name: 'AriaCombobox.fieldRawValue' }),
+    (value) => {
+      formContext.clearErrors(name());
+      validation.change(value);
+    },
+  );
 
   // --- Commands ----------------------------------------------------------------------------
 
@@ -653,14 +723,20 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
     type?: AriaCombobox.HighlightEventReason | undefined;
     event?: Event | undefined;
   }) {
-    const update = {} as Pick<StoreState, 'activeIndex' | 'selectedIndex'>;
+    const update = {} as Pick<
+      StoreState,
+      'activeIndex' | 'activeIndexWrite' | 'selectedIndex' | 'selectedIndexBase'
+    >;
 
     if (options.activeIndex !== undefined) {
       update.activeIndex = options.activeIndex;
+      update.activeIndexWrite = store.state.activeIndexWrite + 1;
     }
 
     if (options.selectedIndex !== undefined) {
       update.selectedIndex = options.selectedIndex;
+      // Written for the current derived index: it wins until the selection index is re-derived.
+      update.selectedIndexBase = untrack(syncedSelectedIndex);
     }
 
     store.update(update);
@@ -743,7 +819,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
           store.state.activeIndex == null &&
           (isOpen || store.state.inline)
         ) {
-          store.set('activeIndex', 0);
+          writeActiveIndex(0);
         }
       }
     } else if (
@@ -1034,59 +1110,109 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
     return store.select('popupElement');
   };
 
+  // --- Highlight ---------------------------------------------------------------------------
+
+  /**
+   * Whether the list is shown, so its highlight is live: an open popup, or an inline list (unless
+   * a kept-mounted dialog around it is closed).
+   */
+  const highlightActive = () => open() || (inline() && !resolvedPopupElement());
+
+  /**
+   * The values the highlight indexes into. Individually rendered items register themselves in
+   * `valuesRef`.
+   */
+  const highlightCandidates = (): readonly any[] =>
+    hasItems() || hasFilteredItemsProp() ? flatFilteredValues() : valuesRef.current;
+
+  /**
+   * Set once the list no longer reaches the stored highlight (it was filtered out, or the list
+   * emptied), until the highlight is written again: a list that grows back doesn't bring it back.
+   */
+  const staleActiveIndex = createMemo<{ write: number } | null>(
+    (prev) => {
+      const write = store.select('activeIndexWrite');
+      if (prev && prev.write === write) {
+        return prev;
+      }
+      const index = store.selectStored('activeIndex');
+      if (index == null) {
+        return null;
+      }
+      const length = highlightCandidates().length;
+      if (
+        index >= length &&
+        (highlightActive() || (hasItems() && Boolean(autoHighlightMode()) && length === 0))
+      ) {
+        return { write };
+      }
+      return null;
+    },
+    { name: 'AriaCombobox.staleActiveIndex' },
+  );
+
+  // The highlight is the stored index while the list reaches it. `autoHighlight="always"` keeps
+  // the first item highlighted whenever nothing else is.
+  store.derive('activeIndex', (stored) => {
+    const index = staleActiveIndex() ? null : stored;
+    if (
+      index == null &&
+      autoHighlightMode() === 'always' &&
+      highlightActive() &&
+      highlightCandidates().length > 0
+    ) {
+      return 0;
+    }
+    return index;
+  });
+
+  function writeActiveIndex(index: number | null) {
+    store.update({ activeIndex: index, activeIndexWrite: store.state.activeIndexWrite + 1 });
+  }
+
   // --- Effects -----------------------------------------------------------------------------
 
-  let previousCloseQuery: string | null = null;
-
+  // State-driven (not tied to the internal event path) so controlled closes also clear a
+  // pointerdown that never received a matching item mouseup.
   createEffect(
-    () => ({
-      open: open(),
-      closeQuery: closeQuery(),
-      selectedValue: selectedValue(),
-      selectionMode: selectionMode(),
-      multiple: multiple(),
-      hasItems: hasItems(),
-      flatFilteredValues: flatFilteredValues(),
-      isItemEqualToValue: isItemEqualToValue(),
-    }),
-    (current) => {
+    open,
+    (isOpen) => {
+      if (!isOpen) {
+        pointerDownItemRef.current = null;
+      }
+    },
+    { name: 'AriaCombobox.clearPointerDownItem' },
+  );
+
+  // Without `items`, the selection is looked up in the live registry of mounted item values
+  // whenever the closed state or the selection changes, keeping the selected index in the
+  // coordinates of the list that is actually rendered (`syncedSelectedIndex` covers `items`).
+  // The registry is filled by the rendered items, so this measures it as of this run.
+  createEffect(
+    () => {
+      open();
+      selectionMode();
+      hasItems();
+      selectedValue();
+      multiple();
+      isItemEqualToValue();
+    },
+    () => {
       untrack(() => {
-        const closeQueryReleased = previousCloseQuery !== null && current.closeQuery === null;
-        previousCloseQuery = current.closeQuery;
-
-        // Closing indexes against the frozen filtered list. Reopening releases that query, so
-        // its rendered coordinates must be synchronized again even though the popup is already
-        // open.
-        if (current.open && (!closeQueryReleased || !current.hasItems)) {
+        if (open() || selectionMode() === 'none' || hasItems()) {
           return;
         }
-
-        // State-driven (not tied to the internal event path) so controlled closes
-        // also clear a pointerdown that never received a matching item mouseup.
-        if (!current.open) {
-          pointerDownItemRef.current = null;
-        }
-
-        if (current.selectionMode === 'none') {
-          return;
-        }
-
-        // Without `items`, look the selection up in the live registry of mounted item values.
-        // Keep the selected index in the coordinates of the list that is actually rendered.
-        const registry: readonly any[] = current.hasItems
-          ? current.flatFilteredValues
-          : valuesRef.current;
-
         setIndices({
           selectedIndex: findSelectionIndex(
-            registry,
-            current.selectedValue,
-            current.isItemEqualToValue,
-            current.multiple,
+            valuesRef.current,
+            selectedValue(),
+            isItemEqualToValue(),
+            multiple(),
           ),
         });
       });
     },
+    { name: 'AriaCombobox.syncRegisteredSelectedIndex' },
   );
 
   createEffect(
@@ -1097,34 +1223,43 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
         listRef.current.length = values.length;
       }
     },
+    { name: 'AriaCombobox.syncValuesRef' },
   );
 
-  createEffect(open, (isOpen) => {
-    // Controlled closes can bypass `setOpen`, and their exit animation may be interrupted.
-    if (!isOpen && pendingQueryHighlight?.hasQuery) {
-      pendingQueryHighlight = null;
-    }
-  });
-
   createEffect(
-    () => ({
-      activeIndex: store.select('activeIndex'),
-      autoHighlightMode: autoHighlightMode(),
-      hasFilteredItemsProp: hasFilteredItemsProp(),
-      hasItems: hasItems(),
-      flatFilteredValues: flatFilteredValues(),
-      inline: inline(),
-      open: open(),
-      resolvedPopupElement: resolvedPopupElement(),
-      inputValue: inputValue(),
-    }),
-    (current) => {
-      untrack(() => syncHighlight(current));
+    open,
+    (isOpen) => {
+      // Controlled closes can bypass `setOpen`, and their exit animation may be interrupted.
+      if (!isOpen && pendingQueryHighlight?.hasQuery) {
+        pendingQueryHighlight = null;
+      }
+    },
+    { name: 'AriaCombobox.dropPendingHighlightOnClose' },
+  );
+
+  // Resolves a highlight requested by typing (or restores one after a query clear) once the
+  // list it targets is there: results can arrive asynchronously, and a controlled popup may open
+  // later. The request is imperative state recorded by the input handlers, and whether it still
+  // applies depends on the DOM (focus, the positioner), so this reads them as of this run.
+  const pendingHighlightInputs = () => ({
+    autoHighlightMode: autoHighlightMode(),
+    hasFilteredItemsProp: hasFilteredItemsProp(),
+    hasItems: hasItems(),
+    flatFilteredValues: flatFilteredValues(),
+    inline: inline(),
+    open: open(),
+    resolvedPopupElement: resolvedPopupElement(),
+    inputValue: inputValue(),
+  });
+  createEffect(
+    pendingHighlightInputs,
+    () => untrack(() => resolvePendingHighlight(pendingHighlightInputs())),
+    {
+      name: 'AriaCombobox.resolvePendingHighlight',
     },
   );
 
-  function syncHighlight(current: {
-    activeIndex: number | null;
+  function resolvePendingHighlight(current: {
     autoHighlightMode: false | 'input-change' | 'always';
     hasFilteredItemsProp: boolean;
     hasItems: boolean;
@@ -1143,163 +1278,162 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
       return;
     }
 
+    const pendingHighlight = pendingQueryHighlight;
+    if (!pendingHighlight) {
+      return;
+    }
+
     const candidateItems =
       current.hasItems || current.hasFilteredItemsProp
         ? current.flatFilteredValues
         : valuesRef.current;
-    const pendingHighlight = pendingQueryHighlight;
-    if (pendingHighlight) {
-      // A directly rendered list remains visible when the popup state is closed, while a
-      // kept-mounted Positioner is hidden and should stay inert.
-      const listIsNavigable = isOpen || isInline || store.state.positionerElement?.hidden === false;
-      if (pendingHighlight.hasQuery) {
-        const input = inputRef.current;
-        // Keep the request while results or a controlled popup opening are pending,
-        // but do not restore an inline highlight after focus has left the input.
-        if (
-          !autoHighlightModeValue ||
-          String(current.inputValue).trim() === '' ||
-          (isInline &&
-            autoHighlightModeValue !== 'always' &&
-            (!input || activeElement(input.ownerDocument) !== input))
-        ) {
-          pendingQueryHighlight = null;
-        } else if (
-          listIsNavigable &&
-          // Individually rendered items register without re-running this effect, and their
-          // registry has holes mid-reindex, so resolve their request immediately.
-          (candidateItems[0] !== undefined || (!current.hasItems && !current.hasFilteredItemsProp))
-        ) {
-          store.set('activeIndex', 0);
-          pendingQueryHighlight = null;
-        }
-      } else if (String(current.inputValue).trim() === '') {
-        // Only handle the clear once it has committed (a controlled input may reject it),
-        // so a restore cannot fire while a query is still active.
+    // A directly rendered list remains visible when the popup state is closed, while a
+    // kept-mounted Positioner is hidden and should stay inert.
+    const listIsNavigable = isOpen || isInline || store.state.positionerElement?.hidden === false;
+    if (pendingHighlight.hasQuery) {
+      const input = inputRef.current;
+      // Keep the request while results or a controlled popup opening are pending,
+      // but do not restore an inline highlight after focus has left the input.
+      if (
+        !autoHighlightModeValue ||
+        String(current.inputValue).trim() === '' ||
+        (isInline &&
+          autoHighlightModeValue !== 'always' &&
+          (!input || activeElement(input.ownerDocument) !== input))
+      ) {
         pendingQueryHighlight = null;
-        if (listIsNavigable) {
-          const clearedBySelection = pendingHighlight.selection;
-          if (
-            autoHighlightModeValue === 'always' &&
-            !clearedBySelection &&
-            store.state.selectionMode === 'none'
-          ) {
-            // There is no selection to restore in Autocomplete. Keep the first-item reset
-            // synchronous so list navigation sees it before a directly rendered list closes.
-            store.set('activeIndex', 0);
-          }
+      } else if (
+        listIsNavigable &&
+        // Individually rendered items register without re-running this effect, and their
+        // registry has holes mid-reindex, so resolve their request immediately.
+        (candidateItems[0] !== undefined || (!current.hasItems && !current.hasFilteredItemsProp))
+      ) {
+        writeActiveIndex(0);
+        pendingQueryHighlight = null;
+      }
+      return;
+    }
 
-          // Items re-mounted by the clear publish their composite indices in a follow-up
-          // microtask, so the item registries are mid-update here. Defer past that.
-          queueMicrotask(() => {
-            queueMicrotask(() => {
-              if (
-                (!store.select('open') && (!store.state.inline || current.resolvedPopupElement)) ||
-                (inputRef.current && inputRef.current.value.trim() !== '')
-              ) {
-                return;
-              }
+    if (String(current.inputValue).trim() !== '') {
+      return;
+    }
 
-              // Return the highlight to the selected item, the same anchor the popup uses
-              // when it first opens.
-              const currentSelectedValue = store.state.selectedValue;
-              const isMultiple = store.state.selectionMode === 'multiple';
-              const hasSelection =
-                isMultiple && Array.isArray(currentSelectedValue)
-                  ? currentSelectedValue.length > 0
-                  : store.state.selectionMode !== 'none' && currentSelectedValue != null;
+    // Only handle the clear once it has committed (a controlled input may reject it),
+    // so a restore cannot fire while a query is still active.
+    pendingQueryHighlight = null;
+    if (!listIsNavigable) {
+      return;
+    }
 
-              if (hasSelection) {
-                const registry =
-                  current.hasItems || current.hasFilteredItemsProp
-                    ? untrack(flatFilteredValues)
-                    : valuesRef.current;
-                // A selection-driven clear keeps the just-selected item highlighted;
-                // otherwise return to the open anchor.
-                const toggledIndex = findItemIndex(
-                  registry,
-                  pendingHighlight.toggledValue,
-                  store.state.isItemEqualToValue,
-                );
-                store.set(
-                  'activeIndex',
-                  toggledIndex !== -1
-                    ? toggledIndex
-                    : findSelectionIndex(
-                        registry,
-                        currentSelectedValue,
-                        store.state.isItemEqualToValue,
-                        isMultiple,
-                      ),
-                );
-              } else if (clearedBySelection) {
-                store.set('activeIndex', null);
-              } else if (autoHighlightModeValue === 'always') {
-                store.set('activeIndex', 0);
-              }
-            });
-          });
+    const clearedBySelection = pendingHighlight.selection;
+    if (
+      autoHighlightModeValue === 'always' &&
+      !clearedBySelection &&
+      store.state.selectionMode === 'none'
+    ) {
+      // There is no selection to restore in Autocomplete. Keep the first-item reset
+      // synchronous so list navigation sees it before a directly rendered list closes.
+      writeActiveIndex(0);
+    }
+
+    // Items re-mounted by the clear publish their composite indices in a follow-up
+    // microtask, so the item registries are mid-update here. Defer past that.
+    queueMicrotask(() => {
+      queueMicrotask(() => {
+        if (
+          (!store.select('open') && (!store.state.inline || current.resolvedPopupElement)) ||
+          (inputRef.current && inputRef.current.value.trim() !== '')
+        ) {
+          return;
         }
-      }
-    }
 
-    if (!isOpen && !isInline) {
-      return;
-    }
+        // Return the highlight to the selected item, the same anchor the popup uses
+        // when it first opens.
+        const currentSelectedValue = store.state.selectedValue;
+        const isMultiple = store.state.selectionMode === 'multiple';
+        const hasSelection =
+          isMultiple && Array.isArray(currentSelectedValue)
+            ? currentSelectedValue.length > 0
+            : store.state.selectionMode !== 'none' && currentSelectedValue != null;
 
-    const storeActiveIndex = store.state.activeIndex;
-
-    if (storeActiveIndex == null) {
-      if (autoHighlightModeValue === 'always' && candidateItems.length > 0) {
-        store.set('activeIndex', 0);
-        return;
-      }
-      emitHighlight(undefined, -1, REASONS.none);
-      return;
-    }
-
-    if (storeActiveIndex >= candidateItems.length) {
-      emitHighlight(undefined, -1, REASONS.none);
-      store.set('activeIndex', null);
-      return;
-    }
-
-    const itemValue = candidateItems[storeActiveIndex];
-    const previouslyHighlightedItemValue = lastHighlight.value;
-    const isSameItem =
-      previouslyHighlightedItemValue !== NO_ACTIVE_VALUE &&
-      compareItemEquality(
-        itemValue,
-        previouslyHighlightedItemValue,
-        store.state.isItemEqualToValue,
-      );
-
-    if (lastHighlight.index !== storeActiveIndex || !isSameItem) {
-      emitHighlight(itemValue, storeActiveIndex, REASONS.none);
-    }
+        if (hasSelection) {
+          const registry =
+            current.hasItems || current.hasFilteredItemsProp
+              ? untrack(flatFilteredValues)
+              : valuesRef.current;
+          // A selection-driven clear keeps the just-selected item highlighted;
+          // otherwise return to the open anchor.
+          const toggledIndex = findItemIndex(
+            registry,
+            pendingHighlight.toggledValue,
+            store.state.isItemEqualToValue,
+          );
+          writeActiveIndex(
+            toggledIndex !== -1
+              ? toggledIndex
+              : findSelectionIndex(
+                  registry,
+                  currentSelectedValue,
+                  store.state.isItemEqualToValue,
+                  isMultiple,
+                ),
+          );
+        } else if (clearedBySelection) {
+          writeActiveIndex(null);
+        } else if (autoHighlightModeValue === 'always') {
+          writeActiveIndex(0);
+        }
+      });
+    });
   }
 
+  // Reports the highlighted item through `onItemHighlighted` whenever the derived highlight or
+  // the item at its index changes without an event (an event reports it in `setIndices`).
   createEffect(
-    () =>
-      selectionMode() === 'none'
-        ? String(inputValue() ?? '') !== ''
-        : multiple()
-          ? Array.isArray(selectedValue()) && selectedValue().length > 0
-          : selectedValue() != null,
-    (filled) => {
-      field.setFilled(filled);
-    },
-  );
+    () => ({
+      activeIndex: store.select('activeIndex'),
+      active: highlightActive(),
+      candidates: highlightCandidates(),
+      emptyAutoHighlightList:
+        hasItems() && Boolean(autoHighlightMode()) && flatFilteredValues().length === 0,
+    }),
+    (current) => {
+      untrack(() => {
+        const { activeIndex, candidates } = current;
+        if (activeIndex == null) {
+          // A list emptied while closed clears the highlight too, so the next ArrowDown doesn't
+          // start from an item that is gone.
+          if (current.active || current.emptyAutoHighlightList) {
+            emitHighlight(undefined, -1, REASONS.none);
+          }
+          return;
+        }
 
-  // Ensures that the active index is not set to 0 when the list is empty.
-  // This avoids needing to press ArrowDown twice under certain conditions.
-  createEffect(
-    () => hasItems() && Boolean(autoHighlightMode()) && flatFilteredValues().length === 0,
-    (empty) => {
-      if (empty) {
-        setIndices({ activeIndex: null });
-      }
+        if (!current.active) {
+          return;
+        }
+
+        if (activeIndex >= candidates.length) {
+          emitHighlight(undefined, -1, REASONS.none);
+          return;
+        }
+
+        const itemValue = candidates[activeIndex];
+        const previouslyHighlightedItemValue = lastHighlight.value;
+        const isSameItem =
+          previouslyHighlightedItemValue !== NO_ACTIVE_VALUE &&
+          compareItemEquality(
+            itemValue,
+            previouslyHighlightedItemValue,
+            store.state.isItemEqualToValue,
+          );
+
+        if (lastHighlight.index !== activeIndex || !isSameItem) {
+          emitHighlight(itemValue, activeIndex, REASONS.none);
+        }
+      });
     },
+    { name: 'AriaCombobox.emitHighlight' },
   );
 
   // `useValueChanged(query)`: a memo, so the effect only runs when the value changes.
@@ -1317,7 +1451,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
         }
       });
     },
-    { defer: true },
+    { defer: true, name: 'AriaCombobox.queryChanged' },
   );
 
   // `useValueChanged(open)`: a memo, so the effect only runs when the value changes.
@@ -1329,7 +1463,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
         handleInterruptedReopen(false);
       }
     },
-    { defer: true },
+    { defer: true, name: 'AriaCombobox.openChanged' },
   );
 
   function syncInputToSelectedLabel() {
@@ -1342,25 +1476,14 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
   // `useValueChanged(selectedValue)`: a memo, so the effect only runs when the value changes.
   createEffect(
     createMemo(selectedValue),
-    (value) => {
+    () => {
       untrack(() => {
-        if (selectionMode() === 'none') {
-          return;
-        }
-
-        formContext.clearErrors(name());
-        field.setDirty(
-          isSelectedValueDirty(value, field.validityData().initialValue, isItemEqualToValue()),
-        );
-
-        validation.change(value);
-
         if (single() && !hasInputValue && !store.state.inputInsidePopup) {
           syncInputToSelectedLabel();
         }
       });
     },
-    { defer: true },
+    { defer: true, name: 'AriaCombobox.selectedValueChanged' },
   );
 
   // The label catches accessor changes while the items identity restores the selected label after
@@ -1379,25 +1502,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
         }
       });
     },
-    { defer: true },
-  );
-
-  // `useValueChanged(inputValue)`: a memo, so the effect only runs when the value changes.
-  createEffect(
-    createMemo(inputValue),
-    (value) => {
-      untrack(() => {
-        if (selectionMode() !== 'none') {
-          return;
-        }
-
-        formContext.clearErrors(name());
-        field.setDirty(value !== field.validityData().initialValue);
-
-        validation.change(value);
-      });
-    },
-    { defer: true },
+    { defer: true, name: 'AriaCombobox.syncSelectedLabel' },
   );
 
   // --- Interactions ------------------------------------------------------------------------
@@ -1621,6 +1726,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
           values.selectionMode === 'none' && (values.inline || !store.state.inputInsidePopup),
       });
     },
+    { name: 'AriaCombobox.syncProps' },
   );
 
   // --- Rendering ---------------------------------------------------------------------------
@@ -1839,6 +1945,69 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
   );
 }
 
+function areArraysShallowEqual(a: readonly unknown[], b: readonly unknown[]): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i += 1) {
+    if (!Object.is(a[i], b[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Whether two filtered lists hold the same items, comparing the groups of a grouped list by their
+ * fields and items, so a re-filter that keeps the same results keeps the previous list.
+ */
+function areItemListsEqual(a: readonly any[], b: readonly any[]): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i += 1) {
+    if (!Object.is(a[i], b[i]) && !areGroupsEqual(a[i], b[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areGroupsEqual(a: unknown, b: unknown): boolean {
+  if (
+    a == null ||
+    b == null ||
+    typeof a !== 'object' ||
+    typeof b !== 'object' ||
+    !Array.isArray((a as Group<unknown>).items) ||
+    !Array.isArray((b as Group<unknown>).items)
+  ) {
+    return false;
+  }
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) {
+    return false;
+  }
+  for (const key of keys) {
+    const valueA = (a as Record<string, unknown>)[key];
+    const valueB = (b as Record<string, unknown>)[key];
+    if (key === 'items') {
+      if (!areArraysShallowEqual(valueA as unknown[], valueB as unknown[])) {
+        return false;
+      }
+    } else if (!Object.is(valueA, valueB)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Returns a live view of `props` without `key`.
  */
@@ -1869,6 +2038,11 @@ function readProp<T>(read: () => T): T {
 }
 
 type SelectionMode = 'single' | 'multiple' | 'none';
+
+interface SyncedSelectedIndex {
+  index: number | null;
+  closeQuery: string | null;
+}
 
 type ComboboxItemValueType<ItemValue, Mode extends SelectionMode> = Mode extends 'multiple'
   ? ItemValue[]

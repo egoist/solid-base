@@ -85,34 +85,51 @@ export function ComboboxInput(componentProps: ComboboxInput.Props): JSX.Element 
 
   const inputOwnsFormValue = () => selectionMode() === 'none' && !hasPositionerParent;
 
-  function setInputElement(element: HTMLInputElement) {
-    const nextIsInsidePopup = hasPositionerParent || store.state.inline;
-
-    if (nextIsInsidePopup && !store.state.hasInputValue) {
-      store.context.setInputValue('', createChangeEventDetails(REASONS.none));
-    }
-
-    store.context.inputRef.current = element;
-    store.update({
-      inputElement: element,
-      inputInsidePopup: nextIsInsidePopup,
-      inputOwnsFormValue: untrack(inputOwnsFormValue),
-    });
-  }
-
   // The displayed value is written imperatively, and only when it differs from the DOM: a
   // `value` prop is rewritten whenever the element's props re-apply, which moves the caret.
   const displayedValue = () => String(composingValue() ?? inputValue() ?? '');
 
   let inputElement: HTMLInputElement | null = null;
+  // The rendered element. Only the registration below reads it: the input's own props depend on
+  // the registered element (its tag decides the combobox ARIA attributes), so registering it from
+  // the ref callback, which runs while those props are applied, would re-apply them right away.
+  const [renderedElement, setRenderedElement] = createSignal<HTMLInputElement | null>(null, {
+    name: 'ComboboxInput.renderedElement',
+  });
+
   const setInputElementRef = (element: HTMLInputElement) => {
     inputElement = element;
-    setInputElement(element);
+    store.context.inputRef.current = element;
+    setRenderedElement(element);
     const value = untrack(displayedValue);
     if (element.value !== value) {
       element.value = value;
     }
   };
+
+  // Registers the rendered element with the root. It measures the DOM (the element and where it
+  // is rendered), so it reads the state as of this run rather than taking a value.
+  createEffect(
+    renderedElement,
+    () => {
+      const element = untrack(renderedElement);
+      if (!element) {
+        return;
+      }
+      const nextIsInsidePopup = hasPositionerParent || store.state.inline;
+
+      if (nextIsInsidePopup && !store.state.hasInputValue) {
+        store.context.setInputValue('', createChangeEventDetails(REASONS.none));
+      }
+
+      store.update({
+        inputElement: element,
+        inputInsidePopup: nextIsInsidePopup,
+        inputOwnsFormValue: untrack(inputOwnsFormValue),
+      });
+    },
+    { name: 'ComboboxInput.register' },
+  );
 
   createEffect(displayedValue, (value) => {
     if (inputElement && inputElement.value !== value) {

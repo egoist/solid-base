@@ -65,15 +65,16 @@ describe('<Combobox.Root />', () => {
 
       function App() {
         const [open, setOpen] = createSignal(false);
-        createEffect(open, (isOpen) => {
-          if (isOpen) {
-            setOpen(false);
-          }
-        });
         return (
           <Combobox.Root
             open={open()}
-            onOpenChange={(next) => setOpen(next)}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (next) {
+                // Close again as soon as the opening update has been applied.
+                queueMicrotask(() => setOpen(false));
+              }
+            }}
             onOpenChangeComplete={onOpenChangeComplete}
           >
             <Combobox.Input />

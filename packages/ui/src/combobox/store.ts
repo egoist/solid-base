@@ -26,6 +26,13 @@ export type State = ValuePopupState & {
   queryChangedAfterOpen: boolean;
   /** The query frozen while the popup closes, so the filtered list stays stable. */
   closeQuery: string | null;
+  /** Counts the writes to `activeIndex`, so the highlight can tell a write from a derivation. */
+  activeIndexWrite: number;
+  /**
+   * The derived selected index the stored `selectedIndex` was written against: the stored value
+   * wins over the derived one until the derived index changes.
+   */
+  selectedIndexBase: unknown;
 
   items: readonly any[] | undefined;
 
