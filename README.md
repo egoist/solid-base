@@ -93,15 +93,22 @@ import { Popover } from '@egoist/solid-base/popover';
 | [`@egoist/solid-base`](packages/ui)            | The components                                         |
 | [`@egoist/solid-base-utils`](packages/utils)   | DOM helpers and Solid primitives used by the components |
 
+The documentation is Markdown in [`docs`](docs) (see [docs/README.md](docs/README.md) for the
+authoring conventions), rendered by the website in [`website`](website): TanStack Start on
+Solid 2, prerendered to static HTML, with live demos and an API reference generated from the
+TypeScript source.
+
 ## Development
 
 This is a Bun workspace.
 
 ```sh
 bun install
-bun run test        # vitest (jsdom) + server rendering
+bun run test        # vitest (jsdom) + server rendering + hydration
 bun run typecheck   # tsc
 bun run dev         # playground at http://localhost:5173
+bun run website     # documentation site
+bun run website:build
 bun run build       # build the packages
 ```
 
