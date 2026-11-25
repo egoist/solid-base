@@ -1,0 +1,22 @@
+{
+  "name": "@egoist/solid-base",
+  "version": "0.1.0",
+  "description": "Unstyled, accessible UI components for SolidJS 2 — a port of Base UI.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*/index.ts"
+  },
+  "dependencies": {
+    "@egoist/solid-base-utils": "workspace:*",
+    "@floating-ui/dom": "^1.8.0",
+    "@floating-ui/utils": "^0.2.12",
+    "tabbable": "^6.5.2"
+  },
+  "peerDependencies": {
+    "solid-js": "^2.0.0",
+    "@solidjs/web": "^2.0.0"
+  }
+}

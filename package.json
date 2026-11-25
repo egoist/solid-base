@@ -1,0 +1,28 @@
+{
+  "name": "solid-base-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "playground"
+  ],
+  "scripts": {
+    "dev": "bun run --filter playground dev",
+    "build": "bun run --filter './packages/*' build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@solidjs/testing-library": "1.0.0-rc.2",
+    "@solidjs/vite-plugin": "3.0.1",
+    "@solidjs/web": "2.0.4",
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/user-event": "^14.6.13",
+    "jsdom": "^31.0.1",
+    "solid-js": "2.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.2"
+  }
+}
