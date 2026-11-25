@@ -92,12 +92,6 @@ export function RadioRoot<Value>(componentProps: RadioRoot.Props<Value>) {
     return validation.registerInput(element, { controlRef: radioRef, value: undefined });
   });
 
-  createEffect(inputElement, (element) => {
-    if (element?.checked) {
-      field.setFilled(true);
-    }
-  });
-
   let unregisterInputRef: (() => void) | undefined;
   onCleanup(() => unregisterInputRef?.());
 

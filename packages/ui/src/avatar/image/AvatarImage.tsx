@@ -130,11 +130,10 @@ export function AvatarImage(componentProps: AvatarImage.Props) {
   createEffect(imageLoadingStatus, (status) => {
     if (status !== 'idle') {
       componentProps.onLoadingStatusChange?.(status);
-      rootContext.setImageLoadingStatus(status);
     }
   });
 
-  onSettled(() => () => rootContext.setImageLoadingStatus('idle'));
+  onSettled(() => rootContext.registerImageLoadingStatus(imageLoadingStatus));
 
   createOpenChangeComplete({
     enabled: () => !isVisible(),

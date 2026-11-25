@@ -6,3 +6,4 @@ export type {
   CreateFieldControlRegistrationParameters,
   CreateFieldControlRegistrationReturnValue,
 } from './createFieldControlRegistration';
+export { createFieldValueChanged } from './createFieldValueChanged';

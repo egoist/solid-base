@@ -13,6 +13,7 @@ import {
   useFieldRootContext,
 } from '../../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import type { FieldRootState } from '../../field/root/FieldRoot';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
@@ -120,12 +121,8 @@ export function OTPFieldRoot(componentProps: OTPFieldRoot.Props) {
       });
   }
 
-  const [inputCount, setInputCount] = createSignal(0);
-  const list = createCompositeList<{}>({
-    onMapChange(map) {
-      setInputCount(map.size);
-    },
-  });
+  const list = createCompositeList<{}>();
+  const inputCount = () => list.map().size;
 
   const firstInputRef: RefObject<HTMLElement | null> = {
     get current() {
@@ -177,10 +174,6 @@ export function OTPFieldRoot(componentProps: OTPFieldRoot.Props) {
       ? Math.min(focusedIndex(), Math.max(length() - 1, 0))
       : Math.min(value().length, length() - 1);
 
-  createEffect(filled, (isFilled) => {
-    field.setFilled(isFilled);
-  });
-
   if (isDev) {
     createEffect(
       () => [inputCount(), length()] as const,
@@ -217,6 +210,8 @@ export function OTPFieldRoot(componentProps: OTPFieldRoot.Props) {
     value,
     enabled: () => !disabled(),
     name: () => componentProps.name,
+    dirty: () => value() !== field.validityData().initialValue,
+    filled,
   });
 
   function focusInput(index: number) {
@@ -261,17 +256,12 @@ export function OTPFieldRoot(componentProps: OTPFieldRoot.Props) {
     }
   }
 
-  createEffect(
-    value,
-    // Imperative reaction to a committed value (upstream `useValueChanged`): reads the field state
-    // at call time.
-    (currentValue) => untrack(() => onValueChanged(currentValue)),
-    { defer: true },
-  );
+  // Validates, and moves focus once the slots rendered the new value (the focus events that
+  // follow update the focused slot).
+  createFieldValueChanged(value, onValueChanged);
 
   function onValueChanged(currentValue: string) {
     formContext.clearErrors(name());
-    field.setDirty(currentValue !== field.validityData().initialValue);
 
     validation.change(currentValue);
 

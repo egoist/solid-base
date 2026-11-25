@@ -1,4 +1,4 @@
-import { createEffect, omit, untrack } from 'solid-js';
+import { omit, untrack } from 'solid-js';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
 import { EMPTY_ARRAY } from '@egoist/solid-base-utils/empty';
 import { areArraysEqual } from '@egoist/solid-base-utils/areArraysEqual';
@@ -13,6 +13,7 @@ import {
   useFieldRootContext,
 } from '../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../internals/field-register-control/createFieldValueChanged';
 import { useLabelableContext } from '../internals/labelable-provider/LabelableContext';
 import { createLabelableId } from '../internals/labelable-provider/createLabelableId';
 import type { BaseUIComponentProps, HTMLProps } from '../internals/types';
@@ -108,36 +109,25 @@ export function CheckboxGroup(componentProps: CheckboxGroup.Props) {
     id,
     value,
     getValue: getFormValue,
+    // The group has no `name` of its own: it only takes part while the field is named.
     enabled: () => !!field.name() && !disabled(),
-    name: field.name,
-  });
-
-  createEffect(value, (currentValue) => {
-    field.setFilled(currentValue.length > 0);
-  });
-
-  createEffect(
-    value,
-    (currentValue) => {
-      untrack(() => {
-        const fieldName = field.name();
-        if (fieldName) {
-          form.clearErrors(fieldName);
-        }
-
-        const initialValue = field.validityData().initialValue;
-        field.setDirty(
-          !areArraysEqual(
-            currentValue,
-            Array.isArray(initialValue) ? (initialValue as readonly string[]) : EMPTY_ARRAY,
-          ),
-        );
-      });
-
-      validation.change(currentValue);
+    dirty: () => {
+      const initialValue = field.validityData().initialValue;
+      return !areArraysEqual(
+        value(),
+        Array.isArray(initialValue) ? (initialValue as readonly string[]) : EMPTY_ARRAY,
+      );
     },
-    { defer: true },
-  );
+    filled: () => value().length > 0,
+  });
+
+  createFieldValueChanged(value, (currentValue) => {
+    const fieldName = field.name();
+    if (fieldName) {
+      form.clearErrors(fieldName);
+    }
+    validation.change(currentValue);
+  });
 
   const state: CheckboxGroupState = extendFieldRootState(field.state, {
     get disabled() {

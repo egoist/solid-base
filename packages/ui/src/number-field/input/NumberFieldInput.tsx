@@ -1,4 +1,4 @@
-import { createEffect, omit, untrack } from 'solid-js';
+import { createEffect, omit } from 'solid-js';
 import { isDev } from '@solidjs/web';
 import { warn } from '@egoist/solid-base-utils/warn';
 import { formatNumber } from '@egoist/solid-base-utils/formatNumber';
@@ -7,6 +7,7 @@ import type { BaseUIComponentProps, HTMLProps } from '../../internals/types';
 import { useFieldRootContext } from '../../internals/field-root-context/FieldRootContext';
 import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
 import {
@@ -106,10 +107,10 @@ export function NumberFieldInput(componentProps: NumberFieldInput.Props) {
     },
   );
 
-  createEffect(
+  createFieldValueChanged(
     () => state.value,
     (value) => {
-      clearErrors(untrack(name));
+      clearErrors(name());
 
       if (blockRevalidation && !field.shouldValidateOnChange()) {
         blockRevalidation = false;
@@ -118,7 +119,6 @@ export function NumberFieldInput(componentProps: NumberFieldInput.Props) {
 
       validation.change(value);
     },
-    { defer: true },
   );
 
   const inputProps: HTMLProps = {

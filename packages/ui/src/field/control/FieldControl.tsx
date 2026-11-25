@@ -8,6 +8,7 @@ import {
 } from '../../internals/field-root-context/FieldRootContext';
 import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
 import { createLabelableId } from '../../internals/labelable-provider/createLabelableId';
@@ -76,34 +77,40 @@ export function FieldControl(componentProps: FieldControl.Props) {
     getValue: () => validation.inputRef.current?.value,
     enabled: () => !disabled(),
     name: () => componentProps.name,
+    // Uncontrolled inputs keep their value in the DOM: their state is written on input.
+    dirty: () => {
+      const value = serializedValue();
+      return value === undefined
+        ? undefined
+        : value !== (field.validityData().initialValue ?? '');
+    },
+    filled: () => {
+      const value = serializedValue();
+      return value === undefined ? undefined : value !== '';
+    },
   });
 
+  // An uncontrolled input's value lives in the DOM: read it once rendered, and again when the
+  // `defaultValue` it renders changes.
   createEffect(
-    () => [serializedValue(), componentProps.defaultValue] as const,
-    ([value]) => {
-      const currentValue = value ?? validation.inputRef.current?.value;
-      if (currentValue !== undefined) {
-        field.setFilled(currentValue !== '');
+    () => [isControlled(), componentProps.defaultValue] as const,
+    ([controlled]) => {
+      if (!controlled) {
+        const currentValue = validation.inputRef.current?.value;
+        if (currentValue !== undefined) {
+          field.setFilled(currentValue !== '');
+        }
       }
     },
   );
 
-  createEffect(
-    serializedValue,
-    (value) => {
-      if (value === undefined) {
-        return;
-      }
-
-      untrack(() => {
-        form.clearErrors(name());
-        field.setDirty(value !== (field.validityData().initialValue ?? ''));
-      });
-
-      validation.change(value);
-    },
-    { defer: true },
-  );
+  createFieldValueChanged(serializedValue, (value) => {
+    if (value === undefined) {
+      return;
+    }
+    form.clearErrors(name());
+    validation.change(value);
+  });
 
   const setFocused = createSetFieldFocused(disabled, () => inputElement);
   const enterValidationTimeout = createTimeout();

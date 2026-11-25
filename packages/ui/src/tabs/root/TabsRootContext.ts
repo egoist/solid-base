@@ -1,5 +1,5 @@
 import { createContext, useContext, type Accessor } from 'solid-js';
-import type { CompositeMetadata } from '../../internals/composite/list/CompositeList';
+import type { CompositeListContextValue } from '../../internals/composite/list/CompositeList';
 import type { TabsTab } from '../tab/TabsTab';
 import type { TabsRoot } from './TabsRoot';
 
@@ -28,8 +28,10 @@ export interface TabsRootContext {
    * Gets the `id` attribute of the TabPanel that corresponds to the given Tab value.
    */
   getTabPanelIdByValue: (tabValue: TabsTab.Value) => string | undefined;
-  registerMountedTabPanel: (panelValue: TabsTab.Value, panelId: string) => () => void;
-  setTabMap: (map: Map<HTMLElement, CompositeMetadata<TabsTab.Metadata>>) => void;
+  /**
+   * The list the tabs register with (provided by `<Tabs.List>`).
+   */
+  tabList: CompositeListContextValue<TabsTab.Metadata>;
   /**
    * The position of the active tab relative to the previously active tab.
    */

@@ -27,6 +27,12 @@ export interface LabelableContextValue {
   messageIds: Accessor<string[]>;
   setMessageIds: StateSetter<string[]>;
   /**
+   * Registers a description whose `id` is derived (e.g. an error message that is only rendered
+   * while the field is invalid): `messageIds` includes it whenever `id` returns one.
+   * Returns the unregister function.
+   */
+  registerMessageId: (id: Accessor<string | undefined>) => () => void;
+  /**
    * Returns a live view of `externalProps` whose `aria-describedby` also references the
    * descriptions and errors registered in this (and the parent) labelable scope.
    */
@@ -43,6 +49,7 @@ const DEFAULT_LABELABLE_CONTEXT: LabelableContextValue = {
   setLabelId: NOOP,
   messageIds: () => EMPTY_IDS,
   setMessageIds: NOOP,
+  registerMessageId: () => NOOP,
   getDescriptionProps: (externalProps: HTMLProps) => externalProps,
 };
 

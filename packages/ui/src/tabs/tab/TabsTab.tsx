@@ -1,13 +1,11 @@
-import { createEffect, omit, onCleanup } from 'solid-js';
+import { omit, onCleanup } from 'solid-js';
 import { ownerDocument } from '@egoist/solid-base-utils/owner';
-import { activeElement, contains } from '@egoist/solid-base-utils/shadowDom';
 import { createBaseUiId } from '../../internals/baseUiId';
 import { renderElement } from '../../internals/renderElement';
 import type { BaseUIComponentProps, HTMLProps, NativeButtonProps } from '../../internals/types';
 import { createButton } from '../../internals/use-button/createButton';
 import { ACTIVE_COMPOSITE_ITEM } from '../../internals/composite/constants';
 import { createCompositeItem } from '../../internals/composite/item/createCompositeItem';
-import { useCompositeRootContext } from '../../internals/composite/root/CompositeRootContext';
 import type { TabsRoot } from '../root/TabsRoot';
 import { useTabsRootContext } from '../root/TabsRootContext';
 import { tabsStateAttributesMapping } from '../root/stateAttributesMapping';
@@ -35,7 +33,6 @@ export function TabsTab(componentProps: TabsTab.Props) {
 
   const rootContext = useTabsRootContext();
   const listContext = useTabsListContext();
-  const compositeRootContext = useCompositeRootContext();
 
   const disabled = () => componentProps.disabled ?? false;
   const id = createBaseUiId(() => componentProps.id || undefined);
@@ -52,46 +49,11 @@ export function TabsTab(componentProps: TabsTab.Props) {
     },
   };
 
-  const { compositeProps, compositeRef, index } = createCompositeItem<TabsTab.Metadata>({
+  const { compositeProps, compositeRef } = createCompositeItem<TabsTab.Metadata>({
     metadata: tabMetadata,
   });
 
   const active = () => componentProps.value === rootContext.value();
-
-  // Keep the highlighted item in sync with the currently active tab
-  // when the value prop changes externally (controlled mode).
-  createEffect(
-    () =>
-      [
-        active(),
-        index(),
-        compositeRootContext.highlightedIndex(),
-        disabled(),
-        listContext.tabsListElement(),
-      ] as const,
-    ([isActive, currentIndex, highlightedIndex, isDisabled, listElement]) => {
-      if (!(isActive && currentIndex > -1 && highlightedIndex !== currentIndex)) {
-        return;
-      }
-
-      // If focus is currently within the tabs list, don't override the roving
-      // focus highlight. This keeps keyboard navigation relative to the focused
-      // item after an external/asynchronous selection change.
-      if (listElement != null) {
-        const activeEl = activeElement(ownerDocument(listElement));
-        if (activeEl && contains(listElement, activeEl)) {
-          return;
-        }
-      }
-
-      // Don't highlight disabled tabs to prevent them from interfering with keyboard navigation.
-      // Keyboard focus (tabindex) should remain on an enabled tab even when a disabled tab is
-      // selected.
-      if (!isDisabled) {
-        compositeRootContext.onHighlightedIndexChange(currentIndex);
-      }
-    },
-  );
 
   const { getButtonProps, buttonRef } = createButton({
     disabled,

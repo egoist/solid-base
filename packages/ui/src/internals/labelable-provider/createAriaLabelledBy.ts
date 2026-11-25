@@ -1,4 +1,4 @@
-import { createEffect, createSignal, type Accessor } from 'solid-js';
+import { createEffect, createSignal, untrack, type Accessor } from 'solid-js';
 import { createBaseUiId } from '../baseUiId';
 
 export interface CreateAriaLabelledByParameters {
@@ -39,6 +39,7 @@ export function createAriaLabelledBy(
 ): Accessor<string | undefined> {
   const [fallbackAriaLabelledBy, setFallbackAriaLabelledBy] = createSignal<string | undefined>(
     undefined,
+    { name: 'createAriaLabelledBy.fallbackAriaLabelledBy' },
   );
 
   const generatedLabelId = createBaseUiId(() => {
@@ -49,25 +50,32 @@ export function createAriaLabelledBy(
   // A non-blank `aria-label` wins over any associated label, as it does on native inputs.
   const hasAriaLabel = () => Boolean(params.ariaLabel?.()?.trim());
 
-  // Fallback for <span> controls labelled by a wrapping/sibling native <label>.
+  const fallbackDisabled = () =>
+    Boolean(params.explicitAriaLabelledBy?.()) ||
+    Boolean(params.labelId?.()) ||
+    hasAriaLabel() ||
+    !(params.enableFallback?.() ?? true);
+
+  // Fallback for <span> controls labelled by a wrapping/sibling native <label>: measured in the
+  // DOM once the label source rendered, so it lands a flush after its inputs (the cost of
+  // measuring). Whether it applies is derived, so it is only measured (and kept) while in use.
   createEffect(
+    () => [fallbackDisabled(), params.labelSource?.(), generatedLabelId()] as const,
     () => {
-      const skip =
-        Boolean(params.explicitAriaLabelledBy?.()) ||
-        Boolean(params.labelId?.()) ||
-        hasAriaLabel() ||
-        !(params.enableFallback?.() ?? true);
-      return [skip, params.labelSource?.(), generatedLabelId()] as const;
-    },
-    ([skip, labelSource, generatedId]) => {
-      setFallbackAriaLabelledBy(skip ? undefined : getAriaLabelledBy(labelSource, generatedId));
+      untrack(() => {
+        if (!fallbackDisabled()) {
+          setFallbackAriaLabelledBy(
+            getAriaLabelledBy(params.labelSource?.(), generatedLabelId()),
+          );
+        }
+      });
     },
   );
 
   return () =>
     params.explicitAriaLabelledBy?.() ??
     (hasAriaLabel() ? undefined : params.labelId?.()) ??
-    fallbackAriaLabelledBy();
+    (fallbackDisabled() ? undefined : fallbackAriaLabelledBy());
 }
 
 function getAriaLabelledBy(labelSource?: LabelSource | null, generatedLabelId?: string) {

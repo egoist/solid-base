@@ -9,6 +9,16 @@ import type { HTMLProps } from '../types';
 import type { FieldControlRegistration } from '../field-register-control/createFieldControlRegistration';
 import type { StateSetter } from '../labelable-provider/LabelableContext';
 
+/**
+ * State a control derives from its value. Published with `registerControlState`, so the field
+ * reads it in the same flush as the value instead of having it written after the fact.
+ * An accessor returning `undefined` falls back to the state written with `setDirty`/`setFilled`.
+ */
+export interface FieldControlState {
+  dirty?: Accessor<boolean | undefined> | undefined;
+  filled?: Accessor<boolean | undefined> | undefined;
+}
+
 export interface FieldRootContextValue {
   /**
    * Whether the field is marked invalid by the app (`invalid` prop or `<Form errors>`).
@@ -28,6 +38,10 @@ export interface FieldRootContextValue {
   setDirty: (dirty: boolean) => void;
   setFilled: (filled: boolean) => void;
   setFocused: (focused: boolean) => void;
+  /**
+   * Publishes the value-derived state of the control. Returns the unregister function.
+   */
+  registerControlState: (state: FieldControlState) => () => void;
   /**
    * Identifies the control the focused state belongs to, so that disabling or unmounting a
    * different control in the same field can't clear it. Written through `createSetFieldFocused`.
@@ -72,6 +86,7 @@ export function createDefaultFieldRootContext(): FieldRootContextValue {
     setDirty: NOOP,
     setFilled: NOOP,
     setFocused: NOOP,
+    registerControlState: () => NOOP,
     focusOwnerRef: { current: undefined },
     validationMode: () => 'onSubmit',
     shouldValidateOnChange: () => false,

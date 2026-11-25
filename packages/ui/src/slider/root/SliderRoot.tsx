@@ -25,6 +25,7 @@ import {
   useFieldRootContext,
 } from '../../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
 import { getDefaultLabelId } from '../../utils/resolveAriaLabelledBy';
@@ -132,7 +133,9 @@ export function SliderRoot<Value extends number | readonly number[]>(
   const field = useFieldRootContext();
   const { validation } = field;
   const { labelId: fieldLabelId } = useLabelableContext();
-  const [labelId, setLabelId] = createSignal<string | undefined>(undefined);
+  // `Slider.Label` always takes the root's label id: derive it while a label is mounted.
+  const [labelCount, setLabelCount] = createSignal(0, { name: 'labelCount' });
+  const labelId = () => (labelCount() > 0 ? defaultLabelId() : undefined);
 
   const ariaLabelledby = () =>
     (componentProps['aria-labelledby'] as string | undefined) ?? fieldLabelId() ?? labelId();
@@ -181,7 +184,9 @@ export function SliderRoot<Value extends number | readonly number[]>(
   // We can't use the :active browser pseudo-classes.
   // - The active state isn't triggered when clicking on the rail.
   // - The active state isn't transferred when inversing a range slider.
-  const [active, setActiveState] = createSignal(-1);
+  const [activeState, setActiveState] = createSignal(-1, { name: 'active' });
+  // A disabled slider has no active thumb.
+  const active = () => (disabled() ? -1 : activeState());
   const [lastUsedThumbIndex, setLastUsedThumbIndex] = createSignal(-1);
   const [dragging, setDragging] = createSignal(false);
   const [indicatorPosition, setIndicatorPosition] = createSignal<
@@ -228,26 +233,17 @@ export function SliderRoot<Value extends number | readonly number[]>(
     value: fieldValue,
     enabled: () => !disabled(),
     name: () => componentProps.name,
+    dirty: () =>
+      !areFieldValuesEqual(
+        fieldValue(),
+        field.validityData().initialValue as number | readonly number[] | undefined,
+      ),
   });
 
-  createEffect(
-    fieldValue,
-    (value) => {
-      untrack(() => {
-        form.clearErrors(name());
-      });
-
-      const initialValue = untrack(() => field.validityData().initialValue) as
-        | number
-        | readonly number[]
-        | undefined;
-      // `validation.change` reads the dirty flag, so update dirty before validating.
-      field.setDirty(!areFieldValuesEqual(value, initialValue));
-
-      validation.change(value);
-    },
-    { defer: true },
-  );
+  createFieldValueChanged(fieldValue, (value) => {
+    form.clearErrors(name());
+    validation.change(value);
+  });
 
   function setValue(newValue: number | number[], details: SliderRoot.ChangeEventDetails) {
     if (Number.isNaN(newValue) || areValuesEqual(newValue, untrack(valueUnwrapped))) {
@@ -325,27 +321,21 @@ export function SliderRoot<Value extends number | readonly number[]>(
     );
   }
 
-  createEffect(
-    () => [disabled(), active()] as const,
-    ([isDisabled, activeIndex]) => {
-      if (!isDisabled) {
-        return;
-      }
+  createEffect(disabled, (isDisabled) => {
+    if (!isDisabled) {
+      return;
+    }
 
-      const slider = sliderRef.current;
-      const activeEl = activeElement(ownerDocument(slider));
-      if (contains(slider, activeEl)) {
-        // This is necessary because Firefox and Safari will keep focus
-        // on a disabled element:
-        // https://codesandbox.io/p/sandbox/mui-pr-22247-forked-h151h?file=/src/App.js
-        (activeEl as HTMLElement).blur();
-      }
-
-      if (activeIndex !== -1) {
-        setActive(-1);
-      }
-    },
-  );
+    const slider = sliderRef.current;
+    const activeEl = activeElement(ownerDocument(slider));
+    if (contains(slider, activeEl)) {
+      // This is necessary because Firefox and Safari will keep focus
+      // on a disabled element:
+      // https://codesandbox.io/p/sandbox/mui-pr-22247-forked-h151h?file=/src/App.js
+      // Blurring the thumb clears its active state.
+      (activeEl as HTMLElement).blur();
+    }
+  });
 
   const state: SliderRootState = extendFieldRootState(field.state, {
     get activeThumbIndex() {
@@ -447,7 +437,12 @@ export function SliderRoot<Value extends number | readonly number[]>(
     setActive,
     setDragging,
     setIndicatorPosition,
-    setLabelId: (next) => setLabelId(next as any),
+    registerLabel() {
+      setLabelCount((count) => count + 1);
+      return () => {
+        setLabelCount((count) => count - 1);
+      };
+    },
     setValue,
     state,
     get step() {

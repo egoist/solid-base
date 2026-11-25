@@ -256,6 +256,11 @@ export function createFieldValidation(params: CreateFieldValidationParameters): 
 
       // Only make `valueMissing` mark the field invalid if it's been changed
       // to reduce error noise.
+      // `dirty` is derived from the value: it is current even when the effect marking the
+      // field hasn't run yet in this flush.
+      if (params.state.dirty) {
+        params.markedDirtyRef.current = true;
+      }
       if (hasOnlyValueMissingError && !params.markedDirtyRef.current) {
         computedState.valid = true;
         computedState.valueMissing = false;

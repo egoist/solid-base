@@ -1,4 +1,4 @@
-import { createMemo, createSignal, omit, onSettled, Show } from 'solid-js';
+import { createEffect, createSignal, omit, onSettled, Show, untrack } from 'solid-js';
 import { isServer, type JSX } from '@solidjs/web';
 import { getParentNode, isHTMLElement, isLastTraversableNode } from '@floating-ui/utils/dom';
 import { ownerWindow } from '@egoist/solid-base-utils/owner';
@@ -53,22 +53,39 @@ export function TabsIndicator(componentProps: TabsIndicator.Props) {
     }),
   );
 
-  const measurement = createMemo<IndicatorMeasurement | null>(() => {
-    version();
+  // Layout is measured once the DOM updated (an effect), not while the graph computes: the
+  // active tab's position is read from the DOM, outside of the reactive graph.
+  const [measurement, setMeasurement] = createSignal<IndicatorMeasurement | null>(null, {
+    name: 'TabsIndicator.measurement',
+    equals: isSameMeasurement,
+  });
+
+  function getActiveTab() {
     const value = rootContext.value();
     const tabsListElement = listContext.tabsListElement();
-
     if (value == null || tabsListElement == null) {
       return null;
     }
+    return rootContext.getTabElementBySelectedValue(value);
+  }
 
-    const activeTab = rootContext.getTabElementBySelectedValue(value);
-    if (activeTab == null) {
-      return null;
-    }
+  function measure(): IndicatorMeasurement | null {
+    return untrack(() => {
+      const activeTab = getActiveTab();
+      const tabsListElement = listContext.tabsListElement();
+      return activeTab && tabsListElement ? measureActiveTab(activeTab, tabsListElement) : null;
+    });
+  }
 
-    return measureActiveTab(activeTab, tabsListElement);
-  });
+  createEffect(
+    () => {
+      version();
+      return getActiveTab();
+    },
+    () => {
+      setMeasurement(measure());
+    },
+  );
 
   const displayIndicator = () => {
     const current = measurement();
@@ -128,6 +145,23 @@ export function TabsIndicator(componentProps: TabsIndicator.Props) {
         <script nonce={csp.nonce} innerHTML={prehydrationScript} />
       ) : null}
     </Show>
+  );
+}
+
+function isSameMeasurement(a: IndicatorMeasurement | null, b: IndicatorMeasurement | null) {
+  if (a === b) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return false;
+  }
+  return (
+    a.position.left === b.position.left &&
+    a.position.right === b.position.right &&
+    a.position.top === b.position.top &&
+    a.position.bottom === b.position.bottom &&
+    a.size.width === b.size.width &&
+    a.size.height === b.size.height
   );
 }
 

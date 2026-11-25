@@ -35,6 +35,7 @@ import {
 } from '../../internals/field-root-context/FieldRootContext';
 import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFieldItemContext } from '../../field/item/FieldItemContext';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
@@ -179,6 +180,9 @@ export function CheckboxRoot(componentProps: CheckboxRoot.Props) {
     value: checked,
     enabled: () => !groupContext && !disabled(),
     name: () => componentProps.name,
+    // Inside a group, the group derives the field state from its value.
+    dirty: groupContext ? undefined : () => checked() !== field.validityData().initialValue,
+    filled: groupContext ? undefined : checked,
   });
 
   const [inputElement, setInputElement] = createSignal<HTMLInputElement | null>(null);
@@ -206,31 +210,19 @@ export function CheckboxRoot(componentProps: CheckboxRoot.Props) {
 
   createEffect(
     () => [inputElement(), computedIndeterminate(), checked()] as const,
-    ([element, isIndeterminate, isChecked]) => {
+    ([element, isIndeterminate]) => {
       if (element) {
         // Re-assert on `checked` changes too: clicking the input natively resets `indeterminate`.
         element.indeterminate = isIndeterminate;
-      }
-      // Inside a group, the group derives the filled state from its value.
-      if (!groupContext) {
-        field.setFilled(isChecked);
       }
     },
   );
 
   if (!groupContext) {
-    createEffect(
-      checked,
-      (isChecked) => {
-        untrack(() => {
-          form.clearErrors(name());
-          field.setDirty(isChecked !== field.validityData().initialValue);
-        });
-
-        validation.change(isChecked);
-      },
-      { defer: true },
-    );
+    createFieldValueChanged(checked, (isChecked) => {
+      form.clearErrors(name());
+      validation.change(isChecked);
+    });
   }
 
   createEffect(

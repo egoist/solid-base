@@ -43,24 +43,43 @@ export function TabsRoot(componentProps: TabsRoot.Props) {
   const hasExplicitDefaultValueProp = initialDefaultValue !== undefined;
   const defaultValue = hasExplicitDefaultValueProp ? initialDefaultValue : 0;
 
-  // Values are boxed: tab values can be functions, which signals would treat as updaters.
-  const [internalValue, setInternalValue] = createSignal<{ current: TabsTab.Value }>({
-    current: defaultValue,
-  });
-
   const isControlled = () => componentProps.value !== undefined;
-  const value = (): TabsTab.Value =>
-    componentProps.value !== undefined ? componentProps.value : internalValue().current;
-  const setValue = (next: TabsTab.Value) => setInternalValue({ current: next });
-
   const orientation = () => componentProps.orientation ?? 'horizontal';
 
-  const [tabMap, setTabMap] = createSignal<TabMap>(new Map());
-  const [mountedTabPanels, setMountedTabPanels] = createSignal(
-    new Map<TabsTab.Value, string>(),
+  // The tabs register in this list (through `<Tabs.List>`), the panels in `panelList`.
+  const tabList = createCompositeList<TabsTab.Metadata>();
+  const panelList = createCompositeList<TabsPanel.Metadata>();
+  const tabMap: () => TabMap = tabList.map;
+
+  // The uncontrolled selection. It's a writable memo: user selections write it, and it falls
+  // back on its own when the selected tab is missing or disabled (uncontrolled roots own the
+  // automatic fallback; controlled roots keep the exact value supplied by the parent).
+  const [selection, setSelection] = createSignal<Selection>(
+    (prev) => {
+      const state = prev ?? {
+        value: defaultValue,
+        notification: null,
+        didRegisterTabs: false,
+        lastKnownTabElement: undefined,
+        // An explicit defaultValue can intentionally point at a disabled tab on mount.
+        // Once that selection becomes valid, later disabled states should fall back.
+        honorDisabledDefaultValue: hasExplicitDefaultValueProp,
+        // Implicit uncontrolled selections are still automatic changes, so notify
+        // once when the tabs first register. Explicit defaults are treated as user-owned.
+        notifyInitialValueChange: !hasExplicitDefaultValueProp,
+      };
+      const map = tabMap();
+      if (isControlled()) {
+        return state;
+      }
+      return resolveSelection(state, map, initialDefaultValue);
+    },
+    { name: 'TabsRoot.selection', equals: isSameSelection },
   );
 
-  const panelList = createCompositeList<TabsPanel.Metadata>();
+  const selectedValue = createMemo(() => selection().value);
+  const value = (): TabsTab.Value =>
+    componentProps.value !== undefined ? componentProps.value : selectedValue();
 
   function getTabElementBySelectedValue(selectedValue: TabsTab.Value): HTMLElement | null {
     return findTabElement(tabMap(), selectedValue);
@@ -69,21 +88,22 @@ export function TabsRoot(componentProps: TabsRoot.Props) {
   // The value the current activation direction was computed from. Plain variables: they're a
   // snapshot of the last committed selection, not reactive state.
   let previousValue: TabsTab.Value = UNSET;
-  let resetActivationDirection = false;
+  let consumedNotification: SelectionNotification | null = null;
 
   const tabActivationDirection = createMemo<TabsTab.ActivationDirection>((previous) => {
     const currentValue = value();
     const map = tabMap();
     const currentOrientation = orientation();
+    const notification = isControlled() ? null : selection().notification;
 
     if (previousValue === UNSET) {
       previousValue = currentValue;
       return 'none';
     }
 
-    if (resetActivationDirection) {
+    if (notification?.fallback && notification !== consumedNotification) {
       // Automatic fallbacks are not directional transitions.
-      resetActivationDirection = false;
+      consumedNotification = notification;
       previousValue = currentValue;
       return 'none';
     }
@@ -127,155 +147,25 @@ export function TabsRoot(componentProps: TabsRoot.Props) {
       return;
     }
 
-    setValue(newValue);
-  }
-
-  function notifyAutomaticValueChange(
-    nextValue: TabsTab.Value,
-    reason: TabsRoot.ChangeEventReason,
-  ) {
-    componentProps.onValueChange?.(
-      nextValue,
-      createChangeEventDetails(reason, undefined, undefined, {
-        activationDirection: 'none' as TabsTab.ActivationDirection,
-      }),
+    const map = tabMap();
+    setSelection((prev) =>
+      resolveSelection({ ...prev, value: newValue, notification: null }, map, initialDefaultValue),
     );
   }
 
-  function registerMountedTabPanel(panelValue: TabsTab.Value, panelId: string) {
-    setMountedTabPanels((prev) => {
-      const next = new Map(prev);
-      next.set(panelValue, panelId);
-      return next;
-    });
-
-    return () => {
-      setMountedTabPanels((prev) => {
-        // Another panel with the same value took ownership in the meantime;
-        // leave its registration in place.
-        if (prev.get(panelValue) !== panelId) {
-          return prev;
-        }
-
-        const next = new Map(prev);
-        next.delete(panelValue);
-        return next;
-      });
-    };
-  }
-
-  // Implicit uncontrolled selections are still automatic changes, so notify
-  // once when the tabs first register. Explicit defaults are treated as user-owned.
-  let shouldNotifyInitialValueChange = !hasExplicitDefaultValueProp;
-  // An explicit defaultValue can intentionally point at a disabled tab on mount.
-  // Once that selection becomes valid, later disabled states should fall back.
-  let shouldHonorDisabledDefaultValue = hasExplicitDefaultValueProp;
-  let didRegisterTabs = false;
-  let lastKnownTabElement: HTMLElement | undefined;
-
-  // Uncontrolled roots own automatic fallback. Controlled roots keep the exact
-  // value supplied by the parent, even when that tab is disabled or missing.
+  // Report automatic selections (fallbacks and the implicit initial selection).
   createEffect(
-    () => {
-      if (isControlled()) {
-        return null;
-      }
-
-      const map = tabMap();
-      const currentValue = value();
-      let selected: CompositeMetadata<TabsTab.Metadata> | undefined;
-      let firstEnabledTabValue: TabsTab.Value | undefined;
-      let hasFirstEnabledTab = false;
-
-      for (const metadata of map.values()) {
-        if (selected === undefined && metadata.value === currentValue) {
-          selected = metadata;
-        }
-        if (!hasFirstEnabledTab && !metadata.disabled) {
-          hasFirstEnabledTab = true;
-          firstEnabledTabValue = metadata.value;
-        }
-      }
-
-      return {
-        map,
-        value: currentValue,
-        selectedFound: selected != null,
-        selectedDisabled: selected?.disabled ?? false,
-        firstEnabledTabValue,
-      };
-    },
-    (snapshot) => {
-      if (snapshot == null) {
+    () => (isControlled() ? null : selection().notification),
+    (notification) => {
+      if (!notification) {
         return;
       }
-
-      const { map, value: currentValue, selectedFound, selectedDisabled } = snapshot;
-
-      function commitAutomaticValueChange(
-        fallbackValue: TabsTab.Value,
-        fallbackReason: TabsRoot.ChangeEventReason,
-      ) {
-        setValue(fallbackValue);
-        // Automatic fallbacks are not directional transitions; reset the direction
-        // alongside the value.
-        previousValue = fallbackValue;
-        resetActivationDirection = true;
-        notifyAutomaticValueChange(fallbackValue, fallbackReason);
-        // Mark the initial notification as delivered only after the consumer callback returns.
-        shouldNotifyInitialValueChange = false;
-      }
-
-      if (map.size === 0) {
-        if (didRegisterTabs && currentValue !== null && !lastKnownTabElement?.isConnected) {
-          commitAutomaticValueChange(null, REASONS.missing);
-        }
-        return;
-      }
-
-      didRegisterTabs = true;
-      lastKnownTabElement = map.keys().next().value;
-
-      const selectionIsMissing = !selectedFound && currentValue !== null;
-
-      if (!selectedDisabled && currentValue === initialDefaultValue) {
-        shouldHonorDisabledDefaultValue = false;
-      }
-
-      if (
-        shouldHonorDisabledDefaultValue &&
-        selectedDisabled &&
-        currentValue === initialDefaultValue
-      ) {
-        return;
-      }
-
-      if (selectedDisabled || selectionIsMissing) {
-        const fallbackValue = snapshot.firstEnabledTabValue ?? null;
-
-        if (currentValue === fallbackValue) {
-          // Already at the fallback value; no commit or notification needed,
-          // but record that the implicit-initial transition has resolved.
-          shouldNotifyInitialValueChange = false;
-          return;
-        }
-
-        let fallbackReason: TabsRoot.ChangeEventReason = REASONS.missing;
-
-        if (shouldNotifyInitialValueChange) {
-          fallbackReason = REASONS.initial;
-        } else if (selectedDisabled) {
-          fallbackReason = REASONS.disabled;
-        }
-
-        commitAutomaticValueChange(fallbackValue, fallbackReason);
-        return;
-      }
-
-      if (shouldNotifyInitialValueChange && selectedFound) {
-        notifyAutomaticValueChange(currentValue, REASONS.initial);
-        shouldNotifyInitialValueChange = false;
-      }
+      componentProps.onValueChange?.(
+        notification.value,
+        createChangeEventDetails(notification.reason, undefined, undefined, {
+          activationDirection: 'none' as TabsTab.ActivationDirection,
+        }),
+      );
     },
   );
 
@@ -293,10 +183,16 @@ export function TabsRoot(componentProps: TabsRoot.Props) {
       return undefined;
     },
     getTabPanelIdByValue(tabValue) {
-      return mountedTabPanels().get(tabValue);
+      // Panels are registered while they're rendered. The last one sharing a value owns it.
+      let panelId: string | undefined;
+      for (const metadata of panelList.map().values()) {
+        if (metadata.value === tabValue) {
+          panelId = metadata.id;
+        }
+      }
+      return panelId;
     },
-    registerMountedTabPanel,
-    setTabMap: (map) => setTabMap(map),
+    tabList,
     tabActivationDirection,
   };
 
@@ -320,6 +216,128 @@ export function TabsRoot(componentProps: TabsRoot.Props) {
       </CompositeList>
     </TabsRootContext>
   );
+}
+
+interface SelectionNotification {
+  value: TabsTab.Value;
+  reason: TabsRoot.ChangeEventReason;
+  /** Whether the value changed (a fallback), as opposed to confirming the initial value. */
+  fallback: boolean;
+}
+
+interface Selection {
+  value: TabsTab.Value;
+  /** The automatic change to report through `onValueChange`, if the last update was one. */
+  notification: SelectionNotification | null;
+  didRegisterTabs: boolean;
+  lastKnownTabElement: HTMLElement | undefined;
+  honorDisabledDefaultValue: boolean;
+  notifyInitialValueChange: boolean;
+}
+
+function isSameSelection(a: Selection, b: Selection) {
+  return (
+    a.value === b.value &&
+    a.notification === b.notification &&
+    a.didRegisterTabs === b.didRegisterTabs &&
+    a.lastKnownTabElement === b.lastKnownTabElement &&
+    a.honorDisabledDefaultValue === b.honorDisabledDefaultValue &&
+    a.notifyInitialValueChange === b.notifyInitialValueChange
+  );
+}
+
+/**
+ * Applies the automatic fallback of uncontrolled roots to a selection: when the selected tab is
+ * missing or disabled, the first enabled tab (or `null`) is selected instead.
+ */
+function resolveSelection(
+  state: Selection,
+  map: TabMap,
+  initialDefaultValue: TabsTab.Value,
+): Selection {
+  const currentValue = state.value;
+  let next: Selection = state.notification ? { ...state, notification: null } : state;
+
+  function commitAutomaticValueChange(
+    fallbackValue: TabsTab.Value,
+    reason: TabsRoot.ChangeEventReason,
+  ): Selection {
+    return {
+      ...next,
+      value: fallbackValue,
+      notification: { value: fallbackValue, reason, fallback: true },
+      notifyInitialValueChange: false,
+    };
+  }
+
+  if (map.size === 0) {
+    if (state.didRegisterTabs && currentValue !== null && !state.lastKnownTabElement?.isConnected) {
+      return commitAutomaticValueChange(null, REASONS.missing);
+    }
+    return next;
+  }
+
+  let selected: CompositeMetadata<TabsTab.Metadata> | undefined;
+  let firstEnabledTabValue: TabsTab.Value | undefined;
+  let hasFirstEnabledTab = false;
+
+  for (const metadata of map.values()) {
+    if (selected === undefined && metadata.value === currentValue) {
+      selected = metadata;
+    }
+    if (!hasFirstEnabledTab && !metadata.disabled) {
+      hasFirstEnabledTab = true;
+      firstEnabledTabValue = metadata.value;
+    }
+  }
+
+  const selectedFound = selected != null;
+  const selectedDisabled = selected?.disabled ?? false;
+  const lastKnownTabElement: HTMLElement | undefined = map.keys().next().value;
+
+  if (!next.didRegisterTabs || next.lastKnownTabElement !== lastKnownTabElement) {
+    next = { ...next, didRegisterTabs: true, lastKnownTabElement };
+  }
+
+  if (!selectedDisabled && currentValue === initialDefaultValue && next.honorDisabledDefaultValue) {
+    next = { ...next, honorDisabledDefaultValue: false };
+  }
+
+  if (next.honorDisabledDefaultValue && selectedDisabled && currentValue === initialDefaultValue) {
+    return next;
+  }
+
+  const selectionIsMissing = !selectedFound && currentValue !== null;
+
+  if (selectedDisabled || selectionIsMissing) {
+    const fallbackValue = firstEnabledTabValue ?? null;
+
+    if (currentValue === fallbackValue) {
+      // Already at the fallback value; no commit or notification needed,
+      // but record that the implicit-initial transition has resolved.
+      return next.notifyInitialValueChange ? { ...next, notifyInitialValueChange: false } : next;
+    }
+
+    let fallbackReason: TabsRoot.ChangeEventReason = REASONS.missing;
+
+    if (next.notifyInitialValueChange) {
+      fallbackReason = REASONS.initial;
+    } else if (selectedDisabled) {
+      fallbackReason = REASONS.disabled;
+    }
+
+    return commitAutomaticValueChange(fallbackValue, fallbackReason);
+  }
+
+  if (next.notifyInitialValueChange && selectedFound) {
+    return {
+      ...next,
+      notification: { value: currentValue, reason: REASONS.initial, fallback: false },
+      notifyInitialValueChange: false,
+    };
+  }
+
+  return next;
 }
 
 function findTabElement(tabMap: TabMap, value: TabsTab.Value): HTMLElement | null {

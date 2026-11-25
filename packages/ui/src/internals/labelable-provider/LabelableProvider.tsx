@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createMemo, createSignal, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { mergeProps } from '../../merge-props/mergeProps';
 import { createBaseUiId } from '../baseUiId';
@@ -19,7 +19,30 @@ export function LabelableProvider(props: LabelableProvider.Props) {
   // `null` deliberately suppresses the label's `for`.
   const [controlId, setControlId] = createSignal<string | null | undefined>(defaultId());
   const [labelId, setLabelId] = createSignal<string | undefined>(undefined);
-  const [messageIds, setMessageIds] = createSignal<string[]>([]);
+  const [staticMessageIds, setMessageIds] = createSignal<string[]>([]);
+  const [messageIdSources, setMessageIdSources] = createSignal<Array<Accessor<string | undefined>>>(
+    [],
+  );
+  const messageIds = createMemo(
+    () => {
+      const ids = staticMessageIds().slice();
+      for (const source of messageIdSources()) {
+        const id = source();
+        if (id && !ids.includes(id)) {
+          ids.push(id);
+        }
+      }
+      return ids;
+    },
+    { name: 'LabelableProvider.messageIds', equals: areIdsEqual },
+  );
+
+  function registerMessageId(id: Accessor<string | undefined>) {
+    setMessageIdSources((sources) => [...sources, id]);
+    return () => {
+      setMessageIdSources((sources) => sources.filter((source) => source !== id));
+    };
+  }
 
   const registrations = new Map<symbol, string | null>();
 
@@ -81,10 +104,15 @@ export function LabelableProvider(props: LabelableProvider.Props) {
     setLabelId: (next) => setLabelId(next as any),
     messageIds,
     setMessageIds: (next) => setMessageIds(next as any),
+    registerMessageId,
     getDescriptionProps,
   };
 
   return <LabelableContext value={context}>{props.children}</LabelableContext>;
+}
+
+function areIdsEqual(a: string[], b: string[]) {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
 }
 
 export interface LabelableProviderState {}

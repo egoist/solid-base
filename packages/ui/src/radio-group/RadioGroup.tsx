@@ -12,6 +12,7 @@ import {
   useFieldRootContext,
 } from '../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../internals/field-register-control/createFieldValueChanged';
 import { fieldValidityMapping } from '../internals/field-constants/constants';
 import type { FieldRootState } from '../field/root/FieldRoot';
 import { isEligibleInput } from '../field/root/createFieldValidation';
@@ -183,26 +184,19 @@ export function RadioGroup<Value>(componentProps: RadioGroup.Props<Value>) {
     getValue: getFormValue,
     enabled: () => !disabled(),
     name: () => componentProps.name,
+    dirty: () => (checkedValue() ?? null) !== field.validityData().initialValue,
+    filled: () => checkedValue() != null,
   });
 
-  createEffect(
-    checkedValue,
-    (value) => {
-      untrack(() => {
-        form.clearErrors(name());
-        field.setDirty(value !== field.validityData().initialValue);
-      });
-      field.setFilled(value != null);
+  createFieldValueChanged(checkedValue, (value) => {
+    form.clearErrors(name());
+    validation.change(value);
 
-      validation.change(value);
-
-      const fallbackInput = firstEnabledInput;
-      if (value == null && fallbackInput && !fallbackInput.disabled) {
-        setInputRef(fallbackInput);
-      }
-    },
-    { defer: true },
-  );
+    const fallbackInput = firstEnabledInput;
+    if (value == null && fallbackInput && !fallbackInput.disabled) {
+      setInputRef(fallbackInput);
+    }
+  });
 
   const state: RadioGroupState = extendFieldRootState(field.state, {
     get disabled() {

@@ -1,4 +1,4 @@
-import { omit } from 'solid-js';
+import { omit, onSettled } from 'solid-js';
 import { isHTMLElement } from '@floating-ui/utils/dom';
 import {
   createLabel,
@@ -40,9 +40,10 @@ export function SliderLabel(componentProps: SliderLabel.Props) {
     }
   }
 
+  onSettled(() => context.registerLabel());
+
   const labelProps = createLabel({
     id: () => context.rootLabelId,
-    setLabelId: context.setLabelId,
     focusControl,
   });
 

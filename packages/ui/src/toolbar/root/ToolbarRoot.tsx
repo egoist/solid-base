@@ -1,11 +1,11 @@
-import { createMemo, createSignal, omit } from 'solid-js';
+import { createMemo, omit } from 'solid-js';
 import type {
   BaseUIComponentProps,
   HTMLProps,
   Orientation as BaseOrientation,
 } from '../../internals/types';
 import { CompositeRoot } from '../../internals/composite/root/CompositeRoot';
-import type { CompositeMetadata } from '../../internals/composite/list/CompositeList';
+import { createCompositeList } from '../../internals/composite/list/CompositeList';
 import { ToolbarRootContext, type ToolbarRootContextValue } from './ToolbarRootContext';
 
 /**
@@ -28,21 +28,23 @@ export function ToolbarRoot(componentProps: ToolbarRoot.Props) {
   const disabled = () => componentProps.disabled ?? false;
   const orientation = () => componentProps.orientation ?? 'horizontal';
 
-  const [itemMap, setItemMap] = createSignal(
-    new Map<HTMLElement, CompositeMetadata<Partial<ToolbarRoot.ItemMetadata>>>(),
-  );
+  // The items register in this list (provided by the composite root).
+  const itemList = createCompositeList<Partial<ToolbarRoot.ItemMetadata>>();
 
-  const disabledIndices = createMemo(() => {
-    const output: number[] = [];
-    for (const itemMetadata of itemMap().values()) {
-      // Only items that are disabled and not focusable when disabled
-      // are removed from roving focus.
-      if (itemMetadata.disabled && !itemMetadata.focusableWhenDisabled) {
-        output.push(itemMetadata.index);
+  const disabledIndices = createMemo(
+    () => {
+      const output: number[] = [];
+      for (const itemMetadata of itemList.map().values()) {
+        // Only items that are disabled and not focusable when disabled
+        // are removed from roving focus.
+        if (itemMetadata.disabled && !itemMetadata.focusableWhenDisabled) {
+          output.push(itemMetadata.index);
+        }
       }
-    }
-    return output;
-  });
+      return output;
+    },
+    { equals: areIndicesEqual },
+  );
 
   const contextValue: ToolbarRootContextValue = {
     get disabled() {
@@ -79,11 +81,15 @@ export function ToolbarRoot(componentProps: ToolbarRoot.Props) {
         props={[defaultProps, elementProps]}
         disabledIndices={disabledIndices()}
         loopFocus={componentProps.loopFocus}
-        onMapChange={(map) => setItemMap(map)}
+        list={itemList}
         orientation={orientation()}
       />
     </ToolbarRootContext>
   );
+}
+
+function areIndicesEqual(a: number[], b: number[]) {
+  return a.length === b.length && a.every((index, i) => index === b[i]);
 }
 
 export interface ToolbarRootItemMetadata {

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, flush, Show, untrack } from 'solid-js';
+import { createSignal, flush, Show, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { Field } from '..';
@@ -18,6 +18,7 @@ import {
 } from '../../internals/field-root-context/FieldRootContext';
 import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
 import { createLabelableId } from '../../internals/labelable-provider/createLabelableId';
@@ -82,21 +83,14 @@ function Toggle(props: { name?: string; defaultChecked?: boolean; 'data-testid'?
     value: checked,
     enabled: () => !disabled(),
     name: () => props.name,
+    dirty: () => checked() !== field.validityData().initialValue,
+    filled: checked,
   });
 
-  createEffect(checked, field.setFilled);
-
-  createEffect(
-    checked,
-    (value) => {
-      untrack(() => {
-        form.clearErrors(field.name() ?? props.name);
-        field.setDirty(value !== field.validityData().initialValue);
-      });
-      validation.change(value);
-    },
-    { defer: true },
-  );
+  createFieldValueChanged(checked, (value) => {
+    form.clearErrors(field.name() ?? props.name);
+    validation.change(value);
+  });
 
   const setFocused = createSetFieldFocused(disabled, () => rootRef.current);
 

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, omit, onCleanup, untrack } from 'solid-js';
+import { createEffect, omit, onCleanup } from 'solid-js';
 import { createBaseUiId } from '../../internals/baseUiId';
 import type { StateAttributesMapping } from '../../internals/getStateAttributesProps';
 import { transitionStatusMapping } from '../../internals/stateAttributesMapping';
@@ -39,66 +39,59 @@ export function TabsPanel(componentProps: TabsPanel.Props) {
   const hidden = () => !mounted();
   const shouldRender = () => keepMounted() || mounted();
 
-  const [panelElement, setPanelElement] = createSignal<HTMLElement | null>(null);
-  // A plain copy for imperative reads (animation tracking).
-  let panelElementForAnimations: HTMLElement | null = null;
+  // Registered in the root's list while rendered: it computes the panel index and associates
+  // the panel with its tab (`aria-controls`). A plain variable: the ref runs inside the effect
+  // applying the element's props, which read `index()`. The list publishes the registration in
+  // its own (microtask) update.
+  let panelElement: HTMLElement | null = null;
+  const metadata: TabsPanel.Metadata = {
+    get id() {
+      return id();
+    },
+    get value() {
+      return componentProps.value;
+    },
+  };
 
-  // Registers the panel in the root's list to compute its index. The element is unregistered
-  // as soon as it leaves the DOM, so unmounted panels don't take an index.
-  function panelRef(element: HTMLElement) {
-    const previous = untrack(panelElement);
-    if (previous === element) {
-      return;
+  function unregisterPanel() {
+    if (panelElement) {
+      panelList?.unregister(panelElement);
+      panelElement = null;
     }
-    if (previous) {
-      panelList?.unregister(previous);
-    }
-    panelList?.register(element, {});
-    panelElementForAnimations = element;
-    setPanelElement(element);
   }
 
-  createEffect(shouldRender, (render) => {
-    if (render) {
+  function panelRef(element: HTMLElement) {
+    if (panelElement === element) {
       return;
     }
-    const element = untrack(panelElement);
-    if (element) {
-      panelList?.unregister(element);
-      panelElementForAnimations = null;
-      setPanelElement(null);
+    unregisterPanel();
+    panelList?.register(element, { metadata });
+    panelElement = element;
+  }
+
+  // Unmounted panels don't take an index.
+  createEffect(shouldRender, (render) => {
+    if (!render) {
+      unregisterPanel();
     }
   });
 
-  onCleanup(() => {
-    const element = untrack(panelElement);
-    if (element) {
-      panelList?.unregister(element);
-    }
-  });
+  onCleanup(unregisterPanel);
 
-  const index = () => panelList?.indexOf(panelElement()) ?? -1;
+  const index = () => {
+    const map = panelList?.map();
+    return (panelElement && map?.get(panelElement)?.index) ?? -1;
+  };
 
   // Only enabled while closed: reopening restarts the primitive, which aborts a pending unmount.
   createOpenChangeComplete({
     enabled: () => !open(),
     open,
-    element: () => panelElementForAnimations,
+    element: () => panelElement,
     onComplete() {
       setMounted(false);
     },
   });
-
-  createEffect(
-    () => [hidden(), keepMounted(), componentProps.value, id()] as const,
-    ([isHidden, isKeptMounted, panelValue, panelId]) => {
-      if (isHidden && !isKeptMounted) {
-        return undefined;
-      }
-
-      return rootContext.registerMountedTabPanel(panelValue, panelId);
-    },
-  );
 
   const state: TabsPanelState = {
     get hidden() {

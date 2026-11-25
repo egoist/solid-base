@@ -1,4 +1,4 @@
-import { createEffect, onCleanup, untrack, type Accessor } from 'solid-js';
+import { createEffect, createSignal, onCleanup, untrack, type Accessor } from 'solid-js';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import { getCombinedFieldValidityData } from '../../field/utils/getCombinedFieldValidityData';
 import type { FormContextValue } from '../form-context/FormContext';
@@ -36,6 +36,9 @@ export interface CreateFieldControlRegistrationParameters {
   invalid: Accessor<boolean>;
   markedDirtyRef: RefObject<boolean>;
   name: Accessor<string | undefined>;
+  /**
+   * Publishes the name of the registered control, used when the field has no `name`.
+   */
   setRegisteredFieldName: (name: string | undefined) => void;
   registeredFieldIdRef: RefObject<string | undefined>;
   setValidityData: StateSetter<FieldValidityData>;
@@ -51,6 +54,10 @@ export interface CreateFieldControlRegistrationReturnValue {
    * Registers (or unregisters, with `undefined`) the control owned by `source`.
    */
   register: (source: symbol, registration: FieldControlRegistration | undefined) => void;
+  /**
+   * Whether the field captured the initial value of a control (the baseline of `dirty`).
+   */
+  initialValueCaptured: Accessor<boolean>;
 }
 
 /**
@@ -64,7 +71,9 @@ export function createFieldControlRegistration(
 
   let activeSource: symbol | null = null;
   let registration: FieldControlRegistration | null = null;
-  let initialValueCaptured = false;
+  const [initialValueCaptured, setInitialValueCaptured] = createSignal(false, {
+    name: 'initialValueCaptured',
+  });
 
   function getValueForForm() {
     if (!registration) {
@@ -125,11 +134,11 @@ export function createFieldControlRegistration(
   // more than once would turn whichever value the control happens to hold at that point into the
   // initial value. Consumers that want a fresh baseline remount `<Field.Root>` itself.
   function captureInitialValue(current: FieldControlRegistration) {
-    if (initialValueCaptured) {
+    if (untrack(initialValueCaptured)) {
       return;
     }
 
-    initialValueCaptured = true;
+    setInitialValueCaptured(true);
     const initialValue = getRegistrationValue(current);
 
     params.setValidityData((prev) =>
@@ -140,11 +149,10 @@ export function createFieldControlRegistration(
   // Keep the registry entry in sync with the field name, external invalidity and validity data.
   createEffect(
     () => [params.name(), params.invalid(), params.validityData()] as const,
-    ([name]) => {
+    () => {
       if (!registration?.id) {
         return;
       }
-      params.setRegisteredFieldName(name ? undefined : registration.name);
       writeEntry(registration, registration.id);
     },
   );
@@ -178,9 +186,8 @@ export function createFieldControlRegistration(
 
     activeSource = source;
     registration = next;
-    if (!params.name()) {
-      params.setRegisteredFieldName(next.name);
-    }
+    // The field's own `name` takes precedence where the registered name is read.
+    params.setRegisteredFieldName(next.name);
     params.registeredFieldIdRef.current = next.id;
 
     if (previousId && previousId !== next.id) {
@@ -191,5 +198,5 @@ export function createFieldControlRegistration(
     refreshRegistration();
   }
 
-  return { validate, register };
+  return { validate, register, initialValueCaptured };
 }

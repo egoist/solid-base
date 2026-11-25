@@ -3,7 +3,6 @@ import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import type { Orientation } from '../../internals/types';
 import type { CompositeListContextValue, CompositeMetadata } from '../../internals/composite';
 import type { FieldValidation } from '../../field/root/createFieldValidation';
-import type { StateSetter } from '../../internals/labelable-provider/LabelableContext';
 import type { ThumbMetadata } from '../thumb/SliderThumb';
 import type { SliderRoot, SliderRootState } from './SliderRoot';
 
@@ -88,7 +87,10 @@ export interface SliderRootContext {
   setIndicatorPosition: (
     updater: (prev: readonly (number | undefined)[]) => (number | undefined)[],
   ) => void;
-  setLabelId: StateSetter<string | undefined>;
+  /**
+   * Registers a mounted `Slider.Label` (which takes `rootLabelId`). Returns the unregister function.
+   */
+  registerLabel: () => () => void;
   /**
    * Applies a new value through `onValueChange` for keyboard, input, track-press,
    * and drag interactions. Returns `true` when the value was applied, or `false`

@@ -1,9 +1,13 @@
-import { createEffect, createSignal, omit } from 'solid-js';
+import { createEffect, createMemo, createSignal, omit } from 'solid-js';
+import { ownerDocument } from '@egoist/solid-base-utils/owner';
+import { activeElement, contains } from '@egoist/solid-base-utils/shadowDom';
 import type { RefProp } from '@egoist/solid-base-utils/refs';
 import { EMPTY_ARRAY } from '@egoist/solid-base-utils/empty';
 import type { BaseUIComponentProps, HTMLProps } from '../../internals/types';
 import type { TabsRootState } from '../root/TabsRoot';
+import type { TabsTab } from '../tab/TabsTab';
 import { CompositeRoot } from '../../internals/composite/root/CompositeRoot';
+import type { CompositeMetadata } from '../../internals/composite/list/CompositeList';
 import { tabsStateAttributesMapping } from '../root/stateAttributesMapping';
 import { useTabsRootContext } from '../root/TabsRootContext';
 import { TabsListContext } from './TabsListContext';
@@ -27,8 +31,32 @@ export function TabsList(componentProps: TabsList.Props) {
 
   const rootContext = useTabsRootContext();
 
-  const [highlightedTabIndex, setHighlightedTabIndex] = createSignal(0);
   const [tabsListElement, setTabsListElement] = createSignal<HTMLElement | null>(null);
+
+  // The highlight follows the active tab when the value changes (e.g. externally, in controlled
+  // mode). It doesn't follow disabled tabs, which would interfere with keyboard navigation, nor
+  // override the roving focus highlight while focus is within the list.
+  const activeTabIndex = createMemo(() => {
+    const value = rootContext.value();
+    const listElement = tabsListElement();
+    let activeTab: CompositeMetadata<TabsTab.Metadata> | undefined;
+    for (const metadata of rootContext.tabList.map().values()) {
+      if (metadata.value === value) {
+        activeTab = metadata;
+        break;
+      }
+    }
+    if (!activeTab || activeTab.disabled) {
+      return undefined;
+    }
+    if (listElement != null) {
+      const activeEl = activeElement(ownerDocument(listElement));
+      if (activeEl && contains(listElement, activeEl)) {
+        return undefined;
+      }
+    }
+    return activeTab.index;
+  });
 
   const indicatorUpdateListeners = new Set<() => void>();
   const tabResizeObserverElements = new Set<HTMLElement>();
@@ -115,12 +143,11 @@ export function TabsList(componentProps: TabsList.Props) {
         ]}
         props={[defaultProps, elementProps]}
         stateAttributesMapping={tabsStateAttributesMapping}
-        highlightedIndex={highlightedTabIndex()}
+        list={rootContext.tabList}
+        syncHighlightedIndex={activeTabIndex()}
         enableHomeAndEndKeys
         loopFocus={componentProps.loopFocus ?? true}
         orientation={rootContext.orientation()}
-        onHighlightedIndexChange={setHighlightedTabIndex}
-        onMapChange={rootContext.setTabMap}
         disabledIndices={EMPTY_ARRAY}
       />
     </TabsListContext>

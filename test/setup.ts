@@ -15,12 +15,14 @@ if (process.env.ATTRIBUTION === 'on') {
  */
 const diagnostics: string[] = [];
 const DIAGNOSTIC_PATTERN = /\[[A-Z][A-Z0-9_]{3,}\]/;
+// Timing hints depend on machine load (jsdom's first style computation is slow), not on code.
+const IGNORED_DIAGNOSTICS = /\[HOT_SCOPE_TIME\]/;
 
 for (const method of ['warn', 'error'] as const) {
   const original = console[method].bind(console);
   console[method] = (...args: unknown[]) => {
     const message = args.map((arg) => (arg instanceof Error ? arg.message : String(arg))).join(' ');
-    if (DIAGNOSTIC_PATTERN.test(message)) {
+    if (DIAGNOSTIC_PATTERN.test(message) && !IGNORED_DIAGNOSTICS.test(message)) {
       diagnostics.push(message);
     }
     original(...args);

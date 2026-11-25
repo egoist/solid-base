@@ -1,7 +1,11 @@
-import { omit } from 'solid-js';
+import { omit, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import type { RefProp } from '@egoist/solid-base-utils/refs';
-import { CompositeList, type CompositeMetadata } from '../list/CompositeList';
+import {
+  CompositeList,
+  type CompositeListContextValue,
+  type CompositeMetadata,
+} from '../list/CompositeList';
 import { createCompositeRoot, type CompositeOnLoop } from './createCompositeRoot';
 import { CompositeRootContext, type CompositeRootContextValue } from './CompositeRootContext';
 import { renderElement, type RenderElementComponentProps } from '../../renderElement';
@@ -33,6 +37,9 @@ export function CompositeRoot<State extends Record<string, any>>(
     direction,
     disabledIndices: () => componentProps.disabledIndices,
     modifierKeys: () => componentProps.modifierKeys,
+    syncHighlightedIndex: () => componentProps.syncHighlightedIndex,
+    // Read once: the list the items register with can't be swapped.
+    list: untrack(() => componentProps.list),
     onMapChange: (map) => componentProps.onMapChange?.(map),
   });
 
@@ -59,6 +66,8 @@ export function CompositeRoot<State extends Record<string, any>>(
     'onLoop',
     'highlightedIndex',
     'onHighlightedIndexChange',
+    'syncHighlightedIndex',
+    'list',
     'enableHomeAndEndKeys',
     'onMapChange',
     'stopEventPropagation',
@@ -99,6 +108,16 @@ export interface CompositeRootProps<State> extends RenderElementComponentProps<S
   onLoop?: CompositeOnLoop | undefined;
   highlightedIndex?: number | undefined;
   onHighlightedIndexChange?: ((index: number) => void) | undefined;
+  /**
+   * The index the highlight follows: whenever it changes to a defined value, the highlight moves
+   * to it.
+   */
+  syncHighlightedIndex?: number | undefined;
+  /**
+   * The list the items register with (see `createCompositeList`), to derive state from the
+   * registered items outside of the root. Read once.
+   */
+  list?: CompositeListContextValue<any> | undefined;
   enableHomeAndEndKeys?: boolean | undefined;
   onMapChange?: ((newMap: Map<HTMLElement, CompositeMetadata<any>>) => void) | undefined;
   stopEventPropagation?: boolean | undefined;

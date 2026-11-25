@@ -1,4 +1,4 @@
-import { createEffect, createSignal, merge, omit, onCleanup, Show, untrack } from 'solid-js';
+import { createSignal, merge, omit, onCleanup, Show, untrack } from 'solid-js';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import { applyRef, type RefProp } from '@egoist/solid-base-utils/refs';
@@ -24,6 +24,7 @@ import {
 } from '../../internals/field-root-context/FieldRootContext';
 import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { useFormContext } from '../../internals/form-context/FormContext';
 import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
 import { createAriaLabelledBy } from '../../internals/labelable-provider/createAriaLabelledBy';
@@ -97,24 +98,14 @@ export function SwitchRoot(componentProps: SwitchRoot.Props) {
     value: checked,
     enabled: () => !disabled(),
     name: () => componentProps.name,
+    dirty: () => checked() !== field.validityData().initialValue,
+    filled: checked,
   });
 
-  createEffect(checked, (value) => {
-    field.setFilled(value);
+  createFieldValueChanged(checked, (value) => {
+    form.clearErrors(name());
+    validation.change(value);
   });
-
-  createEffect(
-    checked,
-    (value) => {
-      untrack(() => {
-        form.clearErrors(name());
-        field.setDirty(value !== field.validityData().initialValue);
-      });
-
-      validation.change(value);
-    },
-    { defer: true },
-  );
 
   const { getButtonProps, buttonRef } = createButton({
     disabled,

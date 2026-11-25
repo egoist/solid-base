@@ -1,4 +1,4 @@
-import { createSignal, omit } from 'solid-js';
+import { createSignal, omit, type Accessor } from 'solid-js';
 import type { BaseUIComponentProps } from '../../internals/types';
 import { renderElement } from '../../internals/renderElement';
 import { AvatarRootContext } from './AvatarRootContext';
@@ -13,7 +13,11 @@ import { avatarStateAttributesMapping } from './stateAttributesMapping';
 export function AvatarRoot(componentProps: AvatarRoot.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');
 
-  const [imageLoadingStatus, setImageLoadingStatus] = createSignal<ImageLoadingStatus>('idle');
+  // The status of the mounted image (`idle` without one), read from the image itself.
+  const [imageStatusSource, setImageStatusSource] = createSignal<
+    Accessor<ImageLoadingStatus> | undefined
+  >(undefined);
+  const imageLoadingStatus = (): ImageLoadingStatus => imageStatusSource()?.() ?? 'idle';
 
   const state: AvatarRootState = {
     get imageLoadingStatus() {
@@ -23,8 +27,11 @@ export function AvatarRoot(componentProps: AvatarRoot.Props) {
 
   const contextValue: AvatarRootContext = {
     imageLoadingStatus,
-    setImageLoadingStatus(status) {
-      setImageLoadingStatus(status);
+    registerImageLoadingStatus(status) {
+      setImageStatusSource(() => status);
+      return () => {
+        setImageStatusSource((current) => (current === status ? undefined : current));
+      };
     },
   };
 

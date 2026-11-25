@@ -3,7 +3,10 @@ import type { ImageLoadingStatus } from './AvatarRoot';
 
 export interface AvatarRootContext {
   imageLoadingStatus: Accessor<ImageLoadingStatus>;
-  setImageLoadingStatus: (status: ImageLoadingStatus) => void;
+  /**
+   * Publishes the status of the mounted image. Returns the unregister function.
+   */
+  registerImageLoadingStatus: (status: Accessor<ImageLoadingStatus>) => () => void;
 }
 
 export const AvatarRootContext = createContext<AvatarRootContext | null>(null);

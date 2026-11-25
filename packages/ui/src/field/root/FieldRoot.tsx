@@ -17,6 +17,7 @@ import { renderElement } from '../../internals/renderElement';
 import { createActionsRef, type ActionsRef } from '../../internals/actionsRef';
 import { createFieldValidation } from './createFieldValidation';
 import { createFieldControlRegistration } from '../../internals/field-register-control/createFieldControlRegistration';
+import type { FieldControlState } from '../../internals/field-root-context/FieldRootContext';
 
 const NO_VALIDATION = () => null;
 
@@ -48,11 +49,14 @@ function FieldRootInner(componentProps: FieldRoot.Props) {
 
   const [touchedState, setTouchedState] = createSignal(false);
   const [dirtyState, setDirtyState] = createSignal(false);
-  const [filled, setFilledState] = createSignal(false);
+  const [filledState, setFilledState] = createSignal(false);
   const [focused, setFocusedState] = createSignal(false);
   const focusOwnerRef = createRefObject<unknown>(undefined);
+  // The value-derived state published by the control (see `createRegisterFieldControl`).
+  const [controlState, setControlState] = createSignal<FieldControlState | null>(null, {
+    name: 'FieldRoot.controlState',
+  });
 
-  const dirty = () => componentProps.dirty ?? dirtyState();
   const touched = () => componentProps.touched ?? touchedState();
 
   const markedDirtyRef = createRefObject(false);
@@ -61,16 +65,6 @@ function FieldRootInner(componentProps: FieldRoot.Props) {
     undefined,
   );
   const effectiveName = () => componentProps.name ?? registeredFieldName();
-
-  // Runs on mount too, so a controlled `dirty` seeds the flag before any interaction.
-  createEffect(
-    () => componentProps.dirty,
-    (dirtyProp) => {
-      if (dirtyProp !== undefined) {
-        markedDirtyRef.current = dirtyProp;
-      }
-    },
-  );
 
   function setDirty(value: boolean) {
     if (untrack(() => componentProps.dirty) !== undefined) {
@@ -165,6 +159,32 @@ function FieldRootInner(componentProps: FieldRoot.Props) {
     validityData,
   });
 
+  // Derived from the control's value where it publishes one, so the field state updates in the
+  // same flush as the value. Controls without a reactive value write it through `setDirty`.
+  const dirty = createMemo(
+    () =>
+      componentProps.dirty ??
+      // The control's value is only compared once the field has its baseline.
+      (registration.initialValueCaptured() ? controlState()?.dirty?.() : undefined) ??
+      dirtyState(),
+    { name: 'FieldRoot.dirty' },
+  );
+  const filled = createMemo(() => controlState()?.filled?.() ?? filledState(), {
+    name: 'FieldRoot.filled',
+  });
+  // Runs on mount too, so a controlled `dirty` seeds the flag before any interaction. A field
+  // that has been dirty once stays marked (it un-suppresses `valueMissing`).
+  createEffect(
+    () => [componentProps.dirty, dirty()] as const,
+    ([dirtyProp, isDirty]) => {
+      if (dirtyProp !== undefined) {
+        markedDirtyRef.current = dirtyProp;
+      } else if (isDirty) {
+        markedDirtyRef.current = true;
+      }
+    },
+  );
+
   createActionsRef(() => componentProps.actionsRef, { validate: registration.validate });
 
   const context: FieldRootContextValue = {
@@ -181,6 +201,12 @@ function FieldRootInner(componentProps: FieldRoot.Props) {
     },
     setFocused: (value) => {
       setFocusedState(value);
+    },
+    registerControlState(nextState) {
+      setControlState(() => nextState);
+      return () => {
+        setControlState((current) => (current === nextState ? null : current));
+      };
     },
     focusOwnerRef,
     validationMode,

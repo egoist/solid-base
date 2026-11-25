@@ -1,7 +1,6 @@
-import { createEffect, createSignal, untrack, type Accessor } from 'solid-js';
+import { createEffect, createMemo, createSignal, untrack, type Accessor } from 'solid-js';
 import { isElementDisabled } from '@egoist/solid-base-utils/isElementDisabled';
 import { getTarget } from '@egoist/solid-base-utils/shadowDom';
-import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import type { TextDirection } from '../../direction-context/DirectionContext';
 import {
@@ -46,6 +45,11 @@ export interface CreateCompositeRootParameters {
   /** Controlled highlighted index. */
   highlightedIndex?: Accessor<number | undefined> | undefined;
   onHighlightedIndexChange?: ((index: number) => void) | undefined;
+  /**
+   * The index the highlight should follow (e.g. the selected tab). Whenever it changes to a
+   * defined value, the (uncontrolled) highlight moves to it; `undefined` leaves it in place.
+   */
+  syncHighlightedIndex?: Accessor<number | undefined> | undefined;
   direction: Accessor<TextDirection>;
   /**
    * When `true`, pressing the Home key moves focus to the first item,
@@ -70,6 +74,11 @@ export interface CreateCompositeRootParameters {
    */
   modifierKeys?: Accessor<ModifierKey[] | undefined> | undefined;
   /**
+   * The list the items register with. Pass a list created with `createCompositeList` to derive
+   * state from its `map()` outside of the root. Created by the root when omitted.
+   */
+  list?: CompositeListContextValue<any> | undefined;
+  /**
    * Called when the registered items change.
    */
   onMapChange?: ((map: Map<HTMLElement, CompositeMetadata<any>>) => void) | undefined;
@@ -80,9 +89,36 @@ export interface CreateCompositeRootReturnValue {
   rootRef: (element: HTMLElement) => void;
   highlightedIndex: Accessor<number>;
   onHighlightedIndexChange: (index: number, shouldScrollIntoView?: boolean) => void;
+  /** A live view of the registered elements, ordered by index. */
   elementsRef: RefObject<Array<HTMLElement | null>>;
   list: CompositeListContextValue<any>;
   relayKeyboardEvent: (event: KeyboardEvent) => void;
+}
+
+interface HighlightState {
+  index: number;
+  /** The element highlighted when `index` was set: the highlight follows it when items move. */
+  element: HTMLElement | null;
+  /** Whether the default highlight was resolved against the registered items. */
+  initialized: boolean;
+  /** The `syncHighlightedIndex` value this state last followed. */
+  synced: number | undefined;
+  /**
+   * Set when the highlight landed on an item without checking whether it's disabled (which reads
+   * the DOM): `'default'` for the initial highlight, `'replaced'` when the highlighted item was
+   * removed and another one took its index.
+   */
+  unchecked: 'default' | 'replaced' | null;
+}
+
+function isSameHighlight(a: HighlightState, b: HighlightState) {
+  return (
+    a.index === b.index &&
+    a.element === b.element &&
+    a.initialized === b.initialized &&
+    a.synced === b.synced &&
+    a.unchecked === b.unchecked
+  );
 }
 
 /**
@@ -95,22 +131,72 @@ export function createCompositeRoot(
   const orientation = () => params.orientation?.() ?? 'both';
   const enableHomeAndEndKeys = () => params.enableHomeAndEndKeys?.() ?? false;
   const disabledIndices = () => params.disabledIndices?.();
+  const isControlled = () => params.highlightedIndex?.() !== undefined;
 
-  const [internalHighlightedIndex, setInternalHighlightedIndex] = createSignal(0);
-  const highlightedIndex = () => params.highlightedIndex?.() ?? internalHighlightedIndex();
+  const list = params.list ?? createCompositeList<any>();
 
   let rootElement: HTMLElement | null = null;
-  const elementsRef = createRefObject<Array<HTMLElement | null>>([]);
-  let hasSetDefaultIndex = false;
-  let highlightedElement: HTMLElement | null = null;
+  const elementsRef: RefObject<Array<HTMLElement | null>> = {
+    // An imperative view (read by handlers, `onLoop`/`grid` and DOM checks), not a dependency.
+    get current() {
+      return untrack(list.elements);
+    },
+    set current(_value) {
+      // The elements are derived from the list.
+    },
+  };
+
+  // The uncontrolled highlight, derived from the registered items: it starts on the active item
+  // and follows the highlighted element when items move. Navigation writes it directly (it's a
+  // writable memo).
+  const [highlight, setHighlight] = createSignal<HighlightState>(
+    (prev) => {
+      const elements = list.elements();
+      const synced = params.syncHighlightedIndex?.();
+      let state: HighlightState = prev ?? {
+        index: 0,
+        element: null,
+        initialized: false,
+        synced: undefined,
+        unchecked: null,
+      };
+
+      if (synced !== state.synced) {
+        state =
+          synced === undefined
+            ? { ...state, synced }
+            : { ...state, index: synced, element: elements[synced] ?? null, synced };
+      }
+
+      return followHighlight(state, elements);
+    },
+    { name: 'createCompositeRoot.highlight', equals: isSameHighlight },
+  );
+
+  const highlightedIndex = createMemo(() => params.highlightedIndex?.() ?? highlight().index, {
+    name: 'createCompositeRoot.highlightedIndex',
+  });
+
+  // Moves the highlight off disabled (or hidden) items. Whether an item is disabled is measured
+  // in the DOM, once the items rendered: the check runs when the items or the disabled indices
+  // change, and reads them through `elementsRef`.
+  createEffect(
+    () => [list.elements(), disabledIndices(), isControlled()] as const,
+    () => {
+      const elements = elementsRef.current;
+      const indices = untrack(disabledIndices);
+      const correctDisabled = !untrack(isControlled);
+      setHighlight((prev) => checkHighlight(prev, elements, indices, correctDisabled));
+    },
+  );
 
   function onHighlightedIndexChange(index: number, shouldScrollIntoView = false) {
-    highlightedElement = elementsRef.current[index] ?? null;
     if (params.onHighlightedIndexChange) {
       params.onHighlightedIndexChange(index);
     }
-    if (untrack(() => params.highlightedIndex?.()) === undefined) {
-      setInternalHighlightedIndex(index);
+    if (!untrack(isControlled)) {
+      const element = elementsRef.current[index] ?? null;
+      setHighlight((prev) => ({ ...prev, index, element, unchecked: null }));
     }
     if (shouldScrollIntoView) {
       const newActiveItem = elementsRef.current[index];
@@ -123,81 +209,32 @@ export function createCompositeRoot(
     }
   }
 
-  function onMapChange(map: Map<HTMLElement, CompositeMetadata<any>>) {
-    params.onMapChange?.(map);
-
-    if (map.size === 0) {
-      return;
-    }
-
-    const currentIndex = untrack(highlightedIndex);
-    const currentDisabledIndices = untrack(disabledIndices);
-
-    if (hasSetDefaultIndex) {
-      const elements = elementsRef.current;
-      const nextIndex = highlightedElement ? elements.indexOf(highlightedElement) : -1;
-
-      if (nextIndex === -1) {
-        const replacement = elements[currentIndex];
-        if (
-          !replacement ||
-          isListIndexDisabled(elements, currentIndex, currentDisabledIndices)
-        ) {
-          onHighlightedIndexChange(getFallbackIndex(elements, currentDisabledIndices));
-        } else {
-          highlightedElement = replacement;
-        }
-      } else if (nextIndex !== currentIndex) {
-        onHighlightedIndexChange(nextIndex);
-      }
-      return;
-    }
-
-    hasSetDefaultIndex = true;
-
-    const sortedElements = elementsRef.current;
-    const activeItem =
-      sortedElements.find((element) => element?.hasAttribute(ACTIVE_COMPOSITE_ITEM)) ?? null;
-    const activeIndex = activeItem ? (map.get(activeItem)?.index ?? -1) : -1;
-
-    if (activeIndex !== -1) {
-      onHighlightedIndexChange(activeIndex);
-    } else if (isListIndexDisabled(sortedElements, currentIndex, currentDisabledIndices)) {
-      const firstEnabledIndex = findNonDisabledListIndex(sortedElements, {
-        disabledIndices: currentDisabledIndices,
-      });
-      if (!isIndexOutOfListBounds(sortedElements, firstEnabledIndex)) {
-        onHighlightedIndexChange(firstEnabledIndex);
-      }
-    } else {
-      highlightedElement = sortedElements[currentIndex] ?? null;
-    }
-
-    scrollIntoViewIfNeeded(
-      rootElement,
-      activeItem as HTMLElement | null,
-      untrack(params.direction),
-      untrack(orientation),
-    );
-  }
-
-  const list = createCompositeList<any>({ elementsRef, onMapChange });
-
+  // Once the items registered, reveal the active one.
+  let didScrollActiveItem = false;
   createEffect(
-    () => [disabledIndices(), highlightedIndex(), params.highlightedIndex?.() != null] as const,
-    ([indices, index, isControlled]) => {
-      if (indices == null || isControlled || !hasSetDefaultIndex) {
+    () => (didScrollActiveItem || !highlight().initialized ? null : list.elements()),
+    (elements) => {
+      if (!elements) {
         return;
       }
-      const elements = elementsRef.current;
-      if (isListIndexDisabled(elements, index, indices)) {
-        const firstEnabledIndex = findNonDisabledListIndex(elements, { disabledIndices: indices });
-        if (!isIndexOutOfListBounds(elements, firstEnabledIndex)) {
-          onHighlightedIndexChange(firstEnabledIndex);
-        }
-      }
+      didScrollActiveItem = true;
+      const activeItem =
+        elements.find((element) => element?.hasAttribute(ACTIVE_COMPOSITE_ITEM)) ?? null;
+      scrollIntoViewIfNeeded(
+        rootElement,
+        activeItem,
+        untrack(params.direction),
+        untrack(orientation),
+      );
     },
   );
+
+  if (params.onMapChange) {
+    const onMapChange = params.onMapChange;
+    createEffect(list.map, (map) => {
+      onMapChange(map);
+    });
+  }
 
   function onKeyDown(event: KeyboardEvent) {
     const isHomeOrEnd = event.key === HOME || event.key === END;
@@ -340,6 +377,84 @@ export function createCompositeRoot(
     list,
     relayKeyboardEvent: onKeyDown,
   };
+}
+
+/**
+ * Follows the highlighted item in the registered items (`elements`, ordered by index), and
+ * resolves the initial highlight. Doesn't read the DOM besides the active item attribute.
+ */
+function followHighlight(state: HighlightState, elements: Array<HTMLElement | null>) {
+  if (elements.length === 0) {
+    return state;
+  }
+
+  if (!state.initialized) {
+    const activeIndex = elements.findIndex((item) => item?.hasAttribute(ACTIVE_COMPOSITE_ITEM));
+    const index = activeIndex === -1 ? state.index : activeIndex;
+    return {
+      ...state,
+      index,
+      element: elements[index] ?? null,
+      initialized: true,
+      unchecked: activeIndex === -1 ? ('default' as const) : null,
+    };
+  }
+
+  const nextIndex = state.element ? elements.indexOf(state.element) : -1;
+  if (nextIndex === -1) {
+    // The highlighted item was removed: the item taking its index (if any) is checked once the
+    // DOM settled.
+    const replacement = elements[state.index] ?? null;
+    return state.unchecked === 'replaced' && replacement === state.element
+      ? state
+      : { ...state, element: replacement, unchecked: 'replaced' as const };
+  }
+
+  return nextIndex === state.index ? state : { ...state, index: nextIndex };
+}
+
+/**
+ * Moves the highlight off missing and disabled items (reads the DOM).
+ */
+function checkHighlight(
+  state: HighlightState,
+  elements: Array<HTMLElement | null>,
+  disabledIndices: number[] | undefined,
+  correctDisabled: boolean,
+): HighlightState {
+  if (!state.initialized || elements.length === 0) {
+    return state;
+  }
+
+  let { index } = state;
+
+  if (state.unchecked === 'default') {
+    if (isListIndexDisabled(elements, index, disabledIndices)) {
+      const firstEnabledIndex = findNonDisabledListIndex(elements, { disabledIndices });
+      if (!isIndexOutOfListBounds(elements, firstEnabledIndex)) {
+        index = firstEnabledIndex;
+      }
+    }
+  } else if (state.unchecked === 'replaced') {
+    if (!elements[index] || isListIndexDisabled(elements, index, disabledIndices)) {
+      index = getFallbackIndex(elements, disabledIndices);
+    }
+  } else if (
+    correctDisabled &&
+    disabledIndices != null &&
+    isListIndexDisabled(elements, index, disabledIndices)
+  ) {
+    const firstEnabledIndex = findNonDisabledListIndex(elements, { disabledIndices });
+    if (!isIndexOutOfListBounds(elements, firstEnabledIndex)) {
+      index = firstEnabledIndex;
+    }
+  }
+
+  if (index === state.index && state.unchecked === null) {
+    return state;
+  }
+
+  return { ...state, index, element: elements[index] ?? null, unchecked: null };
 }
 
 function getFallbackIndex(elements: Array<HTMLElement | null>, disabledIndices?: number[]) {

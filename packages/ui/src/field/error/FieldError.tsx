@@ -1,4 +1,4 @@
-import { createEffect, createMemo, For, omit, Show, untrack } from 'solid-js';
+import { createMemo, For, omit, onSettled, Show, untrack } from 'solid-js';
 import type { FieldRootState } from '../root/FieldRoot';
 import {
   extendFieldRootState,
@@ -51,7 +51,7 @@ export function FieldError(componentProps: FieldError.Props) {
   const id = createBaseUiId(() => componentProps.id);
 
   const field = useFieldRootContext(false);
-  const { setMessageIds } = useLabelableContext();
+  const { registerMessageId } = useLabelableContext();
   const { errors } = useFormContext();
 
   const formError = () => {
@@ -80,20 +80,9 @@ export function FieldError(componentProps: FieldError.Props) {
 
   const { mounted, transitionStatus, setMounted } = createTransitionStatus(rendered);
 
-  createEffect(
-    () => [rendered(), id()] as const,
-    ([isRendered, currentId]) => {
-      if (!isRendered || !currentId) {
-        return undefined;
-      }
-
-      setMessageIds((ids) => ids.concat(currentId));
-
-      return () => {
-        setMessageIds((ids) => ids.filter((item) => item !== currentId));
-      };
-    },
-  );
+  // The message describes the control while it is rendered: derived, so `aria-describedby`
+  // updates in the same flush as the validity.
+  onSettled(() => registerMessageId(() => (rendered() ? id() : undefined)));
 
   const error = createMemo((): ErrorValue => {
     const data = field.validityData();

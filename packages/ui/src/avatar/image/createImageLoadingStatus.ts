@@ -15,7 +15,17 @@ export interface CreateImageLoadingStatusOptions {
  * Preloads the image with a detached `Image` and reports its loading status.
  */
 export function createImageLoadingStatus(options: CreateImageLoadingStatusOptions) {
-  const [status, setStatus] = createSignal<ImageLoadingStatus>('idle');
+  // What the sources say up front (a writable memo): without a source the image can't load,
+  // otherwise it's loading until the probe below reports the outcome.
+  const [status, setStatus] = createSignal<ImageLoadingStatus>(
+    (prev) => {
+      if (!options.enabled()) {
+        return prev ?? 'idle';
+      }
+      return options.src() || options.srcSet() ? 'loading' : 'error';
+    },
+    { name: 'createImageLoadingStatus.status' },
+  );
 
   createEffect(
     () => ({
@@ -27,12 +37,7 @@ export function createImageLoadingStatus(options: CreateImageLoadingStatusOption
       referrerPolicy: options.referrerPolicy(),
     }),
     ({ enabled, src, srcSet, sizes, crossOrigin, referrerPolicy }) => {
-      if (!enabled) {
-        return undefined;
-      }
-
-      if (!src && !srcSet) {
-        setStatus('error');
+      if (!enabled || (!src && !srcSet)) {
         return undefined;
       }
 
@@ -45,7 +50,6 @@ export function createImageLoadingStatus(options: CreateImageLoadingStatusOption
         }
       };
 
-      let nextStatus: ImageLoadingStatus = 'loading';
       image.onload = updateStatus('loaded');
       image.onerror = updateStatus('error');
       if (referrerPolicy) {
@@ -64,9 +68,8 @@ export function createImageLoadingStatus(options: CreateImageLoadingStatusOption
 
       // Fast path for cached/decoded images
       if (image.complete) {
-        nextStatus = image.naturalWidth > 0 ? 'loaded' : 'error';
+        setStatus(image.naturalWidth > 0 ? 'loaded' : 'error');
       }
-      setStatus(nextStatus);
 
       return () => {
         isMounted = false;

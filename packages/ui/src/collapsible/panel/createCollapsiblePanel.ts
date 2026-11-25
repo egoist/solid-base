@@ -100,22 +100,29 @@ export function createCollapsiblePanel(
   // Keyframe mount animations on initially open panels cause a visible layout
   // shift during the server-rendered first paint, so suppress that first open
   // lifecycle until the panel has been closed once. Read once, like a default value.
-  const [shouldPreventMountAnimation, setShouldPreventMountAnimation] = createSignal(
-    untrack(open),
+  // Derived: it stays `true` while the panel is open, and turns `false` for good once it closed.
+  const initiallyOpen = untrack(open);
+  const shouldPreventOpenAnimation = createMemo<boolean>(
+    (prevented) => (prevented ?? initiallyOpen) && open(),
+    { name: 'createCollapsiblePanel.shouldPreventOpenAnimation' },
   );
   // Some open paths intentionally bypass motion, but the shared root transition
-  // status still advances asynchronously. Override the panel to idle so its data
-  // attributes and dimension cleanup reflect the immediate open state.
-  const [forcePanelIdle, setForcePanelIdle] = createSignal(false);
+  // status still advances asynchronously. Override the panel's `starting` status to idle so its
+  // data attributes and dimension cleanup reflect the immediate open state. Set on every
+  // opening pass (it only applies while the root reports `starting`).
+  const [forcePanelIdle, setForcePanelIdle] = createSignal(false, {
+    name: 'createCollapsiblePanel.forcePanelIdle',
+  });
   let pendingTemporaryStyleRestore: (() => void) | null = null;
 
   // Only used to handle panel close.
   const runOnceCloseAnimationsFinish = createAnimationsFinished(getPanel);
 
   const hidden = () => !open() && !mounted();
-  const panelTransitionStatus = (): TransitionStatus =>
-    forcePanelIdle() ? 'idle' : transitionStatus();
-  const shouldPreventOpenAnimation = createMemo(() => open() && shouldPreventMountAnimation());
+  const panelTransitionStatus = (): TransitionStatus => {
+    const status = transitionStatus();
+    return status === 'starting' && forcePanelIdle() ? 'idle' : status;
+  };
 
   const renderedDimensions = (): Dimensions => {
     const current = dimensions();
@@ -159,18 +166,6 @@ export function createCollapsiblePanel(
     };
   }
 
-  // `forcePanelIdle` is only a temporary override for open paths that skip
-  // motion. Keep it active while the shared root still reports `starting`,
-  // then drop it once the root transition state catches up.
-  createEffect(
-    () => forcePanelIdle() && transitionStatus() !== 'starting',
-    (shouldReset) => {
-      if (shouldReset) {
-        setForcePanelIdle(false);
-      }
-    },
-  );
-
   onCleanup(() => {
     restorePendingTemporaryStyle();
   });
@@ -179,22 +174,25 @@ export function createCollapsiblePanel(
     latestOpen = isOpen;
   });
 
-  createEffect(
-    () =>
-      [
-        open(),
-        mounted(),
-        transitionStatus(),
-        shouldPreventOpenAnimation(),
-        panelElement(),
-      ] as const,
-    ([isOpen, isMounted, status, preventOpenAnimation]) => {
-      // A render function can remove the panel on close. Clear one-shot open animation
-      // suppression even without an element, so the next open animates normally.
-      if (!isOpen) {
-        setShouldPreventMountAnimation(false);
-      }
+  // Sequences the open and close passes. It measures the rendered panel (its animation type and
+  // size), so it runs once the DOM updated, and reads the current state when it does. It runs
+  // when the panel opens (the status is `starting` in the same update) or closes, when the
+  // deferred `ending` status lands, and when the element changes; not on the status changes it
+  // causes itself by unmounting the panel.
+  const isEnding = createMemo(() => transitionStatus() === 'ending', {
+    name: 'createCollapsiblePanel.isEnding',
+  });
 
+  function readPanelState() {
+    return untrack(
+      () => [open(), transitionStatus(), shouldPreventOpenAnimation()] as const,
+    );
+  }
+
+  createEffect(
+    () => [open(), isEnding(), shouldPreventOpenAnimation(), panelElement()] as const,
+    () => {
+      const [isOpen, status, preventOpenAnimation] = readPanelState();
       const panel = getPanel();
       if (!panel) {
         return undefined;
@@ -232,9 +230,10 @@ export function createCollapsiblePanel(
         const skipNextOpen = shouldSkipNextOpen;
         shouldSkipNextOpen = false;
 
+        setForcePanelIdle(nextAnimationType === 'none' || skipNextOpen);
+
         if (nextAnimationType === 'none') {
           setDimensions(getDimensions(panel));
-          setForcePanelIdle(true);
           return undefined;
         }
 
@@ -248,7 +247,6 @@ export function createCollapsiblePanel(
 
           const restoreTransitionDuration = setTemporaryStyle(panel, 'transition-duration', '0s');
           setPendingTemporaryStyleRestore(restoreTransitionDuration);
-          setForcePanelIdle(true);
           return restoreLayoutStyles;
         }
 
@@ -264,15 +262,15 @@ export function createCollapsiblePanel(
 
         restoreAnimationName();
         setPendingTemporaryStyleRestore(restoreAnimationDuration);
-        setForcePanelIdle(true);
 
         return undefined;
       }
 
       // Capture the current size as soon as close is requested, before the
       // deferred ending phase applies closed styles. This keeps close transitions
-      // starting from a measured pixel value, including interrupted opens.
-      if (!isOpen && isMounted && (status === 'idle' || status === 'starting')) {
+      // starting from a measured pixel value, including interrupted opens. (A closed panel only
+      // reports `idle` or `starting` while it's still mounted, before `ending` lands.)
+      if (!isOpen && (status === 'idle' || status === 'starting')) {
         if (nextAnimationType === 'none') {
           setDimensions(EMPTY_DIMENSIONS, false);
           setMounted(false);
@@ -288,10 +286,10 @@ export function createCollapsiblePanel(
       }
 
       // Reachable when the transition status already flipped to `ending` before this effect
-      // ran, so the close branch above was skipped. Without motion there is nothing to wait for,
-      // so unmount here instead of deferring to the animation-finished path below.
+      // ran, so the close branch above was skipped. Without motion (or without a size to animate
+      // from) there is nothing to wait for: the animation-finished path below unmounts the panel
+      // right away.
       if (nextAnimationType === 'none') {
-        setMounted(false);
         return undefined;
       }
 
@@ -299,7 +297,6 @@ export function createCollapsiblePanel(
       const hasMeasuredSize = nextDimensions.height > 0 || nextDimensions.width > 0;
 
       if (!hasMeasuredSize) {
-        setMounted(false);
         return undefined;
       }
 
@@ -321,14 +318,19 @@ export function createCollapsiblePanel(
     open: () => true,
     element: getPanel,
     onComplete() {
-      // The animation's `finished` promise can resolve after `open` became `false` but before
-      // the effect cleanup aborted it. Clearing the measured size in that window would make the
-      // close transition start from `height: 0` instead of the expanded pixel height.
-      if (!latestOpen) {
-        return;
-      }
+      // Animations report completion through their `finished` promises, so the measured size
+      // is rendered for at least one turn before it's reset to `auto`. Keep that ordering when
+      // the wait completes synchronously (no animations to inspect, or no animations API).
+      queueMicrotask(() => {
+        // The animation's `finished` promise can resolve after `open` became `false` but before
+        // the effect cleanup aborted it. Clearing the measured size in that window would make
+        // the close transition start from `height: 0` instead of the expanded pixel height.
+        if (!latestOpen) {
+          return;
+        }
 
-      setDimensions(EMPTY_DIMENSIONS, false);
+        setDimensions(EMPTY_DIMENSIONS, false);
+      });
     },
   });
 
@@ -346,14 +348,6 @@ export function createCollapsiblePanel(
       }
 
       const panel = getPanel();
-      if (!panel) {
-        // A render function can drop the panel element while it closes. There is nothing left
-        // to animate, so finish closing instead of staying in the ending phase.
-        setMounted(false);
-        setDimensions(EMPTY_DIMENSIONS, false);
-        return undefined;
-      }
-
       const abortController = new AbortController();
 
       function handleComplete() {
@@ -367,6 +361,12 @@ export function createCollapsiblePanel(
       }
 
       const endingStyleFrame = AnimationFrame.request(() => {
+        if (!panel) {
+          // A render function can drop the panel element while it closes. There is nothing
+          // left to animate, so finish closing instead of staying in the ending phase.
+          handleComplete();
+          return;
+        }
         runOnceCloseAnimationsFinish(handleComplete, abortController.signal);
       });
 

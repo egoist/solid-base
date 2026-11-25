@@ -1,4 +1,4 @@
-import { createEffect, createSignal, omit, onCleanup, untrack } from 'solid-js';
+import { createEffect, createSignal, omit, onCleanup, onSettled, untrack } from 'solid-js';
 import { addEventListener } from '@egoist/solid-base-utils/addEventListener';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
@@ -125,13 +125,8 @@ export function NumberFieldRoot(componentProps: NumberFieldRoot.Props) {
     valueRef.current = nextValue;
   });
 
-  createEffect(value, (nextValue) => {
-    field.setFilled(nextValue !== null);
-  });
+  onSettled(() => field.registerControlState({ filled: () => value() !== null }));
 
-  // Formatting can change even if the numeric value hasn't, so the sync effect below re-runs
-  // whenever this is bumped (upstream re-renders with `useForcedRerendering`).
-  const [renderTick, setRenderTick] = createSignal(0);
 
   const hasPendingCommitRef = createRefObject(false);
 
@@ -146,8 +141,15 @@ export function NumberFieldRoot(componentProps: NumberFieldRoot.Props) {
   const allowInputSyncRef = createRefObject(true);
   const lastChangedValueRef = createRefObject<number | null>(null);
 
-  const [inputValue, setInputValue] = createSignal(
-    untrack(() => formatNumber(value(), locale(), format())),
+  // The text of the input: the formatted value, re-derived whenever the value or its format
+  // changes, except while the user is typing, when the typed text is kept until blur. Handlers
+  // that change the value (or re-sync the text) while syncing is allowed also write it directly.
+  const [inputValue, setInputValue] = createSignal<string>(
+    (previous) => {
+      const formatted = formatNumber(value(), locale(), format());
+      return previous === undefined || allowInputSyncRef.current ? formatted : previous;
+    },
+    { name: 'inputValue' },
   );
 
   const inputMode = (): InputMode => {
@@ -296,9 +298,6 @@ export function NumberFieldRoot(componentProps: NumberFieldRoot.Props) {
         setInputValue(formatNumber(validatedValue, locale(), format()));
       }
 
-      // Formatting can change even if the numeric value hasn't.
-      setRenderTick((tick) => tick + 1);
-
       return shouldFireChange;
     });
   }
@@ -322,23 +321,6 @@ export function NumberFieldRoot(componentProps: NumberFieldRoot.Props) {
       createChangeEventDetails(reason, nativeEvent, undefined, { direction }),
     );
   }
-
-  // Update the input text when the value changes externally (or whenever anything re-syncs it),
-  // except while the user is typing: the text then only syncs on blur.
-  createEffect(
-    () => {
-      renderTick();
-      return [formatNumber(value(), locale(), format()), inputValue()] as const;
-    },
-    ([nextInputValue, currentInputValue]) => {
-      if (!allowInputSyncRef.current) {
-        return;
-      }
-      if (nextInputValue !== currentInputValue) {
-        setInputValue(nextInputValue);
-      }
-    },
-  );
 
   // Programmatic focus leaves the caret at the start (Chrome/Firefox) or selects the whole value
   // (Safari). Store the caret at the end before focusing: every engine restores the stored
