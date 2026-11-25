@@ -1861,24 +1861,22 @@ describe('FloatingFocusManager', () => {
       test('preserves keyboard close modality when reopening before focus restoration', async () => {
         function TestApp() {
           const [isOpen, setIsOpen] = createSignal(false);
-          const [reopenOnClose, setReopenOnClose] = createSignal(false);
+          let reopenOnClose = false;
 
           const { refs, store } = createTestFloating({
             open: isOpen,
-            onOpenChange: (value) => setIsOpen(value),
-          });
-
-          const interactions = [createClick(store), createDismiss(store)];
-
-          createEffect(
-            () => [isOpen(), reopenOnClose()] as const,
-            ([open, reopen]) => {
-              if (!open && reopen) {
-                setReopenOnClose(false);
+            onOpenChange: (value) => {
+              setIsOpen(value);
+              // Reopen right after the close is applied, before focus is restored.
+              if (!value && reopenOnClose) {
+                reopenOnClose = false;
+                flush();
                 setIsOpen(true);
               }
             },
-          );
+          });
+
+          const interactions = [createClick(store), createDismiss(store)];
 
           return (
             <>
@@ -1887,7 +1885,12 @@ describe('FloatingFocusManager', () => {
                 data-testid="reference"
                 {...getInteractionProps(interactions, 'reference', { ref: refs.setReference })}
               />
-              <button data-testid="reopen-on-close" onClick={() => setReopenOnClose(true)} />
+              <button
+                data-testid="reopen-on-close"
+                onClick={() => {
+                  reopenOnClose = true;
+                }}
+              />
               <FloatingPortal>
                 <FloatingFocusManager store={store} disabled={!isOpen()}>
                   <div {...getFloatingTestProps(interactions, { ref: refs.setFloating })}>

@@ -181,15 +181,41 @@ export function createAnchorPositioning(
   const direction = useDirection();
   const isRtl = () => direction() === 'rtl';
 
-  const [mountPlacementState, setMountPlacement] = createSignal<Placement | null>(null);
-  // A locked placement only lasts while the popup is mounted.
-  const mountPlacement = () => (mounted() ? mountPlacementState() : null);
-
-  createEffect(mounted, (isMounted) => {
-    if (!isMounted) {
-      setMountPlacement(null);
-    }
-  });
+  // Locks the flipped side, and the alignment too when the consumer opts in, while filtering
+  // resizes the popup: once the rendered placement leaves the requested (or locked) one, it is
+  // kept. A locked placement only lasts while the popup is mounted. Derived from the rendered
+  // placement, so the side and alignment follow it in the same flush.
+  //
+  // The floating element is created below from the placement this derives: it is connected once
+  // created.
+  const [floatingSource, setFloatingSource] = createSignal<{
+    readonly isPositioned: boolean;
+    readonly placement: Placement;
+  } | null>(null, { ownedWrite: true, name: 'createAnchorPositioning.floatingSource' });
+  const mountPlacement = createMemo<Placement | null>(
+    (locked) => {
+      if (!mounted()) {
+        return null;
+      }
+      const previous = locked ?? null;
+      const rendered = floatingSource();
+      if (!lazyFlip() || !rendered?.isPositioned) {
+        return previous;
+      }
+      const renderedPlacement = rendered.placement;
+      const currentSide = previous ? getSide(previous) : getPhysicalSide(sideParam(), isRtl());
+      const lock = lockAlign();
+      const currentAlign = (previous && lock ? getAlignment(previous) || 'center' : null) || alignParam();
+      if (
+        getSide(renderedPlacement) !== currentSide ||
+        (lock && (getAlignment(renderedPlacement) || 'center') !== currentAlign)
+      ) {
+        return renderedPlacement;
+      }
+      return previous;
+    },
+    { name: 'createAnchorPositioning.mountPlacement' },
+  );
 
   const side = createMemo((): PhysicalSide => {
     const placement = mountPlacement();
@@ -494,6 +520,7 @@ export function createAnchorPositioning(
     nodeId,
     externalTree,
   });
+  setFloatingSource(floating);
 
   // An arrow that mounts or unmounts after the popup is positioned doesn't resize the positioner, so
   // reposition explicitly. Deferred so an anchor that changed in the same update is registered
@@ -623,41 +650,20 @@ export function createAnchorPositioning(
 
   const renderedSide = () => getSide(floating.placement);
 
-  // Locks the flipped side, and the alignment too when the consumer opts in, while filtering
-  // resizes the popup.
-  createEffect(
-    () => ({
-      lazyFlip: lazyFlip(),
-      lockAlign: lockAlign(),
-      mounted: mounted(),
-      isPositioned: floating.isPositioned,
-      renderedPlacement: floating.placement,
-      side: side(),
-      placementAlign: placementAlign(),
-    }),
-    (value) => {
-      const renderedPlacement = value.renderedPlacement;
-      if (
-        value.lazyFlip &&
-        value.mounted &&
-        value.isPositioned &&
-        (getSide(renderedPlacement) !== value.side ||
-          (value.lockAlign &&
-            (getAlignment(renderedPlacement) || 'center') !== value.placementAlign))
-      ) {
-        setMountPlacement(renderedPlacement);
-      }
+  const arrowStyles = createMemo(
+    (): JSX.CSSProperties => {
+      const arrowData = floating.middlewareData.arrow;
+      return {
+        position: 'absolute',
+        top: arrowData?.y != null ? `${arrowData.y}px` : undefined,
+        left: arrowData?.x != null ? `${arrowData.x}px` : undefined,
+      };
+    },
+    {
+      name: 'createAnchorPositioning.arrowStyles',
+      equals: (a, b) => a.top === b.top && a.left === b.left,
     },
   );
-
-  const arrowStyles = createMemo((): JSX.CSSProperties => {
-    const arrowData = floating.middlewareData.arrow;
-    return {
-      position: 'absolute',
-      top: arrowData?.y != null ? `${arrowData.y}px` : undefined,
-      left: arrowData?.x != null ? `${arrowData.x}px` : undefined,
-    };
-  });
 
   return {
     get positionerStyles() {

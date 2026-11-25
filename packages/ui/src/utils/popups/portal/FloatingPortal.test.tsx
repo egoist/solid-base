@@ -1,5 +1,4 @@
 import {
-  createEffect,
   createSignal,
   flush,
   For,
@@ -323,12 +322,13 @@ describe.each([
         ownedWrite: true,
       });
       const [step, setStep] = createSignal(0, { ownedWrite: true });
-
-      createEffect(step, (value) => {
-        if (value < 2) {
-          setStep(value + 1);
-        }
-      });
+      // Two later updates, each flushed on its own (upstream's re-renders).
+      advance = () => {
+        setStep(1);
+        flush();
+        setStep(2);
+        flush();
+      };
 
       return (
         <>
@@ -345,7 +345,9 @@ describe.each([
       );
     }
 
+    let advance!: () => void;
     render(() => <Test />);
+    advance();
     await flushMicrotasks();
 
     expect(screen.getByTestId('portal').parentElement).toBe(screen.getByTestId('second'));
@@ -427,12 +429,13 @@ describe.each([
         const firstContainer: RefObject<HTMLDivElement | null> = { current: null };
         const secondContainer: RefObject<HTMLDivElement | null> = { current: null };
         const [step, setStep] = createSignal(0, { ownedWrite: true });
-
-        createEffect(step, (value) => {
-          if (value < 2) {
-            setStep(value + 1);
-          }
-        });
+        // Two later updates, each flushed on its own (upstream's re-renders).
+        advance = () => {
+          setStep(1);
+          flush();
+          setStep(2);
+          flush();
+        };
 
         const container = () => {
           if (step() < 2) {
@@ -452,7 +455,9 @@ describe.each([
         );
       }
 
+      let advance!: () => void;
       render(() => <Test />);
+      advance();
       await flushMicrotasks();
 
       expect(screen.getByTestId('first')).toBeEmptyDOMElement();

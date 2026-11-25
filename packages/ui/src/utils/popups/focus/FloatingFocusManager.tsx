@@ -1016,8 +1016,8 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   // Report the focus manager state (modal, closeOnFocusOut, open…) to the enclosing
   // `FloatingPortal`, which uses it to decide whether to render its own guards.
   if (portalContext) {
-    createEffect(
-      () =>
+    onCleanup(
+      portalContext.registerFocusManager(() =>
         disabled()
           ? null
           : {
@@ -1027,12 +1027,7 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
               onOpenChange: store.setOpen,
               domReference: domReference(),
             },
-      (state) => {
-        portalContext.setFocusManagerState(state);
-        return () => {
-          portalContext.setFocusManagerState(null);
-        };
-      },
+      ),
     );
   }
 

@@ -25,13 +25,6 @@ export function createDefaultInitialFocus(getPopupElement: () => HTMLElement | n
     interactionType === 'touch' ? getPopupElement() : true;
 }
 
-function syncTriggerCount(store: PopupTriggerDataStore<PopupStoreState<unknown>>) {
-  const triggerCount = store.context.triggerElements.size;
-  if (store.state.open && store.state.triggerCount !== triggerCount) {
-    store.set('triggerCount', triggerCount);
-  }
-}
-
 export interface CreateTriggerDataForwardingReturnValue {
   /**
    * Ref callback for the trigger element.
@@ -96,20 +89,30 @@ export function createTriggerDataForwarding<State extends PopupStoreState<unknow
     }
   }
 
+  //
+  // Registering the rendered element is what makes the trigger known to the popup, so the state
+  // it updates (the registry, the active trigger claimed by a trigger that registers while the
+  // popup is open) comes from the element ref rather than from the tracked values: the apply half
+  // takes no argument and reads them as of this run.
   createEffect(
-    () => [store(), triggerId(), triggerElement()] as const,
-    ([currentStore, id, element]) => {
+    () => {
+      store();
+      triggerId();
+      triggerElement();
+    },
+    () => {
+      const currentStore = untrack(store);
+      const id = untrack(triggerId);
+      const element = untrack(triggerElement);
       if (element == null || id === undefined) {
         return undefined;
       }
       const triggers = currentStore.context.triggerElements;
       triggers.add(id, element);
-      syncTriggerCount(currentStore as PopupTriggerDataStore<PopupStoreState<unknown>>);
       applyTriggerData(currentStore, id, element);
       return () => {
         if (triggers.getById(id) === element) {
           triggers.delete(id);
-          syncTriggerCount(currentStore as PopupTriggerDataStore<PopupStoreState<unknown>>);
         }
       };
     },

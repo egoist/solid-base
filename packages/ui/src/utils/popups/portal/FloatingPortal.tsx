@@ -47,11 +47,30 @@ export interface PortalGuardRefs {
   afterOutside: HTMLSpanElement | null;
 }
 
+function isSameFocusManagerState(a: FocusManagerState | null, b: FocusManagerState | null) {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return (
+    a.modal === b.modal &&
+    a.open === b.open &&
+    a.onOpenChange === b.onOpenChange &&
+    a.domReference === b.domReference &&
+    a.closeOnFocusOut === b.closeOnFocusOut
+  );
+}
+
 export interface PortalContextValue {
   /** The portal element the content is rendered into. */
   portalNode: Accessor<HTMLElement | null>;
-  /** The focus manager inside the portal reports its state here. */
-  setFocusManagerState: (state: FocusManagerState | null) => void;
+  /**
+   * Registers the focus manager inside the portal: the portal reads its state through `state`
+   * (`null` while it is disabled). Returns the function unregistering it.
+   */
+  registerFocusManager: (state: Accessor<FocusManagerState | null>) => () => void;
   guards: PortalGuardRefs;
 }
 
@@ -188,8 +207,14 @@ export function FloatingPortal(componentProps: FloatingPortalProps): JSX.Element
     return null;
   }
 
-  const [focusManagerState, setFocusManagerState] = createSignal<FocusManagerState | null>(null, {
-    ownedWrite: true,
+  // The focus manager registers an accessor once; its state is read through it, so the portal
+  // sees every change in the same flush.
+  const [focusManagerSource, setFocusManagerSource] = createSignal<Accessor<
+    FocusManagerState | null
+  > | null>(null, { ownedWrite: true, name: 'FloatingPortal.focusManagerSource' });
+  const focusManagerState = createMemo(() => focusManagerSource()?.() ?? null, {
+    name: 'FloatingPortal.focusManagerState',
+    equals: isSameFocusManagerState,
   });
 
   const guards: PortalGuardRefs = {
@@ -204,7 +229,12 @@ export function FloatingPortal(componentProps: FloatingPortalProps): JSX.Element
   const { element, portalNode, portalNodeId } = renderPortalNode(componentProps, (node) => {
     const contextValue: PortalContextValue = {
       portalNode: node,
-      setFocusManagerState: (state) => setFocusManagerState(() => state),
+      registerFocusManager: (state) => {
+        setFocusManagerSource(() => state);
+        return () => {
+          setFocusManagerSource((current) => (current === state ? null : current));
+        };
+      },
       guards,
     };
     return <PortalContext value={contextValue}>{componentProps.children}</PortalContext>;

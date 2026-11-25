@@ -386,6 +386,32 @@ export abstract class BasePopupStore<
   // Replaced on every open, so a close can tell whether the popup has opened again since.
   private openSession = {};
 
+  constructor(initialState: State, context: Context, selectors?: Selectors) {
+    super(initialState, context, selectors);
+    // Derived from the trigger registry while the popup is open, so it never lags a registration.
+    this.bind('triggerCount', () => {
+      const store = this as unknown as ReactiveStore<S, PopupStoreContext<unknown>, PopupStoreSelectors>;
+      if (!store.select('open')) {
+        return 0;
+      }
+      const triggers = store.context.triggerElements;
+      triggers.track();
+      return triggers.size;
+    });
+    if (this.anchorsToActiveTrigger()) {
+      // The anchor follows the active trigger while the popup is open or mounted, including an
+      // active trigger that is derived rather than stored (see `createImplicitActiveTrigger`).
+      // `syncAnchorState` keeps the stored value for once it unmounts.
+      this.derive('anchorElement', (stored) => {
+        const store = this as unknown as ReactiveStore<S, PopupStoreContext<unknown>, PopupStoreSelectors>;
+        const anchored =
+          store.selectValue('mounted') || store.select('open') || store.selectStored('open');
+        return ((anchored ? store.selectValue('activeTriggerElement') : null) ??
+          stored) as State['anchorElement'];
+      });
+    }
+  }
+
   protected override transformState(previous: State, next: State): State {
     // A request or an `open` prop that opens the popup starts a new open session.
     if (!openSelector(previous) && openSelector(next)) {

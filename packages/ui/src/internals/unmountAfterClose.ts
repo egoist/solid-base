@@ -61,18 +61,16 @@ export function createUnmountAfterClose(
   // Opening starts a new close cycle.
   const preventUnmountingOnClose = () => (open() ? false : parameters.preventUnmountOnClose());
 
-  createEffect(open, (isOpen) => {
-    if (isOpen) {
-      setPreventUnmountOnClose(false);
-    }
-  });
-
   // `mounted` lags `setMounted(false)` until the next flush: remember the unmount so a second
   // `unmount()` in the same batch doesn't complete closing twice.
   let unmountPending = false;
-  createEffect(mounted, (isMounted) => {
-    if (isMounted) {
-      unmountPending = false;
+
+  createEffect(open, (isOpen) => {
+    // An open change (a reopen, or the close that follows it) starts a new cycle.
+    unmountPending = false;
+    // Opening starts a new close cycle.
+    if (isOpen) {
+      setPreventUnmountOnClose(false);
     }
   });
 
@@ -97,8 +95,11 @@ export function createUnmountAfterClose(
     unmount();
   }
 
+  // Every close starts the wait; `forceUnmount` ignores a completion once the popup is unmounted.
+  // `mounted` isn't an input: the wait's own completion unmounts the popup, which must not restart
+  // it.
   createOpenChangeComplete({
-    enabled: () => mounted() && !open() && !preventUnmountingOnClose(),
+    enabled: () => !open() && !preventUnmountingOnClose(),
     open,
     element,
     onComplete() {

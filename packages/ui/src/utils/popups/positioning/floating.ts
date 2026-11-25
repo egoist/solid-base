@@ -1,4 +1,4 @@
-import { createEffect, createSignal, flush, getObserver, onCleanup, untrack } from 'solid-js';
+import { createEffect, createMemo, createSignal, flush, getObserver, onCleanup, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { computePosition } from '@floating-ui/dom';
 import type {
@@ -146,13 +146,35 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
     isPositioned: false,
   };
 
-  // `dataRef` always holds the latest data (signal reads lag writes).
-  let dataRef: FloatingData = initialData;
-  const [data, setData] = createSignal<FloatingData>(initialData, { ownedWrite: true });
+  // Counts the times the floating element opened. A position computed in an earlier open session
+  // (or while closed) doesn't make the element positioned: this is derived from `open`, so the
+  // element reads as unpositioned in the same flush as it closes or reopens.
+  const openSession = createMemo<{ open: boolean | undefined; session: number }>(
+    (previous) => {
+      const open = options.open;
+      if (!previous) {
+        return { open, session: 0 };
+      }
+      if (previous.open === open) {
+        return previous;
+      }
+      return { open, session: open ? previous.session + 1 : previous.session };
+    },
+    { name: 'createFloating.openSession' },
+  );
 
-  function commitData(next: FloatingData) {
+  // `dataRef` always holds the latest data (signal reads lag writes), along with the open session
+  // it was computed in.
+  let dataRef: PositionedData = { data: initialData, session: 0 };
+  const [positionedData, setPositionedData] = createSignal<PositionedData>(dataRef, {
+    ownedWrite: true,
+    name: 'createFloating.data',
+  });
+  const data = () => positionedData().data;
+
+  function commitData(next: PositionedData) {
     dataRef = next;
-    setData(() => next);
+    setPositionedData(() => next);
   }
 
   const referenceRef: RefObject<ReferenceType | null> = { current: null };
@@ -187,11 +209,14 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
     });
 
     computePosition(reference, floating, config).then((result) => {
-      const fullData: FloatingData = {
-        ...result,
-        // The floating element can be measured before it's opened (`keepMounted`): it's only
-        // positioned once it's open.
-        isPositioned: openRef !== false,
+      const fullData: PositionedData = {
+        data: {
+          ...result,
+          // The floating element can be measured before it's opened (`keepMounted`): it's only
+          // positioned once it's open.
+          isPositioned: openRef !== false,
+        },
+        session: untrack(openSession).session,
       };
       if (!disposed && !deepEqual(dataRef, fullData)) {
         commitData(fullData);
@@ -204,9 +229,6 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
     () => options.open,
     (open) => {
       openRef = open;
-      if (open === false && dataRef.isPositioned) {
-        commitData({ ...dataRef, isPositioned: false });
-      }
     },
   );
 
@@ -342,7 +364,10 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
       return data().middlewareData;
     },
     get isPositioned() {
-      return data().isPositioned;
+      const { data: current, session } = positionedData();
+      return (
+        current.isPositioned && options.open !== false && session === openSession().session
+      );
     },
     get floatingStyles() {
       return floatingStyles();
@@ -363,6 +388,11 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
     { refs, elements, context, rootStore: store },
     Object.getOwnPropertyDescriptors(positionData),
   ) as CreateFloatingReturnValue;
+}
+
+interface PositionedData {
+  data: FloatingData;
+  session: number;
 }
 
 function getDPR(element: Element): number {

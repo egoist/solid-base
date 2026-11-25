@@ -1,4 +1,4 @@
-import { createEffect, untrack } from 'solid-js';
+import { createEffect, createMemo, untrack } from 'solid-js';
 import { isDev } from '@solidjs/web';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import { createAnimationFrame } from '@egoist/solid-base-utils/animationFrame';
@@ -425,14 +425,17 @@ export function createListNavigation(
 
   // The upstream layout effects, run in their declaration order. Each block only runs when one of
   // its upstream dependencies changed (all of them run on the first pass).
-  createEffect(
-    (): EffectSnapshot => ({
+  //
+  // Opening, closing and mounting the list write the active index (`onNavigate`), so this effect
+  // doesn't track it: it takes the active index current when the list changes, and the effect
+  // below follows later changes. Tracking it here would re-run this effect for its own writes.
+  const listState = createMemo(
+    (): Omit<EffectSnapshot, 'activeIndex'> => ({
       enabled: enabled(),
       open: store.select('open'),
       positionerElement: store.select('positionerElement'),
       anchorElement: store.select('anchorElement'),
       selectedIndex: selectedIndexOption(),
-      activeIndex: options.activeIndex ?? null,
       focusItemOnOpen: focusItemOnOpenOption(),
       orientation: orientation(),
       triggerOrientation: triggerOrientation(),
@@ -440,9 +443,28 @@ export function createListNavigation(
       rtl: rtl(),
       virtual: virtual(),
     }),
-    // The blocks read options, the store and the floating tree imperatively (and focusing an item
-    // runs its handlers synchronously), like upstream's effects reading refs: keep them untracked.
-    (current) => untrack(() => applyEffects(current)),
+    { name: 'createListNavigation.listState', equals: shallowEqual },
+  );
+
+  // The blocks read options, the store, the floating tree and the rendered list (`listRef`, focus)
+  // imperatively, like upstream's effects reading refs, and the active index they write follows
+  // from that DOM state: the apply half reads the list state as of this run instead of taking it
+  // as an argument, and runs untracked.
+  createEffect(listState, () =>
+    untrack(() => applyEffects({ ...listState(), activeIndex: options.activeIndex ?? null })),
+    { name: 'createListNavigation.sync' },
+  );
+
+  // Moves focus to the active item when the active index changes (including the writes above).
+  createEffect(
+    () => options.activeIndex ?? null,
+    (activeIndex) =>
+      untrack(() => {
+        if (lastSnapshot !== undefined && lastSnapshot.activeIndex !== activeIndex) {
+          applyEffects({ ...lastSnapshot, activeIndex });
+        }
+      }),
+    { name: 'createListNavigation.syncActiveIndex' },
   );
 
   function applyEffects(current: EffectSnapshot) {
@@ -1062,4 +1084,13 @@ export function createListNavigation(
   };
 
   return { reference, floating, item, trigger };
+}
+
+function shallowEqual<T extends object>(a: T, b: T) {
+  for (const key of Object.keys(a) as Array<keyof T>) {
+    if (!Object.is(a[key], b[key])) {
+      return false;
+    }
+  }
+  return true;
 }

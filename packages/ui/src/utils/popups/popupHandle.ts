@@ -1,4 +1,4 @@
-import { createSignal, type Accessor, type Setter } from 'solid-js';
+import { createSignal, getObserver, untrack, type Accessor, type Setter } from 'solid-js';
 import { isDev } from '@solidjs/web';
 import { AnimationFrame } from '@egoist/solid-base-utils/animationFrame';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
@@ -37,6 +37,55 @@ export interface PopupHandleStoreWithOpen extends PopupHandleStoreWithTriggers {
 }
 
 /**
+ * A root's claim on a handle: the root's store is attached to whichever handle `handle` returns.
+ */
+interface HandleAttachment {
+  readonly store: unknown;
+  readonly handle: Accessor<unknown>;
+}
+
+// Every root attached to a handle, in attach order. A root follows its `handle` prop through its
+// accessor, so the handle a store is attached to is derived (in the same flush as the prop)
+// instead of being moved by an effect. The list is current as soon as a root attaches (a root
+// attaches in its body, before its children read it); the signal, created on first use, makes
+// reads in reactive scopes follow it.
+const attachments: HandleAttachment[] = [];
+let attachmentsChanged: [Accessor<number>, Setter<number>] | undefined;
+
+function getAttachmentsChanged() {
+  attachmentsChanged ??= createSignal(0, {
+    ownedWrite: true,
+    equals: false,
+    name: 'popupHandle.attachments',
+  });
+  return attachmentsChanged;
+}
+
+function readAttachments(): readonly HandleAttachment[] {
+  if (getObserver()) {
+    getAttachmentsChanged()[0]();
+  }
+  return attachments;
+}
+
+/**
+ * Attaches `store` to the handle `handle` returns, until the returned function is called.
+ * @internal
+ */
+export function attachStoreToHandle(store: unknown, handle: Accessor<unknown>): () => void {
+  const attachment: HandleAttachment = { store, handle };
+  attachments.push(attachment);
+  getAttachmentsChanged()[1](0);
+  return () => {
+    const index = attachments.indexOf(attachment);
+    if (index !== -1) {
+      attachments.splice(index, 1);
+      getAttachmentsChanged()[1](0);
+    }
+  };
+}
+
+/**
  * Shared implementation for popup handles that coordinate detached triggers with a mounted root.
  *
  * Subclasses provide the component-specific imperative methods, while this base class owns the
@@ -53,19 +102,6 @@ export class BasePopupHandle<
   HandleStore extends PopupHandleStoreWithTriggers,
   Store extends HandleStore & PopupHandleStoreWithOpen,
 > implements PopupHandleStoreProvider<HandleStore> {
-  /**
-   * Stores of every root currently using this handle, in attach order. Roots can transiently
-   * overlap (e.g. during an animated route transition), so this stack lets the cleanup of
-   * `attachStore` restore the previous root.
-   */
-  private readonly attachedStores: Store[] = [];
-
-  private attachedStoreValue: Store | null = null;
-
-  private versionSignal: [Accessor<number>, Setter<number>] | undefined;
-
-  private version = 0;
-
   private overlapWarningFrame: AnimationFrame | undefined;
 
   /**
@@ -81,8 +117,22 @@ export class BasePopupHandle<
     private readonly throwOnMissingTrigger: boolean = true,
   ) {}
 
-  protected get attachedStore() {
-    return this.attachedStoreValue;
+  /**
+   * Stores of every root currently using this handle, in attach order. Roots can transiently
+   * overlap (e.g. during an animated route transition): the most recently attached one is used.
+   * Tracked in reactive scopes.
+   */
+  private attachedStores(): Store[] {
+    const read = () =>
+      readAttachments()
+        .filter((attachment) => attachment.handle() === this)
+        .map((attachment) => attachment.store as Store);
+    return getObserver() ? read() : untrack(read);
+  }
+
+  protected get attachedStore(): Store | null {
+    const stores = untrack(() => this.attachedStores());
+    return stores[stores.length - 1] ?? null;
   }
 
   /**
@@ -91,52 +141,39 @@ export class BasePopupHandle<
    * @internal
    */
   get store(): HandleStore {
-    this.getVersionSignal()[0]();
-    return this.attachedStoreValue ?? this.fallbackStore;
+    const stores = this.attachedStores();
+    return stores[stores.length - 1] ?? this.fallbackStore;
   }
 
   /**
-   * Points the handle at a root's store and notifies detached triggers so they re-register into it.
-   * Returns a cleanup function that detaches the store again.
+   * Points the handle at a root's store, so detached triggers re-register into it. Returns a
+   * cleanup function that detaches the store again.
    * @internal
    */
   attachStore(newStore: Store) {
-    this.attachedStores.push(newStore);
-    this.setActiveStore(newStore);
+    const detach = attachStoreToHandle(newStore, () => this);
+    this.warnOnOverlap();
+    return detach;
+  }
 
-    if (isDev && this.attachedStores.length > 1) {
-      // Defer the check by a frame and only warn if the overlap is still present.
-      (this.overlapWarningFrame ??= AnimationFrame.create()).request(() => {
-        if (this.attachedStores.length > 1) {
-          console.warn(
-            'Base UI: A handle is attached to more than one mounted root at the same time. ' +
-              'The most recently mounted root takes over and the previous one stops being controlled by the handle. ' +
-              'A handle should be used by a single root that stays mounted for the lifetime of the handle.',
-          );
-        }
-      });
+  /**
+   * Warns in development when more than one mounted root uses this handle.
+   * @internal
+   */
+  warnOnOverlap() {
+    if (!isDev || this.attachedStores().length <= 1) {
+      return;
     }
-
-    return () => {
-      const index = this.attachedStores.lastIndexOf(newStore);
-      if (index !== -1) {
-        this.attachedStores.splice(index, 1);
+    // Defer the check by a frame and only warn if the overlap is still present.
+    (this.overlapWarningFrame ??= AnimationFrame.create()).request(() => {
+      if (this.attachedStores().length > 1) {
+        console.warn(
+          'Base UI: A handle is attached to more than one mounted root at the same time. ' +
+            'The most recently mounted root takes over and the previous one stops being controlled by the handle. ' +
+            'A handle should be used by a single root that stays mounted for the lifetime of the handle.',
+        );
       }
-      this.setActiveStore(this.attachedStores[this.attachedStores.length - 1] ?? null);
-    };
-  }
-
-  private getVersionSignal() {
-    this.versionSignal ??= createSignal(0, { ownedWrite: true });
-    return this.versionSignal;
-  }
-
-  private setActiveStore(store: Store | null) {
-    if (this.attachedStoreValue !== store) {
-      this.attachedStoreValue = store;
-      this.version += 1;
-      this.getVersionSignal()[1](this.version);
-    }
+    });
   }
 
   /**
@@ -165,8 +202,9 @@ export class BasePopupHandle<
     // root's store, so search all of them.
     let triggerElement: Element | undefined;
     if (triggerId) {
-      for (let i = this.attachedStores.length - 1; i >= 0 && !triggerElement; i -= 1) {
-        triggerElement = this.attachedStores[i].context.triggerElements.getById(triggerId);
+      const attachedStores = this.attachedStores();
+      for (let i = attachedStores.length - 1; i >= 0 && !triggerElement; i -= 1) {
+        triggerElement = attachedStores[i].context.triggerElements.getById(triggerId);
       }
       triggerElement ??= this.fallbackStore.context.triggerElements.getById(triggerId);
     }

@@ -1,3 +1,4 @@
+import { createSignal, getObserver } from 'solid-js';
 import { isDev } from '@solidjs/web';
 
 /**
@@ -30,6 +31,28 @@ function getDevElementIds(map: PopupTriggerMap) {
 export class PopupTriggerMap {
   private idMap: Map<string, Element> = new Map();
 
+  // Bumped whenever a trigger registers or unregisters, so derived state (the trigger count, the
+  // implicit active trigger) follows the registry instead of being copied into the store.
+  private readonly changes = createSignal(0, {
+    ownedWrite: true,
+    equals: false,
+    name: 'PopupTriggerMap.changes',
+  });
+
+  private changed() {
+    this.changes[1]((version) => version + 1);
+  }
+
+  /**
+   * Inside a reactive scope, subscribes it to every registration change. A no-op elsewhere, so the
+   * other (untracked) reads can be used from handlers and effect callbacks.
+   */
+  public track() {
+    if (getObserver()) {
+      this.changes[0]();
+    }
+  }
+
   /**
    * Adds a trigger element with the given ID.
    *
@@ -58,7 +81,10 @@ export class PopupTriggerMap {
       elementIds.set(element, id);
     }
 
-    this.idMap.set(id, element);
+    if (this.idMap.get(id) !== element) {
+      this.idMap.set(id, element);
+      this.changed();
+    }
   }
 
   /**
@@ -72,7 +98,9 @@ export class PopupTriggerMap {
       }
     }
 
-    this.idMap.delete(id);
+    if (this.idMap.delete(id)) {
+      this.changed();
+    }
   }
 
   /**

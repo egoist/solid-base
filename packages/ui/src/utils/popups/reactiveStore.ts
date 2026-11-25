@@ -52,7 +52,12 @@ export class ReactiveStore<
 
   private readonly bindings = new Map<PropertyKey, Accessor<any>>();
 
+  private readonly derivations = new Map<PropertyKey, (stored: any) => any>();
+
   private readonly signals = new Map<PropertyKey, [Accessor<number>, Setter<number>]>();
+
+  // Track stored values read through `selectStored`, which bypass derivations.
+  private readonly storedSignals = new Map<PropertyKey, [Accessor<number>, Setter<number>]>();
 
   private readonly listeners = new Set<() => void>();
 
@@ -70,7 +75,8 @@ export class ReactiveStore<
     const read = (key: PropertyKey) => {
       const binding = this.bindings.get(key);
       if (!binding) {
-        return this.values[key];
+        const derive = this.derivations.get(key);
+        return derive ? derive(this.values[key]) : this.values[key];
       }
       // Untracked reads (snapshots in handlers, effect callbacks and ref callbacks) run without an
       // owner: a compiled conditional prop (`open={a() && b()}`) creates a memo on every read that
@@ -169,6 +175,43 @@ export class ReactiveStore<
   }
 
   /**
+   * Derives what reading `key` returns from its stored value (tracked when selected), such as a
+   * fallback computed from other state. Writes still go to the stored value, and snapshots taken
+   * for updates (`transformState`) see the stored value. Returns a function removing it.
+   */
+  derive<Key extends keyof State>(key: Key, fn: (stored: State[Key]) => State[Key]) {
+    this.derivations.set(key, fn);
+    return () => {
+      if (this.derivations.get(key) === fn) {
+        this.derivations.delete(key);
+      }
+    };
+  }
+
+  /**
+   * Reads the value of `key` (with its derivation) without going through a selector of the same
+   * name, tracking it inside a reactive scope.
+   */
+  selectValue<Key extends keyof State>(key: Key): State[Key] {
+    return getObserver() ? this.trackedState[key] : this.state[key];
+  }
+
+  /**
+   * Reads the stored value of `key`, bypassing `derive`, tracking it inside a reactive scope.
+   */
+  selectStored<Key extends keyof State>(key: Key): State[Key] {
+    if (getObserver()) {
+      let signal = this.storedSignals.get(key);
+      if (!signal) {
+        signal = createSignal(0, { ownedWrite: true, name: `store.${String(key)}.stored` });
+        this.storedSignals.set(key, signal);
+      }
+      signal[0]();
+    }
+    return this.values[key as PropertyKey];
+  }
+
+  /**
    * Keeps `key` in sync with `accessor`: the value is written now, and again whenever the
    * accessor changes. Unlike `bind`, the key stays writable.
    */
@@ -231,25 +274,52 @@ export class ReactiveStore<
   }
 
   private commit(previous: State, next: State) {
-    let changed = false;
+    const changedKeys: string[] = [];
     for (const key of Object.keys(next)) {
       if (this.bindings.has(key)) {
         continue;
       }
-      const value = (next as any)[key];
-      if (!Object.is(this.values[key], value) || !(key in this.values)) {
-        this.values[key] = value;
-        changed = true;
+      if (!Object.is(this.values[key], (next as any)[key]) || !(key in this.values)) {
+        changedKeys.push(key);
+      }
+    }
+    if (changedKeys.length === 0) {
+      return;
+    }
+
+    // A derived key notifies its readers only when what they read changes: writing a stored value
+    // that the derivation overrides (an anchor that follows the active trigger while the popup is
+    // mounted, say) is not a change for them.
+    const derivedBefore = new Map<string, unknown>();
+    for (const key of changedKeys) {
+      if (this.derivations.has(key)) {
+        derivedBefore.set(key, this.state[key as keyof State]);
+      }
+    }
+    for (const key of changedKeys) {
+      this.values[key] = (next as any)[key];
+    }
+    for (const key of changedKeys) {
+      this.notifyStored(key);
+      if (!derivedBefore.has(key) || !Object.is(derivedBefore.get(key), this.state[key as keyof State])) {
         this.notify(key);
       }
     }
-    if (changed && previous !== next) {
+    if (previous !== next) {
       this.listeners.forEach((listener) => listener());
     }
   }
 
   private track(key: PropertyKey) {
     this.getSignal(key)[0]();
+  }
+
+  private notifyStored(key: PropertyKey) {
+    const signal = this.storedSignals.get(key);
+    if (signal) {
+      this.version += 1;
+      signal[1](this.version);
+    }
   }
 
   private notify(key: PropertyKey) {
@@ -263,7 +333,7 @@ export class ReactiveStore<
   private getSignal(key: PropertyKey) {
     let signal = this.signals.get(key);
     if (!signal) {
-      signal = createSignal(0, { ownedWrite: true });
+      signal = createSignal(0, { ownedWrite: true, name: `store.${String(key)}` });
       this.signals.set(key, signal);
     }
     return signal;

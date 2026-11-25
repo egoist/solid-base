@@ -217,9 +217,8 @@ export function MenuComponent(props: MenuProps) {
                     visibility: !props.keepMounted ? undefined : isOpen() ? 'visible' : 'hidden',
                   }}
                   aria-hidden={!isOpen() ? 'true' : undefined}
-                  {...getFloatingTestProps(interactions, {
-                    ref: cleanupRef(refs.setFloating),
-                  })}
+                  {...getFloatingTestProps(interactions)}
+                  ref={cleanupRef(refs.setFloating)}
                 >
                   {props.grid ? <GridRows>{props.children}</GridRows> : props.children}
                 </div>
