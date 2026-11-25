@@ -45,7 +45,45 @@ Solid-specific adjustments:
 - Change callbacks keep Base UI's signature: `onOpenChange(open, eventDetails)`,
   `onValueChange(value, eventDetails)`, … with `eventDetails.cancel()` and friends.
 - Hooks are Solid primitives: `useRender` returns an element, `useDirection()` and the media query
-  helper return accessors.
+  helper return accessors, and `useToastManager().toasts` is a reactive getter
+  (`<For each={manager.toasts}>`).
+- Function children (such as a Root's `{({ payload }) => ...}` or `Field.Validity`) are called once
+  with live objects, like `render` functions.
+- `actionsRef` accepts a `{ current }` object or a callback.
+- Attribute-like props use Solid's lowercase names where Base UI uses React's camelCase
+  (`tabindex`, `autocomplete`, `inputmode`, …).
+
+## Status
+
+The port mirrors Base UI's test suites: about 6,700 tests ported from upstream pass in jsdom.
+Upstream tests that need real layout, CSS animations or a real browser are skipped with a comment,
+as are React-specific ones (StrictMode, render counts). Server rendering and hydration follow
+Solid's model but are not covered by the test suite yet.
+
+Known differences:
+
+- Filterable menus match items by their `label` or rendered text. An item whose text changes while
+  it is filtered out is only re-matched once shown again; pass `label` for dynamic text.
+
+## Components
+
+Every Base UI module is ported, with the same parts and props:
+
+Accordion · Alert Dialog · Autocomplete · Avatar · Button · Checkbox · Checkbox Group ·
+Collapsible · Combobox · Context Menu · Dialog · Drawer · Field · Fieldset · Form · Input · Menu ·
+Menubar · Meter · Navigation Menu · Number Field · OTP Field · Popover · Preview Card · Progress ·
+Radio · Radio Group · Scroll Area · Select · Separator · Slider · Switch · Tabs · Toast · Toggle ·
+Toggle Group · Toolbar · Tooltip
+
+Utilities: `CSPProvider`, `DirectionProvider` / `useDirection`, `mergeProps`, `useRender`, and
+`useMediaQuery` (`@egoist/solid-base/unstable-use-media-query`).
+
+Import from the root entry or from a module subpath:
+
+```tsx
+import { Dialog, Menu } from '@egoist/solid-base';
+import { Popover } from '@egoist/solid-base/popover';
+```
 
 ## Packages
 
