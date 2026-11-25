@@ -1,22 +1,24 @@
 import { createSignal } from 'solid-js';
 import { Button } from '@egoist/solid-base/button';
+import styles from './button.module.css';
 
 export const title = 'Button';
 
-export default function ButtonDemo() {
+export default function ExampleButton() {
   const [count, setCount] = createSignal(0);
   return (
-    <div class="row">
-      <Button class="btn primary" onClick={() => setCount((c) => c + 1)}>
+    <div style={{ display: 'flex', gap: '0.75rem', 'flex-wrap': 'wrap' }}>
+      <Button class={styles.Button}>Submit</Button>
+      <Button class={styles.Button} onClick={() => setCount((c) => c + 1)}>
         Clicked {count()} times
       </Button>
-      <Button class="btn" disabled>
+      <Button class={styles.Button} disabled>
         Disabled
       </Button>
-      <Button class="btn" disabled focusableWhenDisabled>
+      <Button class={styles.Button} disabled focusableWhenDisabled>
         Focusable when disabled
       </Button>
-      <Button class="btn" nativeButton={false} render="span">
+      <Button class={styles.Button} nativeButton={false} render="span">
         Rendered as span
       </Button>
     </div>

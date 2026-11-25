@@ -1,0 +1,27 @@
+import { createSignal, onSettled } from 'solid-js';
+import { Progress } from '@egoist/solid-base/progress';
+import styles from './progress.module.css';
+
+export const title = 'Progress';
+
+export default function ExampleProgress() {
+  const [value, setValue] = createSignal(20);
+
+  // Simulate changes
+  onSettled(() => {
+    const interval = setInterval(() => {
+      setValue((current) => Math.min(100, Math.round(current + Math.random() * 25)));
+    }, 1000);
+    return () => clearInterval(interval);
+  });
+
+  return (
+    <Progress.Root class={styles.Progress} value={value()}>
+      <Progress.Label class={styles.Label}>Export data</Progress.Label>
+      <Progress.Value class={styles.Value} />
+      <Progress.Track class={styles.Track}>
+        <Progress.Indicator class={styles.Indicator} />
+      </Progress.Track>
+    </Progress.Root>
+  );
+}
