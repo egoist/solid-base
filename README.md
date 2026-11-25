@@ -57,8 +57,9 @@ Solid-specific adjustments:
 
 The port mirrors Base UI's test suites: about 6,700 tests ported from upstream pass in jsdom.
 Upstream tests that need real layout, CSS animations or a real browser are skipped with a comment,
-as are React-specific ones (StrictMode, render counts). Server rendering and hydration follow
-Solid's model but are not covered by the test suite yet.
+as are React-specific ones (StrictMode, render counts). A separate suite server-renders every
+playground demo (`bun run test:ssr`); like React portals, popups render nothing on the server.
+Hydration is not covered by tests yet.
 
 Known differences:
 
@@ -98,7 +99,7 @@ This is a Bun workspace.
 
 ```sh
 bun install
-bun run test        # vitest (jsdom)
+bun run test        # vitest (jsdom) + server rendering
 bun run typecheck   # tsc
 bun run dev         # playground at http://localhost:5173
 bun run build       # build the packages

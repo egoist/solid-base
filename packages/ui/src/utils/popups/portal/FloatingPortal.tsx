@@ -9,7 +9,7 @@ import {
   useContext,
   type Accessor,
 } from 'solid-js';
-import { Portal, type JSX } from '@solidjs/web';
+import { Portal, isServer, type JSX } from '@solidjs/web';
 import { isNode } from '@floating-ui/utils/dom';
 import { addEventListener } from '@egoist/solid-base-utils/addEventListener';
 import { mergeCleanups } from '@egoist/solid-base-utils/mergeCleanups';
@@ -183,6 +183,11 @@ function renderPortalNode(
  * @internal
  */
 export function FloatingPortal(componentProps: FloatingPortalProps): JSX.Element {
+  // Portals are client-only: like React portals, they render nothing on the server.
+  if (isServer) {
+    return null;
+  }
+
   const [focusManagerState, setFocusManagerState] = createSignal<FocusManagerState | null>(null, {
     ownedWrite: true,
   });
@@ -322,6 +327,10 @@ export namespace FloatingPortal {
  * @internal
  */
 export function FloatingPortalLite(componentProps: FloatingPortalProps): JSX.Element {
+  if (isServer) {
+    return null;
+  }
+
   // Read the children lazily, in the portal's tracking scope.
   const { element } = renderPortalNode(
     componentProps,
