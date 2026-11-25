@@ -53,8 +53,14 @@ The essentials for this codebase:
 - In raw JSX, write ARIA booleans as strings: `aria-hidden="true"`, `aria-expanded={open() ? 'true' : 'false'}`.
   Props that go through `renderElement`/`mergeProps` may use booleans: they are serialized for you.
 - `class` accepts strings, arrays and `{ name: boolean }` objects. No `classList`.
-- Tests: Solid dev diagnostics (`[CODE] ...` warnings) **fail the test** (see `test/setup.ts`).
-  Fix the cause; never silence them.
+- Tests: Solid dev diagnostics (`[CODE] ...` warnings) **fail the test** (see `test/setup.ts`),
+  including the attribution reports Vite's dev server shows to users (`EFFECT_WRITES_OWN_SOURCE`,
+  `EFFECT_RELAY_TEAR`, `UNSTABLE_MEMO_OUTPUT`). Fix the cause; never silence them.
+  `ATTRIBUTION=off` disables the attribution engine to bisect a failure.
+- **Never keep derived state in sync with an effect.** Derive it (`createMemo`, a writable
+  `createSignal(fn)`, a store `derive`), write at the source in handlers, or register an accessor
+  with the parent instead of copying a value into its state. Give memos returning arrays/objects
+  an `equals`. An effect whose `apply` only measures the DOM takes no argument.
 
 ## Component anatomy
 
