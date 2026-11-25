@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, omit, onSettled, untrack } from 'solid-js';
+import { createEffect, createSignal, omit, onCleanup, onSettled, untrack } from 'solid-js';
 import { isDev, type JSX } from '@solidjs/web';
 import { error } from '@egoist/solid-base-utils/error';
 import {
@@ -191,9 +191,17 @@ export function DrawerPopup(componentProps: DrawerPopup.Props): JSX.Element {
     drawer.onPopupHeightChange(nextHeight);
   };
 
+  // Measures the popup (re-measured when a nested drawer opens or closes). The apply half reads
+  // the element's layout rather than the tracked values, so it takes no argument.
   createEffect(
-    () => [mounted(), nestedDrawerOpen(), store.select('popupElement')] as const,
-    ([isMounted, , popupElement]) => {
+    () => {
+      mounted();
+      nestedDrawerOpen();
+      store.select('popupElement');
+    },
+    () => {
+      const isMounted = store.state.mounted;
+      const popupElement = store.state.popupElement;
       if (!isMounted) {
         popupHeightValue = 0;
         setPopupHeight(0);
@@ -219,6 +227,7 @@ export function DrawerPopup(componentProps: DrawerPopup.Props): JSX.Element {
         resizeObserver.disconnect();
       };
     },
+    { name: 'DrawerPopup.measureHeight' },
   );
 
   createEffect(
@@ -248,34 +257,14 @@ export function DrawerPopup(componentProps: DrawerPopup.Props): JSX.Element {
     },
   );
 
-  const notifyParentFrontmostHeight = drawer.notifyParentFrontmostHeight;
-  if (notifyParentFrontmostHeight) {
-    createEffect(
-      () => [open(), drawer.frontmostHeight] as const,
-      ([isOpen, frontmostHeight]) => {
-        if (!isOpen) {
-          return undefined;
-        }
-
-        notifyParentFrontmostHeight(frontmostHeight);
-
-        return () => {
-          notifyParentFrontmostHeight(0);
-        };
-      },
+  const registerWithParentDrawer = drawer.registerWithParentDrawer;
+  if (registerWithParentDrawer) {
+    onCleanup(
+      registerWithParentDrawer({
+        present: () => open() || transitionStatus() === 'ending',
+        frontmostHeight: () => (open() ? drawer.frontmostHeight : 0),
+      }),
     );
-  }
-
-  const notifyParentHasNestedDrawer = drawer.notifyParentHasNestedDrawer;
-  if (notifyParentHasNestedDrawer) {
-    const present = createMemo(() => open() || transitionStatus() === 'ending');
-    createEffect(present, (isPresent) => {
-      notifyParentHasNestedDrawer(isPresent);
-
-      return () => {
-        notifyParentHasNestedDrawer(false);
-      };
-    });
   }
 
   createOpenChangeComplete({

@@ -35,7 +35,19 @@ export interface NavigationMenuRootContext<Value = any> {
   readonly activationDirection: NavigationMenuActivationDirection;
   setActivationDirection: (direction: NavigationMenuActivationDirection) => void;
   readonly floatingRootStore: FloatingRootStore | undefined;
-  setFloatingRootStore: (store: FloatingRootStore | undefined) => void;
+  /**
+   * Registers the floating root store of an item's trigger: while `isActive`, it is the menu's
+   * `floatingRootStore`. Returns the function that unregisters it.
+   */
+  registerFloatingRootStore: (registration: {
+    isActive: () => boolean;
+    store: FloatingRootStore;
+  }) => () => void;
+  /**
+   * Subscribes to the popup's unmount: the listener runs as the popup unmounts, in the same batch.
+   * Returns the function that unsubscribes it.
+   */
+  onPopupUnmount: (listener: () => void) => () => void;
   /**
    * The content element of the active item. Reading `currentContent` is tracked; the ref reads
    * and writes the same value imperatively.

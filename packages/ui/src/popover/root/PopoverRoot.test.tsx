@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, flush, omit, onSettled } from 'solid-js';
+import { Show, createSignal, flush, omit, onSettled } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { Popover } from '..';
@@ -178,22 +178,18 @@ describe('<Popover.Root />', () => {
       const onOpenChangeComplete = vi.fn();
       const [open, setOpen] = createSignal(false);
 
-      function CloseWhenOpened() {
-        createEffect(open, (isOpen) => {
-          if (isOpen) {
-            setOpen(false);
-          }
-        });
-        return null;
-      }
-
       const { user } = renderWithUser(() => (
         <Popover.Root
           open={open()}
-          onOpenChange={(next) => setOpen(next)}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (next) {
+              // Closes it again once the open has rendered (after the flush the press caused).
+              queueMicrotask(() => setOpen(false));
+            }
+          }}
           onOpenChangeComplete={onOpenChangeComplete}
         >
-          <CloseWhenOpened />
           <Popover.Trigger data-testid="trigger">Open</Popover.Trigger>
           <Popover.Portal>
             <Popover.Positioner>
@@ -1462,12 +1458,6 @@ describe('<Popover.Root />', () => {
         const actionsRef = createRef<Popover.Root.Actions>();
 
         function App() {
-          createEffect(open, (isOpen) => {
-            if (!isOpen) {
-              actionsRef.current?.unmount();
-            }
-          });
-
           return (
             <Popover.Root open={open()} onOpenChange={(next) => setOpen(next)} actionsRef={actionsRef}>
               <Popover.Trigger>Trigger 1</Popover.Trigger>
@@ -1489,7 +1479,11 @@ describe('<Popover.Root />', () => {
           expect(trigger1).toHaveAttribute('aria-expanded', 'true');
         });
 
-        await act(() => setOpen(false));
+        // The close lands with the prop on the next flush; `unmount` follows it in the same batch.
+        await act(() => {
+          setOpen(false);
+          actionsRef.current?.unmount();
+        });
         await waitFor(() => {
           expect(screen.queryByTestId('popup')).toBe(null);
         });
@@ -1506,32 +1500,13 @@ describe('<Popover.Root />', () => {
         const [open, setOpen] = createSignal(false);
         const actionsRef = createRef<Popover.Root.Actions>();
 
-        function UnmountOnClose(props: { state: Popover.Popup.State }) {
-          createEffect(
-            () => props.state.open,
-            (isOpen) => {
-              if (!isOpen) {
-                actionsRef.current?.unmount();
-              }
-            },
-          );
-          return null;
-        }
-
         const { user } = renderWithUser(() => (
           <Popover.Root open={open()} onOpenChange={(next) => setOpen(next)} actionsRef={actionsRef}>
             <Popover.Trigger>Trigger 1</Popover.Trigger>
             <Popover.Trigger>Trigger 2</Popover.Trigger>
             <Popover.Portal>
               <Popover.Positioner>
-                <Popover.Popup
-                  data-testid="popup"
-                  render={(props, state) => (
-                    <div {...props}>
-                      <UnmountOnClose state={state} />
-                    </div>
-                  )}
-                />
+                <Popover.Popup data-testid="popup" />
               </Popover.Positioner>
             </Popover.Portal>
           </Popover.Root>
@@ -1550,6 +1525,9 @@ describe('<Popover.Root />', () => {
         });
 
         await act(() => setOpen(false));
+        // The part calls `unmount` once the controlled close has rendered.
+        expect(screen.getByTestId('popup')).toHaveAttribute('data-closed');
+        await act(() => actionsRef.current?.unmount());
         await waitFor(() => {
           expect(screen.queryByTestId('popup')).toBe(null);
         });

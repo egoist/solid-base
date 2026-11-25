@@ -1,18 +1,12 @@
-import { createSignal, omit, onCleanup } from 'solid-js';
+import { createMemo, createSignal, omit, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import type { RefProp } from '@egoist/solid-base-utils/refs';
-import {
-  FloatingNode,
-  FloatingTree,
-  createFloatingNodeId,
-  useFloatingTree,
-} from '../utils/popups/tree/FloatingTree';
+import { FloatingNode, FloatingTree, createFloatingNodeId } from '../utils/popups/tree/FloatingTree';
 import type { MenuRoot } from '../menu/root/MenuRoot';
 import type { BaseUIComponentProps } from '../internals/types';
-import { MenubarContext, useMenubarContext } from './MenubarContext';
+import { MenubarContext, type MenubarMenuStore } from './MenubarContext';
 import { CompositeRoot } from '../internals/composite/root/CompositeRoot';
 import { createBaseUiId } from '../internals/baseUiId';
-import type { MenuOpenEventDetails } from '../menu/utils/types';
 import type { StateAttributesMapping } from '../internals/getStateAttributesProps';
 import * as MenubarDataAttributes from './MenubarDataAttributes';
 import { REASONS } from '../internals/reasons';
@@ -48,7 +42,46 @@ export function Menubar(componentProps: Menubar.Props): JSX.Element {
   const disabled = () => componentProps.disabled ?? false;
 
   const [contentElement, setContentElement] = createSignal<HTMLElement | null>(null);
-  const [hasSubmenuOpen, setHasSubmenuOpen] = createSignal(false);
+
+  // Menus register from their component bodies, before they read the menubar's state.
+  const menus = new Set<Accessor<MenubarMenuStore>>();
+  const [menusVersion, setMenusVersion] = createSignal(0, {
+    ownedWrite: true,
+    equals: false,
+    name: 'Menubar.menus',
+  });
+
+  // A submenu stays open across a switch to a sibling menu, including one that closes the current
+  // menu before the next one opens (sibling open, list navigation), and stops being open once a
+  // menu closes for any other reason.
+  const submenuState = createMemo<SubmenuState>(
+    (previous) => {
+      menusVersion();
+      const openMenus = new Set<MenubarMenuStore>();
+      for (const menu of menus) {
+        const store = menu();
+        const parent = store.select('parent');
+        if (parent.type === 'menubar' && parent.context === context && store.select('open')) {
+          openMenus.add(store);
+        }
+      }
+      if (openMenus.size > 0) {
+        return { openMenus, hasSubmenuOpen: true };
+      }
+      let hasSubmenuOpen = previous?.hasSubmenuOpen ?? false;
+      previous?.openMenus.forEach((store) => {
+        const reason = store.select('lastOpenChangeReason');
+        if (reason !== REASONS.siblingOpen && reason !== REASONS.listNavigation) {
+          hasSubmenuOpen = false;
+        }
+      });
+      return { openMenus, hasSubmenuOpen };
+    },
+    { name: 'Menubar.submenuState', equals: isSameSubmenuState },
+  );
+  const hasSubmenuOpen = createMemo(() => submenuState().hasSubmenuOpen, {
+    name: 'Menubar.hasSubmenuOpen',
+  });
 
   const id = createBaseUiId(() => componentProps.id || undefined);
 
@@ -74,7 +107,15 @@ export function Menubar(componentProps: Menubar.Props): JSX.Element {
     get hasSubmenuOpen() {
       return hasSubmenuOpen();
     },
-    setHasSubmenuOpen,
+    registerMenu(menu) {
+      menus.add(menu);
+      setMenusVersion(0);
+      return () => {
+        if (menus.delete(menu)) {
+          setMenusVersion(0);
+        }
+      };
+    },
     get modal() {
       return modal();
     },
@@ -126,33 +167,24 @@ export function Menubar(componentProps: Menubar.Props): JSX.Element {
 
 function MenubarContent(props: { children?: JSX.Element }) {
   const nodeId = createFloatingNodeId();
-  const { events: menuEvents } = useFloatingTree()!;
-  const rootContext = useMenubarContext();
+  return <FloatingNode id={nodeId}>{props.children}</FloatingNode>;
+}
 
-  function onSubmenuOpenChange(details: MenuOpenEventDetails) {
-    if (!details.nodeId || details.parentNodeId !== nodeId) {
-      return;
-    }
+interface SubmenuState {
+  openMenus: ReadonlySet<MenubarMenuStore>;
+  hasSubmenuOpen: boolean;
+}
 
-    // Emitted from effects, so the current value isn't read here: setting an equal value is a
-    // no-op for the signal.
-    if (details.open) {
-      rootContext.setHasSubmenuOpen(true);
-    } else if (
-      details.reason !== REASONS.siblingOpen &&
-      details.reason !== REASONS.listNavigation
-    ) {
-      rootContext.setHasSubmenuOpen(false);
+function isSameSubmenuState(a: SubmenuState | undefined, b: SubmenuState) {
+  if (!a || a.hasSubmenuOpen !== b.hasSubmenuOpen || a.openMenus.size !== b.openMenus.size) {
+    return false;
+  }
+  for (const store of a.openMenus) {
+    if (!b.openMenus.has(store)) {
+      return false;
     }
   }
-
-  // Subscribe before the menus mount so their initial open state is reported.
-  menuEvents.on('menuopenchange', onSubmenuOpenChange);
-  onCleanup(() => {
-    menuEvents.off('menuopenchange', onSubmenuOpenChange);
-  });
-
-  return <FloatingNode id={nodeId}>{props.children}</FloatingNode>;
+  return true;
 }
 
 export interface MenubarState {

@@ -1,4 +1,4 @@
-import { createEffect, createMemo } from 'solid-js';
+import { createEffect, createMemo, onCleanup } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { TooltipRootContext } from './TooltipRootContext';
 import { createClientPoint } from '../../utils/popups/interactions/clientPoint';
@@ -11,10 +11,12 @@ import {
   renderPopupRootChildren,
 } from '../../utils/popups/popupRoot';
 import type { ActionsRef, PayloadChildRenderFunction } from '../../utils/popups/popupRoot';
-import { createPopupInteractionProps } from '../../utils/popups/popupStoreUtils';
+import {
+  createPopupInteractionProps,
+  deriveActiveTriggerState,
+} from '../../utils/popups/popupStoreUtils';
 import { mergeProps } from '../../merge-props/mergeProps';
 import { TooltipStore } from '../store/TooltipStore';
-import type { TooltipInstantType } from '../store/TooltipStore';
 import type { TooltipHandle } from '../store/TooltipHandle';
 import { REASONS } from '../../internals/reasons';
 import type { HTMLProps } from '../../internals/types';
@@ -29,7 +31,7 @@ export function TooltipRoot<Payload = unknown>(props: TooltipRoot.Props<Payload>
   const disabled = () => props.disabled ?? false;
   const trackCursorAxis = () => props.trackCursorAxis ?? 'none';
 
-  const { store, open, transitionStatus } = createPopupRoot(
+  const { store, transitionStatus } = createPopupRoot(
     props,
     (initialState, defaultPopupId) => new TooltipStore<Payload>(initialState, defaultPopupId),
     { closeOnActiveTriggerUnmount: true, disabled },
@@ -39,13 +41,16 @@ export function TooltipRoot<Payload = unknown>(props: TooltipRoot.Props<Payload>
   store.bind('disableHoverablePopup', () => props.disableHoverablePopup ?? false);
   store.bind('disabled', disabled);
 
+  // Disabling an open tooltip requests a close (it already renders as closed). The request answers
+  // the change of `disabled`, so the effect doesn't track the open state it writes.
   createEffect(
-    () => store.select('open') && disabled(),
-    (shouldClose) => {
-      if (shouldClose) {
+    disabled,
+    (isDisabled) => {
+      if (isDisabled && store.select('open')) {
         store.setOpen(false, createChangeEventDetails(REASONS.disabled));
       }
     },
+    { name: 'TooltipRoot.closeWhenDisabled' },
   );
 
   // Animations should be instant in two cases:
@@ -53,40 +58,28 @@ export function TooltipRoot<Payload = unknown>(props: TooltipRoot.Props<Payload>
   // 2) Closing because another tooltip opened (reason === 'none')
   // Otherwise, allow the animation to play. In particular, do not disable animations
   // during the 'ending' phase unless it's due to a sibling opening.
-  let previousInstantType: TooltipInstantType | null = null;
-  const shouldBeInstant = createMemo(() => {
-    const status = transitionStatus();
-    return (
-      (status === 'ending' && store.select('lastOpenChangeReason') === REASONS.none) ||
-      (status !== 'ending' && store.select('isInstantPhase'))
-    );
+  const shouldBeInstant = createMemo(
+    () => {
+      const status = transitionStatus();
+      return (
+        (status === 'ending' && store.select('lastOpenChangeReason') === REASONS.none) ||
+        (status !== 'ending' && store.select('isInstantPhase'))
+      );
+    },
+    { name: 'TooltipRoot.shouldBeInstant' },
+  );
+
+  // While instant, `instantType` reads 'delay' to disable animations while moving from one trigger
+  // to another within a delay group; the stored value shows through again afterwards.
+  onCleanup(
+    store.derive('instantType', (stored) => (shouldBeInstant() ? 'delay' : stored)),
+  );
+
+  // The payload and the trigger options come from the active trigger. A tooltip open (or closing)
+  // without an active trigger has no payload.
+  deriveActiveTriggerState(store, ['payload', 'closeOnClick', 'closeDelay'], {
+    clearWithoutTrigger: ['payload'],
   });
-
-  createEffect(
-    () => [shouldBeInstant(), store.select('instantType')] as const,
-    ([instant, instantType]) => {
-      if (instant) {
-        // Capture the current instant type so we can restore it later and set to 'delay' to
-        // disable animations while moving from one trigger to another within a delay group.
-        if (instantType !== 'delay') {
-          previousInstantType = instantType;
-        }
-        store.set('instantType', 'delay');
-      } else if (previousInstantType !== null) {
-        store.set('instantType', previousInstantType);
-        previousInstantType = null;
-      }
-    },
-  );
-
-  createEffect(
-    () => open() && store.select('activeTriggerId') == null,
-    (openWithoutTrigger) => {
-      if (openWithoutTrigger) {
-        store.set('payload', undefined);
-      }
-    },
-  );
 
   // Attached before the children render; a new `handle` prop re-attaches the same store.
   attachPopupHandle(() => props.handle, store);

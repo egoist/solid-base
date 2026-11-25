@@ -43,8 +43,13 @@ export function ToastViewport(componentProps: ToastViewport.Props): JSX.Element 
   const hasTransitioningToasts = createMemo(() =>
     store.select('toasts').some((toast) => toast.transitionStatus === 'ending'),
   );
-  const highPriorityToasts = createMemo(() =>
-    store.getToastViews().filter((toast) => toast.priority === 'high'),
+  // The views are stable per toast, so an unchanged selection keeps its array.
+  const highPriorityToasts = createMemo(
+    () => store.getToastViews().filter((toast) => toast.priority === 'high'),
+    {
+      name: 'ToastViewport.highPriorityToasts',
+      equals: (a, b) => a.length === b.length && a.every((toast, index) => toast === b[index]),
+    },
   );
 
   createEffect(

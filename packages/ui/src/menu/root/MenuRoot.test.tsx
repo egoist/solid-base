@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal, flush, onSettled } from 'solid-js';
+import { For, Show, createSignal, flush, onSettled } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { fireEvent, screen, waitFor } from '@solidjs/testing-library';
 import userEvent from '@testing-library/user-event';
@@ -72,18 +72,18 @@ describe('<Menu.Root />', () => {
 
       function App() {
         const [open, setOpen] = createSignal(false);
-        createEffect(
-          () => open(),
-          (isOpen) => {
-            if (isOpen) {
-              setOpen(false);
-            }
-          },
-        );
         return (
           <Menu.Root
             open={open()}
-            onOpenChange={(next) => setOpen(next)}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (next) {
+                // Close again once the open has committed.
+                onSettled(() => {
+                  setOpen(false);
+                });
+              }
+            }}
             onOpenChangeComplete={onOpenChangeComplete}
           >
             <Menu.Trigger data-testid="trigger">Open</Menu.Trigger>

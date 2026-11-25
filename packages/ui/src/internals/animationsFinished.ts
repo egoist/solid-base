@@ -10,6 +10,14 @@ declare global {
 }
 
 /**
+ * Whether the animations of `element` can be waited for. Without the Web Animations API (or with
+ * animations disabled), `createAnimationsFinished` runs its callback right away.
+ */
+export function canWaitForAnimations(element: Element): boolean {
+  return typeof element.getAnimations === 'function' && !globalThis.BASE_UI_ANIMATIONS_DISABLED;
+}
+
+/**
  * Returns a function that runs a callback once all animations of `element` have finished.
  * If an animation is canceled, waits for any replacement animations before executing.
  *
@@ -38,10 +46,7 @@ export function createAnimationsFinished(
       flush();
     };
 
-    if (
-      typeof resolvedElement.getAnimations !== 'function' ||
-      globalThis.BASE_UI_ANIMATIONS_DISABLED
-    ) {
+    if (!canWaitForAnimations(resolvedElement)) {
       fnToExecute();
       return;
     }

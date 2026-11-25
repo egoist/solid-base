@@ -1,4 +1,4 @@
-import { createEffect, omit, onCleanup, untrack } from 'solid-js';
+import { createEffect, createMemo, createSignal, omit, onCleanup, untrack, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { isHTMLElement } from '@floating-ui/utils/dom';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
@@ -60,6 +60,11 @@ function getPositionerFixedSize(positionerElement: HTMLElement) {
   return { width, height };
 }
 
+interface FloatingRootStoreRegistration {
+  isActive: Accessor<boolean>;
+  store: FloatingRootStore;
+}
+
 interface NavigationMenuRootStoreState {
   value: any;
   mounted: boolean;
@@ -119,6 +124,14 @@ export function NavigationMenuRoot<Value = any>(
   }, {});
 
   let closeReason: NavigationMenuRoot.ChangeEventReason | undefined;
+  // Called as the popup unmounts, in the same batch.
+  const popupUnmountListeners = new Set<() => void>();
+  function onPopupUnmount(listener: () => void) {
+    popupUnmountListeners.add(listener);
+    return () => {
+      popupUnmountListeners.delete(listener);
+    };
+  }
   const rootRef: RefObject<HTMLElement | null> = { current: null };
   const prevTriggerElementRef: RefObject<Element | null | undefined> = { current: null };
   const beforeInsideRef: RefObject<HTMLSpanElement | null> = { current: null };
@@ -170,14 +183,60 @@ export function NavigationMenuRoot<Value = any>(
       // Callbacks are read when called, which can happen in an effect's apply phase.
       untrack(() => componentProps.onOpenChangeComplete)?.(false);
       store.set('activationDirection', null);
-      store.set('floatingRootStore', undefined);
+      releaseFloatingRootStore();
+      popupUnmountListeners.forEach((listener) => listener());
 
       store.set('currentContent', null);
       closeReason = undefined;
     },
   });
 
+  // The floating root store of the active item, which positions the popup against its trigger.
+  // Triggers register theirs; the active one is followed as the value changes, and the last one is
+  // kept after the value clears (a controlled close) until the menu is closed through `setValue` or
+  // unmounts, which release it.
+  const [floatingRootStores, setFloatingRootStores] = createSignal<
+    readonly FloatingRootStoreRegistration[]
+  >([], { ownedWrite: true, name: 'NavigationMenuRoot.floatingRootStores' });
+  const [floatingRootStoreRelease, setFloatingRootStoreRelease] = createSignal(0, {
+    ownedWrite: true,
+    name: 'NavigationMenuRoot.floatingRootStoreRelease',
+  });
+  function releaseFloatingRootStore() {
+    setFloatingRootStoreRelease((release) => release + 1);
+  }
+  const activeFloatingRootStore = createMemo<{
+    store: FloatingRootStore | undefined;
+    release: number;
+  }>(
+    (previous) => {
+      const release = floatingRootStoreRelease();
+      const active = floatingRootStores().find((registration) => registration.isActive());
+      if (active) {
+        return { store: active.store, release };
+      }
+      return { store: previous?.release === release ? previous.store : undefined, release };
+    },
+    {
+      name: 'NavigationMenuRoot.activeFloatingRootStore',
+      equals: (a, b) => a.store === b.store && a.release === b.release,
+    },
+  );
+  const floatingRootStore = createMemo(() => activeFloatingRootStore().store, {
+    name: 'NavigationMenuRoot.floatingRootStore',
+  });
+
+  function registerFloatingRootStore(registration: FloatingRootStoreRegistration) {
+    setFloatingRootStores((registrations) => [...registrations, registration]);
+    return () => {
+      setFloatingRootStores((registrations) =>
+        registrations.filter((entry) => entry !== registration),
+      );
+    };
+  }
+
   store.bind('value', value);
+  store.bind('floatingRootStore', floatingRootStore);
   store.bind('mounted', mounted);
   store.bind('transitionStatus', transitionStatus);
   store.bind('delay', () => componentProps.delay ?? 50);
@@ -261,7 +320,7 @@ export function NavigationMenuRoot<Value = any>(
         store.set('preventUnmountOnClose', unmountPrevented);
       }
       store.set('activationDirection', null);
-      store.set('floatingRootStore', undefined);
+      releaseFloatingRootStore();
     }
 
     setValueUnwrapped(nextValue);
@@ -324,7 +383,8 @@ export function NavigationMenuRoot<Value = any>(
     get floatingRootStore() {
       return store.select('floatingRootStore');
     },
-    setFloatingRootStore: store.setter('floatingRootStore'),
+    registerFloatingRootStore,
+    onPopupUnmount,
     get currentContent() {
       return store.select('currentContent');
     },

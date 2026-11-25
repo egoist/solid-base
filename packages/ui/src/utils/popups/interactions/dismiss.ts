@@ -278,15 +278,25 @@ export function createDismiss(
   // Effects never compare their values, so the open state goes through a memo: a controlled
   // `open` accessor that re-evaluates to the same value must not renumber the popup or
   // re-attach the listeners mid-gesture.
-  const open = createMemo(() => store.select('open'));
-  createEffect(open, (isOpen) => {
-    if (isOpen) {
-      openCount += 1;
-      layer = openCount;
-    } else {
-      layer = 0;
-    }
-  });
+  const open = createMemo(() => store.select('open'), { name: 'createDismiss.open' });
+  createEffect(
+    open,
+    (isOpen) => {
+      if (isOpen) {
+        openCount += 1;
+        layer = openCount;
+      } else {
+        layer = 0;
+        // Reset here, not in the listeners' cleanup, which also runs when a dependency changes
+        // mid-gesture.
+        sawPressWhileOpen = false;
+        compositionEndPending = false;
+        currentPointerType = '';
+        touchState = null;
+      }
+    },
+    { name: 'createDismiss.openSession' },
+  );
 
   // Capture-phase markers on the floating element. React's synthetic capture handlers also see
   // presses in portaled children; those are recognized through the component tree instead (see
@@ -320,48 +330,47 @@ export function createDismiss(
     },
   );
 
+  // The listeners are attached while the interaction is enabled and the popup open. Nothing else
+  // is read otherwise, so a popup that closes after being disabled doesn't re-run them.
   const listenerDeps = createMemo(
-    () => ({
-      open: open(),
-      enabled: enabled(),
-      positionerElement: store.select('positionerElement'),
-      escapeKey: escapeKey(),
-      outsidePressEnabled: outsidePressOption() !== false,
-      bubbles: bubbles(),
-    }),
+    () => {
+      if (!enabled() || !open()) {
+        return null;
+      }
+      return {
+        positionerElement: store.select('positionerElement'),
+        escapeKey: escapeKey(),
+        outsidePressEnabled: outsidePressOption() !== false,
+        bubbles: bubbles(),
+      };
+    },
     {
+      name: 'createDismiss.listenerDeps',
       equals: (a, b) =>
-        a.open === b.open &&
-        a.enabled === b.enabled &&
-        a.positionerElement === b.positionerElement &&
-        a.escapeKey === b.escapeKey &&
-        a.outsidePressEnabled === b.outsidePressEnabled &&
-        a.bubbles.escapeKey === b.bubbles.escapeKey &&
-        a.bubbles.outsidePress === b.bubbles.outsidePress,
+        a === b ||
+        (a !== null &&
+          b !== null &&
+          a.positionerElement === b.positionerElement &&
+          a.escapeKey === b.escapeKey &&
+          a.outsidePressEnabled === b.outsidePressEnabled &&
+          a.bubbles.escapeKey === b.bubbles.escapeKey &&
+          a.bubbles.outsidePress === b.bubbles.outsidePress),
     },
   );
 
   createEffect(
     listenerDeps,
-    ({
-      open,
-      enabled: isEnabled,
-      positionerElement,
-      escapeKey: escapeKeyEnabled,
-      outsidePressEnabled,
-      bubbles: bubbleOptions,
-    }) => {
-      if (!open || !isEnabled) {
-        // Reset here, not in the cleanup, which also runs when a dependency changes mid-gesture.
-        if (!open) {
-          sawPressWhileOpen = false;
-          compositionEndPending = false;
-          currentPointerType = '';
-          touchState = null;
-        }
+    (deps) => {
+      if (!deps) {
         clearInsideReactTree();
         return undefined;
       }
+      const {
+        positionerElement,
+        escapeKey: escapeKeyEnabled,
+        outsidePressEnabled,
+        bubbles: bubbleOptions,
+      } = deps;
 
       const { escapeKey: escapeKeyBubbles, outsidePress: outsidePressBubbles } = bubbleOptions;
       storeContext.escapeKeyBubbles = escapeKeyBubbles;

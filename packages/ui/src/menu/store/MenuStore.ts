@@ -1,3 +1,4 @@
+import { createMemo, onCleanup } from 'solid-js';
 import { EMPTY_OBJECT, NOOP } from '@egoist/solid-base-utils/empty';
 import { platform } from '@egoist/solid-base-utils/platform';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
@@ -50,6 +51,11 @@ export type State<Payload> = PopupStoreState<Payload> & {
   highlightedItem: HTMLElement | undefined;
   hoverEnabled: boolean;
   instantType: MenuInstantType;
+  /**
+   * The `instantType` a submenu that opens along with its parent inherits for its initial reveal.
+   * Takes precedence over `instantType` until the reveal ends.
+   */
+  seededInstantType: MenuInstantType;
   openChangeReason: MenuRoot.ChangeEventReason | null;
   floatingTreeRoot: FloatingTreeStore;
   floatingNodeId: string | undefined;
@@ -98,6 +104,11 @@ export type MenuStoreContext = PopupStoreContext<MenuRoot.ChangeEventDetails> & 
    * while the Root is mounted, so open changes requested while it isn't are dropped.
    */
   getCommittedOpenState: (() => MenuCommittedOpenState) | undefined;
+  /**
+   * Stops hovering over submenu triggers from opening their submenus until the menu opens again
+   * (`hoverEnabled`). Set by the `Menu.Root`.
+   */
+  disableHover: () => void;
 };
 
 /**
@@ -157,9 +168,10 @@ const selectors = {
   // popup instant and skipping its exit transition, including on close paths that never reach
   // `setOpen` — a controlled consumer committing `open={false}` goes straight through the prop.
   instantType: (state: S): MenuInstantType =>
-    state.instantType === 'trigger-change' && !popupStoreSelectors.open(state)
+    state.seededInstantType ??
+    (state.instantType === 'trigger-change' && !popupStoreSelectors.open(state)
       ? undefined
-      : state.instantType,
+      : state.instantType),
   lastOpenChangeReason: (state: S) => state.openChangeReason,
   floatingTreeRoot: (state: S): FloatingTreeStore => {
     if (state.parent.type === 'menu') {
@@ -187,6 +199,89 @@ const selectors = {
 };
 
 export type MenuStoreSelectors = typeof selectors;
+
+/**
+ * The menu state a `Menu.Trigger` supplies while it is the active trigger. Its properties are
+ * getters, read when the menu reads that state.
+ */
+export interface ActiveMenuTriggerState {
+  readonly payload: unknown;
+  readonly closeDelay: number;
+  /** What the trigger supplies while it is rendered outside the Root it opens. */
+  readonly detached: DetachedMenuTriggerState | undefined;
+}
+
+export interface DetachedMenuTriggerState {
+  readonly parent: MenuParent;
+  readonly floatingTreeRoot: FloatingTreeStore;
+  /** The trigger's own node in the floating tree, if it is rendered outside any Root. */
+  readonly floatingNodeId: string | undefined;
+  readonly floatingParentNodeId: string | null;
+  readonly keyboardEventRelay: ((event: KeyboardEvent) => void) | undefined;
+}
+
+const triggerStates = new WeakMap<Element, ActiveMenuTriggerState>();
+
+/**
+ * Registers the state the trigger rendered as `element` supplies to the menu while it is the
+ * active trigger.
+ */
+export function registerMenuTriggerState(element: Element, state: ActiveMenuTriggerState) {
+  triggerStates.set(element, state);
+}
+
+/**
+ * Derives the state the active trigger supplies (its payload, close delay, and the menu's place
+ * in the tree for a detached trigger) from that trigger, in the same flush as the active trigger
+ * changes. Like upstream's forwarding, it outlives the trigger's activation until another
+ * trigger becomes active. The floating tree ids follow a detached trigger only while the popup is
+ * mounted by it; the Root supplies its own otherwise.
+ */
+export function deriveActiveMenuTriggerState(store: MenuStore<any>) {
+  const activeTriggerState = createMemo<ActiveMenuTriggerState | undefined>(
+    (previous) => {
+      const activeTriggerId = store.select('activeTriggerId');
+      if (activeTriggerId == null) {
+        return previous;
+      }
+      const triggers = store.context.triggerElements;
+      triggers.track();
+      const element = triggers.getById(activeTriggerId);
+      return (element && triggerStates.get(element)) || previous;
+    },
+    { name: 'MenuStore.activeTriggerState' },
+  );
+  const detached = () => activeTriggerState()?.detached;
+  const mountedDetachedNode = () => {
+    const state = detached();
+    return state?.floatingNodeId !== undefined && store.select('activeTriggerElement')
+      ? state
+      : undefined;
+  };
+
+  const removers = [
+    store.derive('payload', (stored) => {
+      const state = activeTriggerState();
+      return state ? state.payload : stored;
+    }),
+    store.derive('closeDelay', (stored) => activeTriggerState()?.closeDelay ?? stored),
+    store.derive('parent', (stored) => detached()?.parent ?? stored),
+    store.derive('floatingTreeRoot', (stored) => detached()?.floatingTreeRoot ?? stored),
+    store.derive('keyboardEventRelay', (stored) => {
+      const state = detached();
+      return state ? state.keyboardEventRelay : stored;
+    }),
+    store.derive('floatingNodeId', (stored) => {
+      const state = mountedDetachedNode();
+      return state ? state.floatingNodeId : stored;
+    }),
+    store.derive('floatingParentNodeId', (stored) => {
+      const state = mountedDetachedNode();
+      return state ? state.floatingParentNodeId : stored;
+    }),
+  ];
+  onCleanup(() => removers.forEach((remove) => remove()));
+}
 
 /**
  * The store view that detached handle-backed triggers read from. Both the real `MenuStore` and the
@@ -299,6 +394,8 @@ export class MenuStore<Payload> extends BasePopupStore<
     return {
       keyboardOpen: nextOpen && isKeyboardOpen(reason, nativeEvent),
       instantType,
+      // An open change ends the initial reveal an inherited instant type applies to.
+      seededInstantType: undefined,
     } as Partial<State<Payload>>;
   }
 
@@ -368,6 +465,7 @@ function createInitialContext(): MenuStoreContext {
     allowTouchToClose: true,
     allowTouchToCloseTimeout: new Timeout(),
     getCommittedOpenState: undefined,
+    disableHover: NOOP,
   };
 }
 
@@ -395,6 +493,7 @@ function createInitialState<Payload>(
     highlightedItem: undefined,
     hoverEnabled: true,
     instantType: undefined,
+    seededInstantType: undefined,
     openChangeReason: null,
     floatingTreeRoot: new FloatingTreeStore(),
     floatingNodeId: undefined,

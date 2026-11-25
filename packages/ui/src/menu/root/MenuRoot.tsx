@@ -1,7 +1,15 @@
-import { createEffect, createMemo, omit, onCleanup, untrack, useContext } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  omit,
+  onCleanup,
+  untrack,
+  useContext,
+} from 'solid-js';
 import { isDev, type JSX } from '@solidjs/web';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
-import { EMPTY_ARRAY, EMPTY_OBJECT } from '@egoist/solid-base-utils/empty';
+import { EMPTY_ARRAY, EMPTY_OBJECT, NOOP } from '@egoist/solid-base-utils/empty';
 import { Timeout } from '@egoist/solid-base-utils/timeout';
 import {
   FloatingTree,
@@ -30,8 +38,15 @@ import { getHighlightReason } from '../../utils/getHighlightReason';
 import type { ContextMenuRootContext } from '../../context-menu/root/ContextMenuRootContext';
 import { useContextMenuRootContext } from '../../context-menu/root/ContextMenuRootContext';
 import { mergeProps } from '../../merge-props/mergeProps';
-import { createAnimationsFinished } from '../../internals/animationsFinished';
-import { MenuStore, type MenuInstantType } from '../store/MenuStore';
+import {
+  canWaitForAnimations,
+  createAnimationsFinished,
+} from '../../internals/animationsFinished';
+import {
+  MenuStore,
+  deriveActiveMenuTriggerState,
+  type MenuInstantType,
+} from '../store/MenuStore';
 import type { MenuHandle } from '../store/MenuHandle';
 import type { ActionsRef, PayloadChildRenderFunction } from '../../utils/popups/popupRoot';
 import {
@@ -119,7 +134,7 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
   // Mirror an instantly-opened parent (e.g. keyboard click) so `[data-instant]` styling
   // suppresses the enter transition on both popups or neither.
   const seededInstantType: MenuInstantType = animateInitialOpen
-    ? parentMenuStore?.state.instantType
+    ? parentMenuStore?.select('instantType')
     : undefined;
 
   const { store, open, transitionStatus } = createPopupRootWithPopupId(
@@ -133,7 +148,7 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
           highlightItemOnHover: untrack(() => props.highlightItemOnHover) ?? true,
           modal: parentFromContext.type === undefined ? untrack(() => props.modal) : undefined,
           rootId,
-          instantType: seededInstantType,
+          seededInstantType,
           floatingTreeRoot: initialFloatingTreeRoot,
           floatingNodeId: floatingNodeIdFromContext,
           floatingParentNodeId: floatingParentNodeIdFromContext,
@@ -146,6 +161,10 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
     generatedPopupId,
     { animateInitialOpen },
   );
+
+  if (menubarContext) {
+    onCleanup(menubarContext.registerMenu(() => store));
+  }
 
   const parent = () => store.select('parent');
   const disabled = () => store.select('disabled');
@@ -174,35 +193,40 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
 
   attachPopupHandle(() => props.handle, store);
 
-  // An inherited `instantType` is only for the initial reveal. A later controlled `open` flip
-  // bypasses `setOpen`, so nothing would reset it. Clear it once the enter phase settles.
+  // An inherited `instantType` is only for the initial reveal: it ends once the enter phase
+  // settles, when the menu closes (a controlled `open` flip bypasses `setOpen`), or with the next
+  // open change, which writes its own (see `MenuStore.prepareOpenChange`).
   if (seededInstantType !== undefined) {
-    const runOnceAnimationsFinish = createAnimationsFinished(() => store.state.popupElement);
+    const popupElement = () => store.select('popupElement');
+    const [revealAnimationsFinished, setRevealAnimationsFinished] = createSignal(false, {
+      name: 'MenuRoot.revealAnimationsFinished',
+    });
+    const seedEnded = createMemo<boolean>(
+      (ended) => {
+        if (ended || !open()) {
+          return true;
+        }
+        if (transitionStatus() !== undefined) {
+          return false;
+        }
+        const element = popupElement();
+        return element == null || !canWaitForAnimations(element) || revealAnimationsFinished();
+      },
+      { name: 'MenuRoot.seededInstantTypeEnded' },
+    );
+    onCleanup(
+      store.derive('seededInstantType', (stored) => (seedEnded() ? undefined : stored)),
+    );
+
+    const runOnceAnimationsFinish = createAnimationsFinished(popupElement);
     createEffect(
-      () => [open(), transitionStatus()] as const,
-      ([isOpen, status]) => {
-        const clearSeededInstantType = () => {
-          if (store.state.instantType === seededInstantType) {
-            store.set('instantType', undefined);
-          }
-        };
-
-        if (!isOpen) {
-          clearSeededInstantType();
+      () => !seedEnded() && transitionStatus() === undefined,
+      (waitForReveal) => {
+        if (!waitForReveal) {
           return undefined;
         }
-
-        if (status !== undefined) {
-          return undefined;
-        }
-
-        if (store.state.popupElement == null) {
-          clearSeededInstantType();
-          return undefined;
-        }
-
         const abortController = new AbortController();
-        runOnceAnimationsFinish(clearSeededInstantType, abortController.signal);
+        runOnceAnimationsFinish(() => setRevealAnimationsFinished(true), abortController.signal);
         return () => abortController.abort();
       },
     );
@@ -216,21 +240,9 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
     });
   }
 
-  // Without an active trigger, the root supplies its own tree ids (a detached trigger in a menubar
-  // forwards its own while it's active).
-  if (!parentMenuRootContext) {
-    createEffect(
-      () => store.select('activeTriggerElement'),
-      (activeTriggerElement) => {
-        if (!activeTriggerElement) {
-          store.update({
-            floatingNodeId: floatingNodeIdFromContext,
-            floatingParentNodeId: floatingParentNodeIdFromContext,
-          });
-        }
-      },
-    );
-  }
+  // A trigger supplies its payload and close delay while it is active, and a detached trigger
+  // the menu's place in the tree.
+  deriveActiveMenuTriggerState(store);
 
   let allowOutsidePressDismissal = parentFromContext.type !== 'context-menu';
   const allowOutsidePressDismissalTimeout = new Timeout();
@@ -264,14 +276,20 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
 
   onCleanup(() => store.context.allowTouchToCloseTimeout.clear());
 
-  createEffect(
-    () => !open() && !store.select('hoverEnabled'),
-    (shouldReset) => {
-      if (shouldReset) {
-        store.set('hoverEnabled', true);
-      }
+  // Hovering over a submenu trigger opens its submenu until the pointer interacts with this menu's
+  // popup. It's a writable memo that every open change resets, and a closed menu always has it.
+  const [hoverEnabledWhileOpen, setHoverEnabledWhileOpen] = createSignal(
+    () => {
+      open();
+      return true;
     },
+    { name: 'hoverEnabled' },
   );
+  store.bind('hoverEnabled', () => !open() || hoverEnabledWhileOpen());
+  store.context.disableHover = () => setHoverEnabledWhileOpen(false);
+  onCleanup(() => {
+    store.context.disableHover = NOOP;
+  });
 
   // Repeated open requests are compared against the Root's current open state. Open changes are
   // run only while this Root is mounted.
@@ -506,13 +524,11 @@ export function MenuRootInternal<Payload>(props: MenuRootInternalProps<Payload>)
       onMouseMove() {
         store.set('allowMouseEnter', true);
         if (store.state.parent.type === 'menu') {
-          store.set('hoverEnabled', false);
+          store.context.disableHover();
         }
       },
       onClick() {
-        if (store.state.hoverEnabled) {
-          store.set('hoverEnabled', false);
-        }
+        store.context.disableHover();
       },
       onKeyDown(event: KeyboardEvent) {
         // The Menubar's CompositeRoot captures keyboard events via event delegation. This works

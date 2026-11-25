@@ -14,7 +14,10 @@ import {
   renderPopupRootChildren,
 } from '../../utils/popups/popupRoot';
 import type { ActionsRef, PayloadChildRenderFunction } from '../../utils/popups/popupRoot';
-import { createPopupInteractionProps } from '../../utils/popups/popupStoreUtils';
+import {
+  createPopupInteractionProps,
+  deriveActiveTriggerState,
+} from '../../utils/popups/popupStoreUtils';
 
 function PopoverRootComponent<Payload>(props: PopoverRoot.Props<Payload>): JSX.Element {
   const { store, open } = createPopupRoot(
@@ -32,6 +35,9 @@ function PopoverRootComponent<Payload>(props: PopoverRoot.Props<Payload>): JSX.E
   onCleanup(store.context.stickIfOpenTimeout.clear);
 
   createPopupRootSync(store, open);
+
+  // The payload and the trigger options come from the active trigger.
+  deriveActiveTriggerState(store, ['payload', 'disabled', 'openOnHover', 'closeDelay']);
 
   createEffect(open, (isOpen) => {
     if (!isOpen) {

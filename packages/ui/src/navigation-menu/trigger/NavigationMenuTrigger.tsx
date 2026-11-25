@@ -567,11 +567,15 @@ export function NavigationMenuTrigger(componentProps: NavigationMenuTrigger.Prop
 
   const referenceProps = mergeProps(click.reference, hoverProps);
 
+  // Registered as the trigger is created, so the menu follows it as soon as it is active.
+  onCleanup(
+    context.registerFloatingRootStore({ isActive: isActiveItem, store: floatingRootStore }),
+  );
+
   createEffect(
     () => (isActiveItem() ? { element: triggerElement() } : null),
     (active) => {
       if (active) {
-        context.setFloatingRootStore(floatingRootStore);
         context.prevTriggerElementRef.current = active.element;
       }
     },

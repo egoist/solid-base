@@ -180,32 +180,32 @@ export function MenuPositioner(componentProps: MenuPositioner.Props): JSX.Elemen
     },
   );
 
-  createEffect(
-    () => [floatingTreeRoot(), floatingNodeId()] as const,
-    ([tree, nodeId]) => {
-      function onMenuOpenChange(details: MenuOpenEventDetails) {
-        if (details.open) {
-          if (details.parentNodeId === nodeId) {
-            store.set('hoverEnabled', false);
-          }
-          // A submenu that is already closed has nothing to close, and a dropped close would
-          // cancel a hover open it has pending. This mirrors the drop rule in `setOpen`.
-          if (
-            details.nodeId !== nodeId &&
-            details.parentNodeId === store.state.floatingParentNodeId &&
-            (store.state.open || store.state.openProp)
-          ) {
-            store.setOpen(false, createChangeEventDetails(REASONS.siblingOpen));
-          }
+  // The node ids are read when an event arrives: they can change in the same flush as the open
+  // state that the event reports (a detached trigger supplies its own node).
+  createEffect(floatingTreeRoot, (tree) => {
+    function onMenuOpenChange(details: MenuOpenEventDetails) {
+      const nodeId = store.state.floatingNodeId;
+      if (details.open) {
+        if (details.parentNodeId === nodeId) {
+          store.context.disableHover();
+        }
+        // A submenu that is already closed has nothing to close, and a dropped close would
+        // cancel a hover open it has pending. This mirrors the drop rule in `setOpen`.
+        if (
+          details.nodeId !== nodeId &&
+          details.parentNodeId === store.state.floatingParentNodeId &&
+          (store.state.open || store.state.openProp)
+        ) {
+          store.setOpen(false, createChangeEventDetails(REASONS.siblingOpen));
         }
       }
+    }
 
-      tree.events.on('menuopenchange', onMenuOpenChange);
-      return () => {
-        tree.events.off('menuopenchange', onMenuOpenChange);
-      };
-    },
-  );
+    tree.events.on('menuopenchange', onMenuOpenChange);
+    return () => {
+      tree.events.off('menuopenchange', onMenuOpenChange);
+    };
+  });
 
   createEffect(
     () => [floatingTreeRoot(), floatingParentNodeId()] as const,
@@ -276,17 +276,19 @@ export function MenuPositioner(componentProps: MenuPositioner.Props): JSX.Elemen
     },
   );
 
+  // Announces the open state and the node ids as of the emission, which is when the listeners
+  // compare them against their own (the ids can change in the same flush as the open state).
   createEffect(
-    () => [floatingTreeRoot(), open(), floatingNodeId(), floatingParentNodeId()] as const,
-    ([tree, isOpen, nodeId, parentNodeId]) => {
+    () => [floatingTreeRoot(), open(), floatingNodeId(), floatingParentNodeId()],
+    () => {
       const eventDetails: MenuOpenEventDetails = {
-        open: isOpen,
-        nodeId,
-        parentNodeId,
+        open: store.select('open'),
+        nodeId: store.state.floatingNodeId,
+        parentNodeId: store.state.floatingParentNodeId,
         reason: store.state.openChangeReason,
       };
 
-      tree.events.emit('menuopenchange', eventDetails);
+      store.select('floatingTreeRoot').events.emit('menuopenchange', eventDetails);
     },
   );
 

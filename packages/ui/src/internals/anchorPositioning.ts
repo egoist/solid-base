@@ -478,14 +478,6 @@ export function createAnchorPositioning(
     return result;
   });
 
-  createEffect(mounted, (isMounted) => {
-    // Ensure positioning doesn't run initially for `keepMounted` elements that
-    // aren't initially open.
-    if (!isMounted) {
-      interactionStore.clearPositioning();
-    }
-  });
-
   const autoUpdateOptions = (): AutoUpdateOptions => {
     const disableAnchorTracking = params.disableAnchorTracking ?? false;
     return {
@@ -495,8 +487,18 @@ export function createAnchorPositioning(
     };
   };
 
+  // The `anchor` as known while rendering (an element, a reactive accessor, a filled ref object),
+  // so positioning follows it in the same flush.
+  const renderedAnchor = createMemo(() => (mounted() ? resolveAnchor().anchor : null), {
+    name: 'createAnchorPositioning.renderedAnchor',
+  });
+
   const floating = createFloating({
     rootStore: interactionStore,
+    get anchor() {
+      return renderedAnchor();
+    },
+    // A `keepMounted` element isn't positioned while it's unmounted (closed), initially included.
     get open() {
       return keepMounted() ? mounted() : undefined;
     },
@@ -598,24 +600,22 @@ export function createAnchorPositioning(
     return { anchor: unwrappedElement as ReferenceType | null, anchorRef };
   }
 
+  // Positioning reads the rendered anchor first; an anchor only known once the update has rendered
+  // is registered with the positioning.
   createEffect(
-    () => {
-      if (!mounted()) {
-        return false;
-      }
-      // Tracks the anchor (a signal accessor passed as `anchor` included).
-      resolveAnchor();
-      return true;
-    },
-    (isMounted) => {
-      if (!isMounted) {
+    () => (mounted() ? { rendered: renderedAnchor() } : null),
+    (mountedAnchor) => {
+      if (!mountedAnchor) {
         return;
       }
 
       // Resolved again now that the update has been rendered: an `anchor` function may read a
       // variable that a ref callback has just set, like upstream's layout effect.
       const { anchor, anchorRef } = untrack(resolveAnchor);
-      registerPositionReference(anchor);
+      // The rendered anchor already positions the popup.
+      if (anchor === null || anchor !== mountedAnchor.rendered) {
+        registerPositionReference(anchor);
+      }
 
       // Ref objects are filled by ref callbacks, which may run after this effect (such as the
       // ref of an element rendered later in the tree): check again once the update settles.

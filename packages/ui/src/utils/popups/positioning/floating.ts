@@ -29,10 +29,16 @@ export interface CreateFloatingOptions {
    */
   rootStore: PopupInteractionStore;
   /**
-   * Whether the floating element is open. When `false`, `isPositioned` is reset. Leave it
-   * `undefined` when the floating element unmounts while closed.
+   * Whether the floating element is open. When `false`, `isPositioned` is reset and the element
+   * isn't positioned. Leave it `undefined` when the floating element unmounts while closed.
    */
   open?: boolean | undefined;
+  /**
+   * The element (or virtual element) to position against, as known while rendering, such as the
+   * Positioner's `anchor`. It takes precedence over the position reference registered with
+   * `refs.setPositionReference` (an anchor only known once the update has rendered).
+   */
+  anchor?: ReferenceType | null | undefined;
   /**
    * Where to place the floating element relative to the reference element.
    * @default 'bottom'
@@ -106,6 +112,19 @@ export interface CreateFloatingReturnValue extends Readonly<FloatingData> {
   elements: ExtendedElements;
   context: PopupPositioningContext;
   rootStore: PopupInteractionStore;
+}
+
+/**
+ * Wraps an element used as a position reference in a virtual element, so only its rects are used.
+ */
+function toPositionReference(node: ReferenceType | null): ReferenceType | null {
+  return isElement(node)
+    ? ({
+        getBoundingClientRect: () => node.getBoundingClientRect(),
+        getClientRects: () => node.getClientRects(),
+        contextElement: node,
+      } satisfies VirtualElement)
+    : node;
 }
 
 /**
@@ -185,8 +204,11 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
   // Synced by the effect below, which runs before the first position update.
   let openRef: boolean | undefined;
 
+  const anchor = createMemo(() => toPositionReference(options.anchor ?? null), {
+    name: 'createFloating.anchor',
+  });
   const referenceEl = () =>
-    positionerAnchor() || store.select('anchor') || localReference() || null;
+    anchor() || positionerAnchor() || store.select('anchor') || localReference() || null;
   const floatingEl = () => store.select('positionerElement') || localFloating() || null;
 
   function update() {
@@ -242,17 +264,28 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
   );
 
   createEffect(
-    () => ({
-      reference: referenceEl(),
-      floating: floatingEl(),
-      // Recompute and resubscribe when the positioning inputs change.
-      placement: options.placement,
-      strategy: options.strategy,
-      middleware: options.middleware,
-      platform: options.platform,
-      whileElementsMounted: options.whileElementsMounted,
-    }),
-    ({ reference, floating, whileElementsMounted }) => {
+    () => {
+      // A floating element kept mounted while closed isn't positioned: positioning starts again
+      // once it opens.
+      if (options.open === false) {
+        return null;
+      }
+      return {
+        reference: referenceEl(),
+        floating: floatingEl(),
+        // Recompute and resubscribe when the positioning inputs change.
+        placement: options.placement,
+        strategy: options.strategy,
+        middleware: options.middleware,
+        platform: options.platform,
+        whileElementsMounted: options.whileElementsMounted,
+      };
+    },
+    (inputs) => {
+      if (!inputs) {
+        return undefined;
+      }
+      const { reference, floating, whileElementsMounted } = inputs;
       if (reference) {
         referenceRef.current = reference;
       }
@@ -288,13 +321,7 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
   }
 
   function setPositionReference(node: ReferenceType | null) {
-    const computedPositionReference = isElement(node)
-      ? ({
-          getBoundingClientRect: () => node.getBoundingClientRect(),
-          getClientRects: () => node.getClientRects(),
-          contextElement: node,
-        } satisfies VirtualElement)
-      : node;
+    const computedPositionReference = toPositionReference(node);
     // Keep the Positioner's anchor separately from the store's anchor, so the store's doesn't
     // replace it when it changes.
     setPositionerAnchor(() => computedPositionReference);

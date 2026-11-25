@@ -1,4 +1,4 @@
-import { Show, createEffect, createMemo, createSignal, omit, onCleanup, untrack } from 'solid-js';
+import { Show, createMemo, createSignal, omit, onCleanup, onSettled, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { usePopoverRootContext } from '../root/PopoverRootContext';
 import { createButton } from '../../internals/use-button/createButton';
@@ -21,6 +21,7 @@ import { FocusGuard } from '../../utils/popups/focus/FocusGuard';
 import {
   createDynamicPropsSource,
   createTriggerDataForwarding,
+  registerTriggerState,
 } from '../../utils/popups/popupStoreUtils';
 import { createTriggerFocusGuards } from '../../utils/popups/triggerFocusGuards';
 import { createOpenMethodTriggerProps } from '../../utils/popups/interactions/openInteractionType';
@@ -80,13 +81,23 @@ export function PopoverTrigger<Payload = unknown>(
   const { registerTrigger, isMountedByThisTrigger, triggerElement } = createTriggerDataForwarding(
     thisTriggerId,
     store,
-    () => ({
-      payload: componentProps.payload,
-      disabled: disabled(),
-      openOnHover: openOnHover(),
-      closeDelay: closeDelay(),
-    }),
   );
+  // What the popover reads from this trigger while it is the active one (see `PopoverRoot`).
+  const triggerState = {
+    get payload() {
+      return componentProps.payload;
+    },
+    get disabled() {
+      return disabled();
+    },
+    get openOnHover() {
+      return openOnHover();
+    },
+    get closeDelay() {
+      return closeDelay();
+    },
+  };
+  const registerState = (element: HTMLElement) => registerTriggerState(element, triggerState);
 
   const isPressOpenedByThisTrigger = () =>
     (store() as unknown as PopoverStore<Payload>).select(
@@ -190,7 +201,7 @@ export function PopoverTrigger<Payload = unknown>(
 
   const element = renderElement('button', componentProps, {
     state,
-    ref: [buttonRef, registerTrigger],
+    ref: [buttonRef, registerState, registerTrigger],
     props: [
       clickProps,
       hoverProps,
@@ -218,16 +229,15 @@ export function PopoverTrigger<Payload = unknown>(
   // Solid reconciles the trigger's siblings as one list: inserting nodes both before and after
   // the trigger in the same pass (the guards, and the portal's own focus guards when the popup
   // opens) replaces (moves) the trigger element, which drops its focus. The guard before the
-  // trigger is therefore added in a later pass, once everything after it is in place.
-  const guardsVisible = createMemo(hasFocusGuards);
-  const [beforeGuardReady, setBeforeGuardReady] = createSignal(false, { ownedWrite: true });
-  createEffect(guardsVisible, (visible) => {
-    setBeforeGuardReady(visible);
+  // trigger is therefore added in a later pass, once the one after it has settled in place.
+  const guardsVisible = createMemo(hasFocusGuards, { name: 'PopoverTrigger.guardsVisible' });
+  const [afterGuardSettled, setAfterGuardSettled] = createSignal(false, {
+    name: 'PopoverTrigger.afterGuardSettled',
   });
 
   return (
     <>
-      <Show when={guardsVisible() && beforeGuardReady()}>
+      <Show when={guardsVisible() && afterGuardSettled()}>
         <TriggerFocusGuard
           refObject={() => untrack(store).context.beforeTriggerFocusGuardRef}
           onFocus={handlePreFocusGuardFocus}
@@ -238,6 +248,7 @@ export function PopoverTrigger<Payload = unknown>(
         <TriggerFocusGuard
           refObject={() => untrack(store).context.triggerFocusTargetRef}
           onFocus={handleFocusTargetFocus}
+          onSettledChange={setAfterGuardSettled}
         />
       </Show>
     </>
@@ -250,6 +261,8 @@ export function PopoverTrigger<Payload = unknown>(
 function TriggerFocusGuard(props: {
   refObject: () => { current: HTMLElement | null };
   onFocus: (event: FocusEvent) => void;
+  /** Called with `true` once the guard is in the document, and with `false` when it unmounts. */
+  onSettledChange?: ((settled: boolean) => void) | undefined;
 }) {
   let element: HTMLElement | null = null;
   onCleanup(() => {
@@ -257,6 +270,14 @@ function TriggerFocusGuard(props: {
     if (refObject.current === element) {
       refObject.current = null;
     }
+  });
+  onSettled(() => {
+    const onSettledChange = props.onSettledChange;
+    if (!onSettledChange) {
+      return undefined;
+    }
+    onSettledChange(true);
+    return () => onSettledChange(false);
   });
   return (
     <FocusGuard

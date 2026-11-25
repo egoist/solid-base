@@ -1,9 +1,10 @@
-import { createEffect, createSignal, onCleanup, untrack, type Accessor } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, untrack, type Accessor } from 'solid-js';
 import { EMPTY_OBJECT } from '@egoist/solid-base-utils/empty';
 import { FOCUSABLE_ATTRIBUTE } from './constants';
 import type { HTMLProps } from '../../internals/types';
 import type { InteractionType } from './interactions/enhancedClickHandler';
 import type { PopupStoreState, PopupTriggerDataStore } from './store';
+import type { PopupTriggerMap } from './popupTriggerMap';
 import type { PopupInteractionStore } from './types';
 
 /**
@@ -140,6 +141,75 @@ export function createTriggerDataForwarding<State extends PopupStoreState<unknow
     isMountedByThisTrigger,
     triggerElement,
   };
+}
+
+/**
+ * The state each trigger element supplies to its popup while it is the active trigger (see
+ * `deriveActiveTriggerState`).
+ */
+const triggerStates = new WeakMap<Element, object>();
+
+/**
+ * Registers the state the trigger rendered as `element` supplies to its popup while it is the
+ * active trigger: an object whose getters are read when the popup reads that state. Call it from
+ * the trigger's ref, before the element registers with the popup.
+ */
+export function registerTriggerState(element: Element, state: object) {
+  triggerStates.set(element, state);
+}
+
+export interface DeriveActiveTriggerStateOptions<Key> {
+  /**
+   * Keys that read `undefined` while the popup is mounted without an active trigger, instead of
+   * the stored value.
+   */
+  clearWithoutTrigger?: readonly Key[] | undefined;
+}
+
+/**
+ * Derives `keys` from the state the active trigger supplies (`registerTriggerState`), in the same
+ * flush as the active trigger changes, instead of having the trigger write them once it became
+ * active. Like that forwarding, the state outlives the trigger's activation until another trigger
+ * becomes active. A popup mounted without an active trigger reads the stored values (written by
+ * `handle.open()` and the like).
+ *
+ * Call it in the Root body. The derivations are removed when the owner is disposed.
+ */
+export function deriveActiveTriggerState<Key extends string>(
+  store: {
+    derive(key: Key, fn: (stored: any) => any): () => void;
+    select(key: 'activeTriggerId' | 'mounted'): any;
+    readonly context: { readonly triggerElements: PopupTriggerMap };
+  },
+  keys: readonly Key[],
+  options: DeriveActiveTriggerStateOptions<Key> = {},
+) {
+  const triggers = store.context.triggerElements;
+  // `null` while the popup is mounted without an active trigger.
+  const activeTriggerState = createMemo<object | null | undefined>(
+    (previous) => {
+      const activeTriggerId = store.select('activeTriggerId') as string | null;
+      if (activeTriggerId == null) {
+        return store.select('mounted') ? null : previous;
+      }
+      triggers.track();
+      const element = triggers.getById(activeTriggerId);
+      return (element && triggerStates.get(element)) || previous;
+    },
+    { name: 'deriveActiveTriggerState.activeTriggerState' },
+  );
+
+  const removers = keys.map((key) => {
+    const clearWithoutTrigger = options.clearWithoutTrigger?.includes(key) ?? false;
+    return store.derive(key, (stored) => {
+      const state = activeTriggerState();
+      if (state === null && clearWithoutTrigger) {
+        return undefined;
+      }
+      return state ? (state as Record<string, unknown>)[key] : stored;
+    });
+  });
+  onCleanup(() => removers.forEach((remove) => remove()));
 }
 
 /**

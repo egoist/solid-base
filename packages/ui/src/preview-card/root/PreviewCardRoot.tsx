@@ -1,4 +1,3 @@
-import { createEffect } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createDismiss } from '../../utils/popups/interactions/dismiss';
 import { FloatingTree } from '../../utils/popups/tree/FloatingTree';
@@ -12,24 +11,22 @@ import {
   createPopupRoot,
   renderPopupRootChildren,
 } from '../../utils/popups/popupRoot';
-import { createPopupInteractionProps } from '../../utils/popups/popupStoreUtils';
+import {
+  createPopupInteractionProps,
+  deriveActiveTriggerState,
+} from '../../utils/popups/popupStoreUtils';
 import type { PreviewCardHandle } from '../store/PreviewCardHandle';
 
 function PreviewCardRootComponent<Payload>(props: PreviewCardRoot.Props<Payload>): JSX.Element {
-  const { store, open } = createPopupRoot(
+  const { store } = createPopupRoot(
     props,
     (initialState, defaultPopupId) => new PreviewCardStore<Payload>(initialState, defaultPopupId),
     { closeOnActiveTriggerUnmount: true },
   );
 
-  createEffect(
-    () => open() && store.select('activeTriggerId') == null,
-    (openWithoutTrigger) => {
-      if (openWithoutTrigger) {
-        store.set('payload', undefined);
-      }
-    },
-  );
+  // The payload and the close delay come from the active trigger. A preview card open (or closing)
+  // without an active trigger has no payload.
+  deriveActiveTriggerState(store, ['payload', 'closeDelay'], { clearWithoutTrigger: ['payload'] });
 
   // Attached before the children render; a new `handle` prop re-attaches the same store.
   attachPopupHandle(() => props.handle, store);

@@ -3,11 +3,17 @@ import { isDev, type JSX } from '@solidjs/web';
 import { isElementDisabled } from '@egoist/solid-base-utils/isElementDisabled';
 import { warn } from '@egoist/solid-base-utils/warn';
 import { platform } from '@egoist/solid-base-utils/platform';
-import { getTarget } from '@egoist/solid-base-utils/shadowDom';
+import { activeElement, getTarget } from '@egoist/solid-base-utils/shadowDom';
+import { ownerDocument } from '@egoist/solid-base-utils/owner';
 import { safePolygon } from '../../utils/popups/interactions/safePolygon';
 import { createClick } from '../../utils/popups/interactions/click';
 import { createHoverTriggerInteraction } from '../../utils/popups/interactions/hoverTriggerInteraction';
-import type { BaseUIComponentProps, HTMLProps, NonNativeButtonProps } from '../../internals/types';
+import type {
+  BaseUIComponentProps,
+  BaseUIEvent,
+  HTMLProps,
+  NonNativeButtonProps,
+} from '../../internals/types';
 import { useMenuRootContext } from '../root/MenuRootContext';
 import { createBaseUiId } from '../../internals/baseUiId';
 import { triggerOpenStateMapping } from '../../utils/popups/popupStateMapping';
@@ -114,10 +120,22 @@ function MenuSubmenuTriggerPlain(componentProps: MenuSubmenuTrigger.Props): JSX.
 
   const highlighted = () => parentMenuStore.select('isActive', listItem.index());
 
+  // A filterable submenu keeps real focus on its input while open. The pointer crossing the
+  // trigger then leaves the parent menu's highlight alone: highlighting the trigger would move
+  // focus onto it, only for the trigger to hand focus straight back to the input.
+  function submenuInputHasFocus() {
+    const focusOwner = store.context.virtualFocusRef?.current;
+    return (
+      focusOwner != null &&
+      store.select('open') &&
+      activeElement(ownerDocument(focusOwner)) === focusOwner
+    );
+  }
+
   const itemMetadata: MenuItemMetadata = {
     type: 'submenu-trigger',
     setActive(event: MouseEvent) {
-      if (parentMenuStore.select('highlightItemOnHover')) {
+      if (parentMenuStore.select('highlightItemOnHover') && !submenuInputHasFocus()) {
         parentMenuStore.setActiveIndex(listItem.index(), REASONS.pointer, event);
       }
     },
@@ -222,6 +240,13 @@ function MenuSubmenuTriggerPlain(componentProps: MenuSubmenuTrigger.Props): JSX.
         ? { onKeyDown: submenuRootContext.onTriggerKeyDown }
         : undefined,
       createDynamicPropsSource(() => parentMenuStore.select('itemProps')),
+      {
+        onMouseMove(event: BaseUIEvent<MouseEvent>) {
+          if (submenuInputHasFocus()) {
+            event.preventBaseUIHandler();
+          }
+        },
+      },
       // Opening a submenu changes the trigger's expanded state while the trigger still holds
       // focus, and VoiceOver announces that state change instead of the submenu item that focus
       // moves to a moment later. Dropping the state while the submenu is open avoids the

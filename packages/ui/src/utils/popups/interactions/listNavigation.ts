@@ -842,6 +842,13 @@ export function createListNavigation(
       if (!enabled()) {
         return;
       }
+      // `focusin` follows `focus`, whose handlers can already have moved focus on (a filterable
+      // submenu trigger hands it to the submenu's input): an item that lost focus doesn't become
+      // active, or syncing focus to it would pull focus back.
+      const currentTarget = event.currentTarget as Element;
+      if (!contains(currentTarget, activeElement(ownerDocument(currentTarget)))) {
+        return;
+      }
       forceSyncFocus = true;
       syncCurrentTarget(event);
     },

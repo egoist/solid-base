@@ -11,6 +11,7 @@ import { getInlineRectTriggerProps } from '../../utils/popups/inlineRect';
 import {
   createDynamicPropsSource,
   createTriggerDataForwarding,
+  registerTriggerState,
 } from '../../utils/popups/popupStoreUtils';
 import { CLOSE_DELAY, OPEN_DELAY } from '../utils/constants';
 import { safePolygon } from '../../utils/popups/interactions/safePolygon';
@@ -67,11 +68,17 @@ export function PreviewCardTrigger<Payload = unknown>(
   const { registerTrigger, isMountedByThisTrigger, triggerElement } = createTriggerDataForwarding(
     thisTriggerId,
     store,
-    () => ({
-      payload: componentProps.payload,
-      closeDelay: closeDelayWithDefault(),
-    }),
   );
+  // What the preview card reads from this trigger while it is the active one (see
+  // `PreviewCardRoot`).
+  const triggerState = {
+    get payload() {
+      return componentProps.payload;
+    },
+    get closeDelay() {
+      return closeDelayWithDefault();
+    },
+  };
 
   // The interactions bind to the store they are created with (its context, event emitter and
   // hover intent). A handle-backed trigger switches from the handle's fallback store to the
@@ -126,7 +133,7 @@ export function PreviewCardTrigger<Payload = unknown>(
 
   return renderElement('a', componentProps, {
     state,
-    ref: registerTrigger,
+    ref: [(element: HTMLElement) => registerTriggerState(element, triggerState), registerTrigger],
     props: [
       hoverProps,
       focusProps,

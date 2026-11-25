@@ -10,6 +10,7 @@ import type {
   DrawerNestedSwipeProgressStore,
   DrawerSwipeDirection,
   DrawerSnapPoint,
+  NestedDrawerRegistration,
 } from './DrawerRootContext';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import type { BaseUIChangeEventDetails } from '../../internals/createBaseUIEventDetails';
@@ -31,14 +32,47 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
   const parentDrawerRootContext = useDrawerRootContext(true);
 
   const [popupHeight, setPopupHeight] = createSignal(0);
-  const [frontmostHeight, setFrontmostHeight] = createSignal(0);
-  const [hasNestedDrawer, setHasNestedDrawer] = createSignal(false);
+  // The nested drawers registered with this one.
+  const [nestedDrawers, setNestedDrawers] = createSignal<readonly NestedDrawerRegistration[]>([], {
+    ownedWrite: true,
+    name: 'DrawerRoot.nestedDrawers',
+  });
+  const hasNestedDrawer = createMemo(() => nestedDrawers().some((nested) => nested.present()), {
+    name: 'DrawerRoot.hasNestedDrawer',
+  });
+  // A frontmost height reported imperatively (`onNestedFrontmostHeightChange`).
+  const [reportedNestedHeight, setReportedNestedHeight] = createSignal(0, {
+    name: 'DrawerRoot.reportedNestedHeight',
+  });
+  // The frontmost height of the stack of the open nested drawer, or 0 without one.
+  const nestedFrontmostHeight = createMemo(
+    () => {
+      for (const nested of nestedDrawers()) {
+        const height = nested.frontmostHeight();
+        if (height > 0) {
+          return height;
+        }
+      }
+      return reportedNestedHeight();
+    },
+    { name: 'DrawerRoot.nestedFrontmostHeight' },
+  );
+  // The height of the frontmost drawer of the stack: the open nested drawer's, else this popup's
+  // last measured height.
+  const frontmostHeight = createMemo<number>(
+    (previous) => {
+      const nestedHeight = nestedFrontmostHeight();
+      if (nestedHeight > 0) {
+        return nestedHeight;
+      }
+      const ownHeight = popupHeight();
+      return ownHeight > 0 ? ownHeight : (previous ?? 0);
+    },
+    { name: 'DrawerRoot.frontmostHeight' },
+  );
   const [nestedSwiping, setNestedSwiping] = createSignal(false);
   const nestedSwipeProgressStore = createNestedSwipeProgressStore();
 
-  // Plain mirrors: reads of the signals lag their writes.
-  let popupHeightValue = 0;
-  let isNestedDrawerOpen = false;
 
   const resolvedDefaultSnapPoint = () =>
     props.defaultSnapPoint !== undefined ? props.defaultSnapPoint : (props.snapPoints?.[0] ?? null);
@@ -136,28 +170,17 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
       return nestedSwiping();
     },
     nestedSwipeProgressStore,
-    onNestedDrawerPresenceChange(present) {
-      setHasNestedDrawer(present);
+    registerNestedDrawer(nested) {
+      setNestedDrawers((drawers) => [...drawers, nested]);
+      return () => {
+        setNestedDrawers((drawers) => drawers.filter((drawer) => drawer !== nested));
+      };
     },
     onPopupHeightChange(height) {
-      popupHeightValue = height;
       setPopupHeight(height);
-
-      if (!isNestedDrawerOpen && height > 0) {
-        setFrontmostHeight(height);
-      }
     },
     onNestedFrontmostHeightChange(height) {
-      if (height > 0) {
-        isNestedDrawerOpen = true;
-        setFrontmostHeight(height);
-        return;
-      }
-
-      isNestedDrawerOpen = false;
-      if (popupHeightValue > 0) {
-        setFrontmostHeight(popupHeightValue);
-      }
+      setReportedNestedHeight(height);
     },
     onNestedSwipingChange(swiping) {
       setNestedSwiping(swiping);
@@ -167,10 +190,9 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
       nestedSwipeProgressStore.set(progress);
       notifyParentSwipeProgressChange?.(progress);
     },
-    notifyParentFrontmostHeight: parentDrawerRootContext?.onNestedFrontmostHeightChange,
     notifyParentSwipingChange,
     notifyParentSwipeProgressChange,
-    notifyParentHasNestedDrawer: parentDrawerRootContext?.onNestedDrawerPresenceChange,
+    registerWithParentDrawer: parentDrawerRootContext?.registerNestedDrawer,
   };
 
   const dialogProps: DialogRootProps<Payload> = {
@@ -405,16 +427,7 @@ function DrawerProviderReporter() {
   const store = useDialogRootContext();
 
   if (providerContext) {
-    onCleanup(() => {
-      providerContext.removeDrawer(store);
-    });
-
-    createEffect(
-      () => store.select('open'),
-      (open) => {
-        providerContext.setDrawerOpen(store, open);
-      },
-    );
+    onCleanup(providerContext.registerDrawer(() => store.select('open')));
   }
 
   const closeWatcherState = createMemo(

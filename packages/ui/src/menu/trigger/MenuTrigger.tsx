@@ -1,4 +1,13 @@
-import { Show, createEffect, createMemo, createSignal, omit, onCleanup, untrack } from 'solid-js';
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  omit,
+  onCleanup,
+  onSettled,
+  untrack,
+} from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { ownerDocument } from '@egoist/solid-base-utils/owner';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
@@ -34,7 +43,13 @@ import { createBaseUiId } from '../../internals/baseUiId';
 import { REASONS } from '../../internals/reasons';
 import { createMixedToggleClickHandler } from './mixedToggleClickHandler';
 import type { MenuHandle } from '../store/MenuHandle';
-import type { MenuHandleStore, State as MenuStoreState } from '../store/MenuStore';
+import {
+  registerMenuTriggerState,
+  type DetachedMenuTriggerState,
+  type ActiveMenuTriggerState,
+  type MenuHandleStore,
+  type State as MenuStoreState,
+} from '../store/MenuStore';
 import { useMenubarContext } from '../../menubar/MenubarContext';
 import type { MenuParent } from '../root/MenuRoot';
 import { PATIENT_CLICK_THRESHOLD } from '../../internals/constants';
@@ -98,6 +113,10 @@ export function MenuTrigger<Payload = unknown>(
     ? { type: 'menubar', context: menubarContext }
     : { type: undefined };
   const isInMenubar = parent.type === 'menubar';
+  if (menubarContext) {
+    // A trigger rendered outside its Root makes that menu the menubar's while it's active.
+    onCleanup(menubarContext.registerMenu(store));
+  }
 
   const compositeRootContext = useCompositeRootContext(true);
   const floatingTreeRootFromContext = useFloatingTree();
@@ -119,25 +138,33 @@ export function MenuTrigger<Payload = unknown>(
   const closeDelay = () => componentProps.closeDelay ?? 0;
   const delay = () => componentProps.delay ?? 100;
 
+  // The menu reads what the active trigger supplies from it (see `deriveActiveMenuTriggerState`).
+  const isDetached = () => detachedFromRoot || store() !== (rootContext?.store as unknown);
+  const detachedState: DetachedMenuTriggerState = {
+    parent,
+    floatingTreeRoot,
+    floatingNodeId,
+    floatingParentNodeId,
+    keyboardEventRelay: compositeRootContext?.relayKeyboardEvent,
+  };
+  const triggerState: ActiveMenuTriggerState = {
+    get payload() {
+      return componentProps.payload;
+    },
+    get closeDelay() {
+      return closeDelay();
+    },
+    get detached() {
+      return isDetached() ? detachedState : undefined;
+    },
+  };
+  const registerTriggerState = (element: HTMLElement) => {
+    registerMenuTriggerState(element, triggerState);
+  };
+
   const { registerTrigger, isMountedByThisTrigger } = createTriggerDataForwarding<
     MenuStoreState<Payload>
-  >(thisTriggerId, store, () => {
-    const isDetached = detachedFromRoot || store() !== (rootContext?.store as unknown);
-    const updates: Partial<MenuStoreState<Payload>> = {
-      payload: componentProps.payload,
-      closeDelay: closeDelay(),
-    };
-    if (isDetached) {
-      updates.parent = parent;
-      updates.floatingTreeRoot = floatingTreeRoot;
-      if (floatingNodeId !== undefined) {
-        updates.floatingNodeId = floatingNodeId;
-        updates.floatingParentNodeId = floatingParentNodeId;
-      }
-      updates.keyboardEventRelay = compositeRootContext?.relayKeyboardEvent;
-    }
-    return updates;
-  });
+  >(thisTriggerId, store);
 
   const rootDisabled = () => store().select('disabled') as boolean;
   const disabled = () =>
@@ -320,6 +347,7 @@ export function MenuTrigger<Payload = unknown>(
       setTriggerElement(element);
     },
     buttonRef,
+    registerTriggerState,
     registerTrigger,
   ];
 
@@ -382,16 +410,16 @@ export function MenuTrigger<Payload = unknown>(
 
   // Solid reconciles the trigger's siblings as one list: inserting nodes both before and after
   // the trigger in the same pass replaces (moves) the trigger element, which drops its focus. The
-  // guard before the trigger is therefore added in a later pass, once the one after it is in place.
+  // guard before the trigger is therefore added in a later pass, once the one after it has settled
+  // in place.
   const guardsVisible = createMemo(isOpenedByThisTrigger);
-  const [beforeGuardReady, setBeforeGuardReady] = createSignal(false);
-  createEffect(guardsVisible, (visible) => {
-    setBeforeGuardReady(visible);
+  const [afterGuardSettled, setAfterGuardSettled] = createSignal(false, {
+    name: 'afterGuardSettled',
   });
 
   return (
     <>
-      <Show when={guardsVisible() && beforeGuardReady()}>
+      <Show when={guardsVisible() && afterGuardSettled()}>
         <TriggerFocusGuard
           target={untrack(store).context.beforeTriggerFocusGuardRef}
           onFocus={handlePreFocusGuardFocus}
@@ -402,6 +430,7 @@ export function MenuTrigger<Payload = unknown>(
         <TriggerFocusGuard
           target={untrack(store).context.triggerFocusTargetRef}
           onFocus={handleFocusTargetFocus}
+          onSettledChange={setAfterGuardSettled}
         />
       </Show>
     </>
@@ -415,12 +444,22 @@ export function MenuTrigger<Payload = unknown>(
 function TriggerFocusGuard(props: {
   target: RefObject<HTMLElement | null>;
   onFocus: (event: FocusEvent) => void;
+  /** Called with `true` once the guard is in the document, and with `false` when it unmounts. */
+  onSettledChange?: ((settled: boolean) => void) | undefined;
 }) {
   let element: HTMLSpanElement | undefined;
   onCleanup(() => {
     if (props.target.current === element) {
       props.target.current = null;
     }
+  });
+  onSettled(() => {
+    const onSettledChange = props.onSettledChange;
+    if (!onSettledChange) {
+      return undefined;
+    }
+    onSettledChange(true);
+    return () => onSettledChange(false);
   });
   return (
     <FocusGuard

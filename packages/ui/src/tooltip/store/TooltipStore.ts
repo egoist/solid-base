@@ -38,6 +38,14 @@ type S = State<unknown>;
 
 const selectors = {
   ...popupStoreSelectors,
+  // A disabled tooltip renders as closed while its open state is kept (it reopens when re-enabled
+  // if the close request was canceled), so its triggers aren't open. `disabled` is read first:
+  // the triggers don't depend on the open state while it's disabled, and the close request
+  // committed then doesn't re-run them.
+  isOpenedByTrigger: (state: S, triggerId: string | undefined) =>
+    !state.disabled && popupStoreSelectors.isOpenedByTrigger(state, triggerId),
+  triggerPopupId: (state: S, triggerId: string | undefined) =>
+    state.disabled ? undefined : popupStoreSelectors.triggerPopupId(state, triggerId),
   disabled: (state: S) => state.disabled,
   instantType: (state: S) => state.instantType,
   isInstantPhase: (state: S) => state.isInstantPhase,

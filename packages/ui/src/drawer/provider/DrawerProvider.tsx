@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createMemo, createSignal, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { DrawerProviderContext } from './DrawerProviderContext';
 import type { DrawerVisualState, DrawerVisualStateStore } from './DrawerProviderContext';
@@ -10,8 +10,19 @@ import type { DrawerVisualState, DrawerVisualStateStore } from './DrawerProvider
  * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
  */
 export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
+  // Drawers marked open imperatively (`setDrawerOpen`), and the open states drawers register.
   const openDrawers = new Set<object>();
-  const [active, setActive] = createSignal(false);
+  const [openDrawerCount, setOpenDrawerCount] = createSignal(0, {
+    name: 'DrawerProvider.openDrawerCount',
+  });
+  const [registeredDrawers, setRegisteredDrawers] = createSignal<readonly Accessor<boolean>[]>(
+    [],
+    { ownedWrite: true, name: 'DrawerProvider.registeredDrawers' },
+  );
+  const active = createMemo(
+    () => openDrawerCount() > 0 || registeredDrawers().some((open) => open()),
+    { name: 'DrawerProvider.active' },
+  );
   const visualStateStore = createVisualStateStore();
 
   const setDrawerOpen = (drawer: object, open: boolean) => {
@@ -19,22 +30,24 @@ export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
       return;
     }
 
-    const wasActive = openDrawers.size > 0;
     if (open) {
       openDrawers.add(drawer);
     } else {
       openDrawers.delete(drawer);
     }
-    const isActive = openDrawers.size > 0;
-    if (isActive !== wasActive) {
-      setActive(isActive);
-    }
+    setOpenDrawerCount(openDrawers.size);
   };
 
   const contextValue: DrawerProviderContext = {
     setDrawerOpen,
     removeDrawer(drawer) {
       setDrawerOpen(drawer, false);
+    },
+    registerDrawer(open) {
+      setRegisteredDrawers((drawers) => [...drawers, open]);
+      return () => {
+        setRegisteredDrawers((drawers) => drawers.filter((drawer) => drawer !== open));
+      };
     },
     get active() {
       return active();

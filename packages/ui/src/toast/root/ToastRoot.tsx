@@ -1,4 +1,14 @@
-import { createEffect, createMemo, createSignal, flush, omit, onCleanup, untrack } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  flush,
+  omit,
+  onCleanup,
+  untrack,
+  type Accessor,
+  type Setter,
+} from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { addEventListener } from '@egoist/solid-base-utils/addEventListener';
 import { ownerDocument } from '@egoist/solid-base-utils/owner';
@@ -55,14 +65,17 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
 
   const toast = () => componentProps.toast;
 
-  const swipeDirections = createMemo((): SwipeDirection[] => {
-    const isAnchored = toast().positionerProps?.anchor !== undefined;
-    if (isAnchored) {
-      return [];
-    }
-    const swipeDirection = componentProps.swipeDirection ?? DEFAULT_SWIPE_DIRECTIONS;
-    return Array.isArray(swipeDirection) ? swipeDirection : [swipeDirection];
-  });
+  const swipeDirections = createMemo(
+    (): SwipeDirection[] => {
+      const isAnchored = toast().positionerProps?.anchor !== undefined;
+      if (isAnchored) {
+        return [];
+      }
+      const swipeDirection = componentProps.swipeDirection ?? DEFAULT_SWIPE_DIRECTIONS;
+      return Array.isArray(swipeDirection) ? swipeDirection : [swipeDirection];
+    },
+    { name: 'ToastRoot.swipeDirections', equals: areArraysEqual },
+  );
 
   const swipeEnabled = () => swipeDirections().length > 0;
 
@@ -72,13 +85,34 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
   const [isSwiping, setIsSwiping] = createSignal(false);
   const [dragOffset, setDragOffset] = createSignal({ x: 0, y: 0 });
   const [initialTransform, setInitialTransform] = createSignal({ x: 0, y: 0, scale: 1 });
-  const [titleId, setTitleId] = createSignal<string | undefined>();
-  const [descriptionId, setDescriptionId] = createSignal<string | undefined>();
+  const [titleIdSources, setTitleIdSources] = createSignal<Array<Accessor<string | undefined>>>(
+    [],
+    { name: 'ToastRoot.titleIdSources' },
+  );
+  const [descriptionIdSources, setDescriptionIdSources] = createSignal<
+    Array<Accessor<string | undefined>>
+  >([], { name: 'ToastRoot.descriptionIdSources' });
+  // The latest registered part that renders something labels (or describes) the toast.
+  const titleId = createMemo(() => resolveRegisteredId(titleIdSources()), {
+    name: 'ToastRoot.titleId',
+  });
+  const descriptionId = createMemo(() => resolveRegisteredId(descriptionIdSources()), {
+    name: 'ToastRoot.descriptionId',
+  });
+
+  function createIdRegistration(setSources: Setter<Array<Accessor<string | undefined>>>) {
+    return (id: Accessor<string | undefined>) => {
+      setSources((sources) => [...sources, id]);
+      return () => {
+        setSources((sources) => sources.filter((source) => source !== id));
+      };
+    };
+  }
   const [rootElement, setRootElement] = createSignal<HTMLElement | null>(null);
 
   // Imperative swipe bookkeeping, read and written by the pointer handlers only.
   const rootRef: RefObject<HTMLElement | null> = { current: null };
-  let lastToastId: string | undefined;
+  let initialized = false;
   let isRealSwipe = false;
   let lockedDirection: 'horizontal' | 'vertical' | null = null;
   let dragStartPos = { x: 0, y: 0 };
@@ -154,20 +188,24 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
     setDragOffset(nextDragOffset);
   }
 
-  // Initialize the toast on mount, and reinitialize when it begins a new lifecycle:
-  // re-adding an ending toast keeps the same root instance (the list keeps the toast's identity
-  // by id), and non-keyed lists can hand an existing instance a different toast.
-  createEffect(
-    () => [toast().id, toast().transitionStatus] as const,
-    ([id, transitionStatus]) => {
-      const previousToastId = lastToastId;
-      // `recalculateHeight` clears the `starting` status itself, so bail out on the
-      // resulting re-run and on the later `ending` one, which the store discards anyway.
-      if (transitionStatus !== 'starting' && previousToastId === id) {
-        return;
-      }
+  // A toast begins a lifecycle when the root mounts, when a non-keyed list hands the root a
+  // different toast, and when an ending toast is re-added under the same id (the list keeps the
+  // root instance, since it keeps the toast's identity by id). The lifecycle counts the entries
+  // into `starting` rather than tracking the status itself: the measurement below clears
+  // `starting`, and must not re-trigger itself.
+  const toastId = createMemo(() => toast().id, { name: 'ToastRoot.toastId' });
+  const isStarting = createMemo(() => toast().transitionStatus === 'starting', {
+    name: 'ToastRoot.isStarting',
+  });
+  const startCount = createMemo((previous: number = 0) => (isStarting() ? previous + 1 : previous), {
+    name: 'ToastRoot.startCount',
+  });
 
-      if (previousToastId !== undefined) {
+  // Measure the toast at the start of each lifecycle.
+  createEffect(
+    () => [toastId(), startCount()],
+    () => {
+      if (initialized) {
         // A retained root keeps component-local swipe state from its previous lifecycle;
         // clear it so the toast doesn't stay offset or exit in the swiped direction.
         setCurrentSwipeDirection(undefined);
@@ -176,9 +214,10 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
         setResolvedDragOffset({ x: 0, y: 0 });
       }
 
-      lastToastId = id;
+      initialized = true;
       recalculateHeight();
     },
+    { name: 'ToastRoot.measureLifecycle' },
   );
 
   function handleSwipeEnd(event: PointerEvent) {
@@ -457,8 +496,8 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
     get toast() {
       return toast();
     },
-    setTitleId,
-    setDescriptionId,
+    registerTitleId: createIdRegistration(setTitleIdSources),
+    registerDescriptionId: createIdRegistration(setDescriptionIdSources),
     recalculateHeight,
     get visibleIndex() {
       return visibleIndex();
@@ -499,6 +538,20 @@ export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
       })}
     </ToastRootContext>
   );
+}
+
+function resolveRegisteredId(sources: Array<Accessor<string | undefined>>) {
+  for (let index = sources.length - 1; index >= 0; index -= 1) {
+    const id = sources[index]();
+    if (id !== undefined) {
+      return id;
+    }
+  }
+  return undefined;
+}
+
+function areArraysEqual<T>(a: readonly T[], b: readonly T[]) {
+  return a.length === b.length && a.every((item, index) => item === b[index]);
 }
 
 export type ToastRootToastObject<Data extends object = any> = ToastObjectType<Data>;

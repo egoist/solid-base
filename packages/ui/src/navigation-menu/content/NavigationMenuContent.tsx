@@ -62,14 +62,14 @@ export function NavigationMenuContent(componentProps: NavigationMenuContent.Prop
   const { mounted, setMounted, transitionStatus } = createTransitionStatus(open);
 
   // If the popup unmounts before the content's exit animation completes, reset the internal
-  // mounted state so the next open can re-enter via `transitionStatus="starting"`.
-  createEffect(
-    () => mounted() && !context.mounted,
-    (shouldReset) => {
-      if (shouldReset) {
+  // mounted state so the next open can re-enter via `transitionStatus="starting"`. Reset along
+  // with the popup's unmount, so the content never outlives it.
+  onCleanup(
+    context.onPopupUnmount(() => {
+      if (untrack(mounted)) {
         setMounted(false);
       }
-    },
+    }),
   );
 
   createOpenChangeComplete({

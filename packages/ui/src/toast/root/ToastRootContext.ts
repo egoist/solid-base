@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'solid-js';
+import { createContext, useContext, type Accessor } from 'solid-js';
 import type { ToastObject } from '../useToastManager';
 
 /**
@@ -6,10 +6,16 @@ import type { ToastObject } from '../useToastManager';
  */
 export interface ToastRootContext {
   readonly toast: ToastObject<any>;
-  setTitleId: (id: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
-  setDescriptionId: (
-    id: string | undefined | ((prev: string | undefined) => string | undefined),
-  ) => void;
+  /**
+   * Registers the id of a title part: it labels the toast whenever `id` returns one.
+   * Returns the unregister function.
+   */
+  registerTitleId: (id: Accessor<string | undefined>) => () => void;
+  /**
+   * Registers the id of a description part: it describes the toast whenever `id` returns one.
+   * Returns the unregister function.
+   */
+  registerDescriptionId: (id: Accessor<string | undefined>) => () => void;
   readonly visibleIndex: number;
   readonly expanded: boolean;
   recalculateHeight: (flushSync?: boolean) => void;

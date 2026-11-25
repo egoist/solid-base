@@ -133,8 +133,13 @@ export function createPopupRootWithPopupId<Store extends PopupRootStore>(
   );
 
   store.context.nested = useFloatingParentNodeId() != null;
-  store.bind('openProp', () => props.open);
-  store.bind('triggerIdProp', () => props.triggerId);
+  // Memos: a compiled conditional prop (`open={a() && b()}`) creates a computation on every read,
+  // and the store reads these on every selector call.
+  store.bind('openProp', createMemo(() => props.open, { name: 'createPopupRoot.openProp' }));
+  store.bind(
+    'triggerIdProp',
+    createMemo(() => props.triggerId, { name: 'createPopupRoot.triggerIdProp' }),
+  );
   // Callbacks are read when called, which can happen in an effect's apply phase.
   store.context.onOpenChange = (open: boolean, details: any) =>
     untrack(() => props.onOpenChange)?.(open, details);

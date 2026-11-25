@@ -11,6 +11,7 @@ import {
   createDynamicPropsSource,
   createStoreProxy,
   createTriggerDataForwarding,
+  registerTriggerState,
 } from '../../utils/popups/popupStoreUtils';
 import { createBaseUiId } from '../../internals/baseUiId';
 import type { TooltipHandle } from '../store/TooltipHandle';
@@ -89,12 +90,19 @@ export function TooltipTrigger<Payload = unknown>(
   const { registerTrigger, isMountedByThisTrigger, triggerElement } = createTriggerDataForwarding(
     thisTriggerId,
     store,
-    () => ({
-      payload: componentProps.payload,
-      closeOnClick: closeOnClick(),
-      closeDelay: closeDelayWithDefault(),
-    }),
   );
+  // What the tooltip reads from this trigger while it is the active one (see `TooltipRoot`).
+  const triggerState = {
+    get payload() {
+      return componentProps.payload;
+    },
+    get closeOnClick() {
+      return closeOnClick();
+    },
+    get closeDelay() {
+      return closeDelayWithDefault();
+    },
+  };
 
   const interactionStore = createStoreProxy(store as unknown as () => PopupInteractionStore);
 
@@ -274,7 +282,7 @@ export function TooltipTrigger<Payload = unknown>(
 
   return renderElement('button', componentProps, {
     state,
-    ref: registerTrigger,
+    ref: [(element: HTMLElement) => registerTriggerState(element, triggerState), registerTrigger],
     props: [
       hoverProps,
       focusProps,

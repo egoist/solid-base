@@ -127,8 +127,10 @@ export function NavigationMenuPositioner(
 
   const positioning = createAnchorPositioning({
     interactionStore,
+    // Without an `anchor` prop, positioning reads the active trigger's store anchor directly, so
+    // it follows the active trigger in the same flush.
     get anchor() {
-      return componentProps.anchor ?? interactionStore.select('anchorElement');
+      return componentProps.anchor;
     },
     get positionMethod() {
       return componentProps.positionMethod;

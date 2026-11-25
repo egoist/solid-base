@@ -228,10 +228,9 @@ describe('<Menu.Root />', () => {
         const [step, setStep] = createSignal(0);
 
         // Two follow-up updates after mounting, like upstream's layout effect chain.
-        createEffect(step, (value) => {
-          if (value < 2) {
-            setStep(value + 1);
-          }
+        onSettled(() => {
+          setStep(1);
+          queueMicrotask(() => setStep(2));
         });
 
         return (

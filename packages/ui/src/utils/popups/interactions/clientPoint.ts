@@ -121,8 +121,9 @@ export function createClientPoint(
   // Bumped to re-run the listener effect, like a React state update.
   const [reactive, setReactive] = createSignal(0, { ownedWrite: true });
 
-  function resetReference(reference: Element | null) {
-    store.set('anchorOverride', reference);
+  // Drops the cursor reference: the popup anchors to its DOM reference again.
+  function resetReference() {
+    store.set('anchorOverride', store.select('anchorElement'));
   }
 
   function setReference(newX: number | null, newY: number | null, referenceElement?: Element | null) {
@@ -169,8 +170,24 @@ export function createClientPoint(
     cleanupListener = null;
   }
 
+  // Disabling the interaction drops the cursor reference.
+  createEffect(
+    enabled,
+    (isEnabled) => {
+      if (!isEnabled) {
+        resetReference();
+      }
+    },
+    { name: 'createClientPoint.resetWhenDisabled' },
+  );
+
+  // Follows the cursor while the interaction is enabled and the popup open. Nothing is read
+  // otherwise, so a disabled interaction doesn't re-run with the popup state.
   createEffect(
     () => {
+      if (!enabled()) {
+        return { openCheck: false, floating: null, reactive: 0 };
+      }
       const floating = store.select('positionerElement');
       // If the pointer is a mouse-like pointer, we want to continue following the
       // mouse even if the floating element is transitioning out. On touch
@@ -178,19 +195,12 @@ export function createClientPoint(
       // the dismissal touch point.
       const openCheck = isMouseLikePointerType(pointerType()) ? floating : store.select('open');
       return {
-        enabled: enabled(),
         openCheck: Boolean(openCheck),
         floating,
-        domReference: store.select('anchorElement'),
         reactive: reactive(),
       };
     },
-    ({ enabled: isEnabled, openCheck, floating, domReference }) => {
-      if (!isEnabled) {
-        resetReference(domReference);
-        return undefined;
-      }
-
+    ({ openCheck, floating }) => {
       if (!openCheck) {
         return undefined;
       }
@@ -210,11 +220,12 @@ export function createClientPoint(
       if (!storeContext.openEvent || isMouseBasedEvent(storeContext.openEvent)) {
         cleanupListener = addEventListener(win, 'mousemove', handleMouseMove);
       } else {
-        resetReference(domReference);
+        resetReference();
       }
 
       return clearListener;
     },
+    { name: 'createClientPoint.listener' },
   );
 
   // Clear virtual cursor references when the interaction is disposed. Enabled flips are handled
