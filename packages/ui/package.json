@@ -33,7 +33,13 @@
   "files": [
     "dist",
     "src",
-    "!src/**/*.test.*"
+    "!src/**/*.test.*",
+    "!src/**/*.spec.*",
+    "!src/**/test-utils.*",
+    "!src/**/testUtils.*",
+    "!src/**/*TestUtils.*",
+    "!src/**/test-fixtures.*",
+    "!src/**/__fixtures__"
   ],
   "scripts": {
     "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json"

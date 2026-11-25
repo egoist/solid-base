@@ -15,8 +15,14 @@
   "exclude": [
     "src/**/*.test.tsx",
     "src/**/*.test.ts",
+    "src/**/*.test-d.tsx",
     "src/**/*.spec.tsx",
     "src/**/*.spec.ts",
-    "src/**/*.test-d.tsx"
+    "src/**/test-utils.ts",
+    "src/**/test-utils.tsx",
+    "src/**/testUtils.tsx",
+    "src/**/*TestUtils.tsx",
+    "src/**/test-fixtures.tsx",
+    "src/**/__fixtures__/**"
   ]
 }
