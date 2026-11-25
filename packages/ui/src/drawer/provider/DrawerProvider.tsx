@@ -1,5 +1,6 @@
 import { createMemo, createSignal, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
+import { createRegistry } from '../../utils/createRegistry';
 import { DrawerProviderContext } from './DrawerProviderContext';
 import type { DrawerVisualState, DrawerVisualStateStore } from './DrawerProviderContext';
 
@@ -15,12 +16,9 @@ export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
   const [openDrawerCount, setOpenDrawerCount] = createSignal(0, {
     name: 'DrawerProvider.openDrawerCount',
   });
-  const [registeredDrawers, setRegisteredDrawers] = createSignal<readonly Accessor<boolean>[]>(
-    [],
-    { ownedWrite: true, name: 'DrawerProvider.registeredDrawers' },
-  );
+  const registeredDrawers = createRegistry<Accessor<boolean>>('DrawerProvider.registeredDrawers');
   const active = createMemo(
-    () => openDrawerCount() > 0 || registeredDrawers().some((open) => open()),
+    () => openDrawerCount() > 0 || registeredDrawers.entries().some((open) => open()),
     { name: 'DrawerProvider.active' },
   );
   const visualStateStore = createVisualStateStore();
@@ -43,12 +41,7 @@ export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
     removeDrawer(drawer) {
       setDrawerOpen(drawer, false);
     },
-    registerDrawer(open) {
-      setRegisteredDrawers((drawers) => [...drawers, open]);
-      return () => {
-        setRegisteredDrawers((drawers) => drawers.filter((drawer) => drawer !== open));
-      };
-    },
+    registerDrawer: registeredDrawers.register,
     get active() {
       return active();
     },

@@ -1,5 +1,5 @@
 import { createMemo, createSignal, omit, type Accessor } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { isServer, type JSX } from '@solidjs/web';
 import type { RefProp } from '@egoist/solid-base-utils/refs';
 import { FloatingNode, FloatingTree, createFloatingNodeId } from '../utils/popups/tree/FloatingTree';
 import type { MenuRoot } from '../menu/root/MenuRoot';
@@ -109,9 +109,12 @@ export function Menubar(componentProps: Menubar.Props): JSX.Element {
     },
     registerMenu(menu) {
       menus.add(menu);
-      setMenusVersion(0);
+      // A server render never re-runs (and must not write signals): only notify in the browser.
+      if (!isServer) {
+        setMenusVersion(0);
+      }
       return () => {
-        if (menus.delete(menu)) {
+        if (menus.delete(menu) && !isServer) {
           setMenusVersion(0);
         }
       };

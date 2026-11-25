@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, onCleanup, untrack } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { isServer, type JSX } from '@solidjs/web';
 import { getSide, getAlignment, getSideAxis } from '@floating-ui/utils';
 import type { Rect } from '@floating-ui/utils';
 import { ownerDocument, ownerWindow } from '@egoist/solid-base-utils/owner';
@@ -522,7 +522,11 @@ export function createAnchorPositioning(
     nodeId,
     externalTree,
   });
-  setFloatingSource(floating);
+  // The server never positions the element (nor re-runs) and must not write signals: there the
+  // source stays unset, which reads the same as an element that isn't positioned yet.
+  if (!isServer) {
+    setFloatingSource(floating);
+  }
 
   // An arrow that mounts or unmounts after the popup is positioned doesn't resize the positioner, so
   // reposition explicitly. Deferred so an anchor that changed in the same update is registered

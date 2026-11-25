@@ -50,16 +50,12 @@ export function useMediaQuery(
     return defaultMatches();
   };
 
-  if (isServer) {
-    return getServerSnapshot;
-  }
-
-  const [hydrated, setHydrated] = createSignal(!isHydrating());
-  if (isHydrating()) {
-    onSettled(() => {
-      setHydrated(true);
-    });
-  }
+  // The same reactive structure on the server and the client, so hydration ids line up. The
+  // server (and a hydrating client) render the server snapshot; effects never run on the server.
+  const [hydrated, setHydrated] = createSignal(!isServer && !isHydrating());
+  onSettled(() => {
+    setHydrated(true);
+  });
 
   const mediaQueryList = createMemo(() => {
     const match = matchMedia();

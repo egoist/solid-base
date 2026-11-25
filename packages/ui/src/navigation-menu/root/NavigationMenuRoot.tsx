@@ -33,6 +33,7 @@ import type { TransitionStatus } from '../../internals/transitionStatus';
 import { REASONS } from '../../internals/reasons';
 import * as NavigationMenuPositionerCssVars from '../positioner/NavigationMenuPositionerCssVars';
 import { setSharedFixedSize } from '../utils/setSharedFixedSize';
+import { createRegistry } from '../../utils/createRegistry';
 
 const blockedReturnFocusReasons = new Set<string>([
   REASONS.triggerHover,
@@ -195,9 +196,9 @@ export function NavigationMenuRoot<Value = any>(
   // Triggers register theirs; the active one is followed as the value changes, and the last one is
   // kept after the value clears (a controlled close) until the menu is closed through `setValue` or
   // unmounts, which release it.
-  const [floatingRootStores, setFloatingRootStores] = createSignal<
-    readonly FloatingRootStoreRegistration[]
-  >([], { ownedWrite: true, name: 'NavigationMenuRoot.floatingRootStores' });
+  const floatingRootStores = createRegistry<FloatingRootStoreRegistration>(
+    'NavigationMenuRoot.floatingRootStores',
+  );
   const [floatingRootStoreRelease, setFloatingRootStoreRelease] = createSignal(0, {
     ownedWrite: true,
     name: 'NavigationMenuRoot.floatingRootStoreRelease',
@@ -211,7 +212,7 @@ export function NavigationMenuRoot<Value = any>(
   }>(
     (previous) => {
       const release = floatingRootStoreRelease();
-      const active = floatingRootStores().find((registration) => registration.isActive());
+      const active = floatingRootStores.entries().find((registration) => registration.isActive());
       if (active) {
         return { store: active.store, release };
       }
@@ -225,15 +226,6 @@ export function NavigationMenuRoot<Value = any>(
   const floatingRootStore = createMemo(() => activeFloatingRootStore().store, {
     name: 'NavigationMenuRoot.floatingRootStore',
   });
-
-  function registerFloatingRootStore(registration: FloatingRootStoreRegistration) {
-    setFloatingRootStores((registrations) => [...registrations, registration]);
-    return () => {
-      setFloatingRootStores((registrations) =>
-        registrations.filter((entry) => entry !== registration),
-      );
-    };
-  }
 
   store.bind('value', value);
   store.bind('floatingRootStore', floatingRootStore);
@@ -383,7 +375,7 @@ export function NavigationMenuRoot<Value = any>(
     get floatingRootStore() {
       return store.select('floatingRootStore');
     },
-    registerFloatingRootStore,
+    registerFloatingRootStore: floatingRootStores.register,
     onPopupUnmount,
     get currentContent() {
       return store.select('currentContent');

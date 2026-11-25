@@ -7,6 +7,7 @@ import {
   type Accessor,
   type Setter,
 } from 'solid-js';
+import { isServer } from '@solidjs/web';
 
 type SelectorFunction<State> = (state: State, ...args: any[]) => any;
 
@@ -317,7 +318,12 @@ export class ReactiveStore<
     this.getSignal(key)[0]();
   }
 
+  // Values live in `values`; the signals only notify readers. A server render never re-runs, and
+  // Solid forbids writing signals there, so the server skips notifications.
   private notifyStored(key: PropertyKey) {
+    if (isServer) {
+      return;
+    }
     const signal = this.storedSignals.get(key);
     if (signal) {
       this.version += 1;
@@ -326,6 +332,9 @@ export class ReactiveStore<
   }
 
   private notify(key: PropertyKey) {
+    if (isServer) {
+      return;
+    }
     const signal = this.signals.get(key);
     if (signal) {
       this.version += 1;

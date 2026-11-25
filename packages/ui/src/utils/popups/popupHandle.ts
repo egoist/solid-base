@@ -1,5 +1,5 @@
 import { createSignal, getObserver, untrack, type Accessor, type Setter } from 'solid-js';
-import { isDev } from '@solidjs/web';
+import { isDev, isServer } from '@solidjs/web';
 import { AnimationFrame } from '@egoist/solid-base-utils/animationFrame';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import type { BaseUIChangeEventDetails } from '../../internals/createBaseUIEventDetails';
@@ -61,6 +61,13 @@ function getAttachmentsChanged() {
   return attachmentsChanged;
 }
 
+/** Notifies readers of the attachments. Server renders never re-run, so they skip it. */
+function notifyAttachmentsChanged() {
+  if (!isServer) {
+    getAttachmentsChanged()[1](0);
+  }
+}
+
 function readAttachments(): readonly HandleAttachment[] {
   if (getObserver()) {
     getAttachmentsChanged()[0]();
@@ -75,12 +82,12 @@ function readAttachments(): readonly HandleAttachment[] {
 export function attachStoreToHandle(store: unknown, handle: Accessor<unknown>): () => void {
   const attachment: HandleAttachment = { store, handle };
   attachments.push(attachment);
-  getAttachmentsChanged()[1](0);
+  notifyAttachmentsChanged();
   return () => {
     const index = attachments.indexOf(attachment);
     if (index !== -1) {
       attachments.splice(index, 1);
-      getAttachmentsChanged()[1](0);
+      notifyAttachmentsChanged();
     }
   };
 }

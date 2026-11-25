@@ -6,6 +6,7 @@ import {
   createSignal,
   createUniqueId,
   omit,
+  untrack,
   useContext,
   type Accessor,
 } from 'solid-js';
@@ -202,11 +203,22 @@ function renderPortalNode(
  * @internal
  */
 export function FloatingPortal(componentProps: FloatingPortalProps): JSX.Element {
-  // Portals are client-only: like React portals, they render nothing on the server.
-  if (isServer) {
-    return null;
-  }
+  return clientOnly(() => renderFloatingPortal(componentProps));
+}
 
+/**
+ * Portals are client-only: like React portals, they render nothing on the server. The portal is
+ * built inside one memo created on both sides, so the primitives it creates on the client nest
+ * under that owner instead of shifting the hydration ids of the siblings that follow.
+ */
+function clientOnly(render: () => JSX.Element): JSX.Element {
+  const element = createMemo(() => (isServer ? null : untrack(render)), {
+    name: 'FloatingPortal.clientOnly',
+  });
+  return element as unknown as JSX.Element;
+}
+
+function renderFloatingPortal(componentProps: FloatingPortalProps): JSX.Element {
   // The focus manager registers an accessor once; its state is read through it, so the portal
   // sees every change in the same flush.
   const [focusManagerSource, setFocusManagerSource] = createSignal<Accessor<
@@ -357,16 +369,14 @@ export namespace FloatingPortal {
  * @internal
  */
 export function FloatingPortalLite(componentProps: FloatingPortalProps): JSX.Element {
-  if (isServer) {
-    return null;
-  }
-
-  // Read the children lazily, in the portal's tracking scope.
-  const { element } = renderPortalNode(
-    componentProps,
-    () => (() => componentProps.children) as unknown as JSX.Element,
-  );
-  return element;
+  return clientOnly(() => {
+    // Read the children lazily, in the portal's tracking scope.
+    const { element } = renderPortalNode(
+      componentProps,
+      () => (() => componentProps.children) as unknown as JSX.Element,
+    );
+    return element;
+  });
 }
 
 export namespace FloatingPortalLite {

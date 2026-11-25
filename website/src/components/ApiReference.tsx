@@ -27,7 +27,10 @@ export function ApiReference(props: { module: ApiModule }) {
           <section class="api-part" id={`api-${part.name.toLowerCase()}`}>
             <header class="api-part-header">
               <h3>
-                <code>{`<${part.jsxName}>`}</code>
+                {/* JSX entities: Solid 2.0.4's hydratable SSR leaves `{`<${x}>`}` unescaped. */}
+                <code>
+                  &lt;{part.jsxName}&gt;
+                </code>
               </h3>
               <Show when={part.description}>
                 <Description text={part.description} />

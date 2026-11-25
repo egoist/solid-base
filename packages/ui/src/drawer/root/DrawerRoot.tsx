@@ -15,6 +15,7 @@ import type {
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import type { BaseUIChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import { REASONS } from '../../internals/reasons';
+import { createRegistry } from '../../utils/createRegistry';
 import { useDialogRootContext } from '../../dialog/root/DialogRootContext';
 import { renderDialogRoot } from '../../dialog/root/useRenderDialogRoot';
 import type { DialogRootProps } from '../../dialog/root/DialogRoot';
@@ -33,13 +34,11 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
 
   const [popupHeight, setPopupHeight] = createSignal(0);
   // The nested drawers registered with this one.
-  const [nestedDrawers, setNestedDrawers] = createSignal<readonly NestedDrawerRegistration[]>([], {
-    ownedWrite: true,
-    name: 'DrawerRoot.nestedDrawers',
-  });
-  const hasNestedDrawer = createMemo(() => nestedDrawers().some((nested) => nested.present()), {
-    name: 'DrawerRoot.hasNestedDrawer',
-  });
+  const nestedDrawers = createRegistry<NestedDrawerRegistration>('DrawerRoot.nestedDrawers');
+  const hasNestedDrawer = createMemo(
+    () => nestedDrawers.entries().some((nested) => nested.present()),
+    { name: 'DrawerRoot.hasNestedDrawer' },
+  );
   // A frontmost height reported imperatively (`onNestedFrontmostHeightChange`).
   const [reportedNestedHeight, setReportedNestedHeight] = createSignal(0, {
     name: 'DrawerRoot.reportedNestedHeight',
@@ -47,7 +46,7 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
   // The frontmost height of the stack of the open nested drawer, or 0 without one.
   const nestedFrontmostHeight = createMemo(
     () => {
-      for (const nested of nestedDrawers()) {
+      for (const nested of nestedDrawers.entries()) {
         const height = nested.frontmostHeight();
         if (height > 0) {
           return height;
@@ -170,12 +169,7 @@ export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>):
       return nestedSwiping();
     },
     nestedSwipeProgressStore,
-    registerNestedDrawer(nested) {
-      setNestedDrawers((drawers) => [...drawers, nested]);
-      return () => {
-        setNestedDrawers((drawers) => drawers.filter((drawer) => drawer !== nested));
-      };
-    },
+    registerNestedDrawer: nestedDrawers.register,
     onPopupHeightChange(height) {
       setPopupHeight(height);
     },

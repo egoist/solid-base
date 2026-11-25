@@ -9,6 +9,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['test/hydration/render.server.test.tsx'],
+    include: ['test/hydration/*.server.test.tsx'],
   },
 });

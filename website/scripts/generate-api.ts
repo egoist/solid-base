@@ -206,7 +206,10 @@ const result: Record<string, ModuleDoc> = {};
 for (const slug of modules) {
   const name = pascal(slug);
   const partsFile = join(src, slug, 'index.parts.ts');
-  const namespaced = existsSync(partsFile);
+  // Namespaced when the module exports its parts as `Name.Part` (not just an index.parts file).
+  const namespaced =
+    existsSync(partsFile) &&
+    new RegExp(`export \\* as ${name} from`).test(readFileSync(join(src, slug, 'index.ts'), 'utf8'));
   const entry = program.getSourceFile(namespaced ? partsFile : join(src, slug, 'index.ts'));
   if (!entry) {
     continue;
@@ -238,7 +241,7 @@ for (const slug of modules) {
     const cssFile = cssFiles.find((file) => file.endsWith(`/${implementationName}CssVars.ts`));
     parts.push({
       name: partName,
-      jsxName: namespaced ? `${name}.${partName}` : partName,
+      jsxName: namespaced ? `${name}.${partName}` : existsSync(partsFile) ? name : partName,
       description: docOf(symbol).replace(/\n*Documentation: \[[^\]]*\]\([^)]*\)/, '').trim(),
       props: propsOf(symbol),
       dataAttributes: dataFile ? attributesOf(dataFile) : [],

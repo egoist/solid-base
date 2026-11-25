@@ -10965,11 +10965,11 @@
   "direction-provider": {
     "slug": "direction-provider",
     "name": "DirectionProvider",
-    "namespaced": true,
+    "namespaced": false,
     "parts": [
       {
-        "name": "Provider",
-        "jsxName": "DirectionProvider.Provider",
+        "name": "DirectionProvider",
+        "jsxName": "DirectionProvider",
         "description": "Enables RTL behavior for Base UI components.",
         "props": [
           {
