@@ -1,0 +1,45 @@
+.Control {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  height: 8rem;
+  padding-inline: 0.75rem;
+  touch-action: none;
+  user-select: none;
+}
+
+.Track {
+  width: 0.25rem;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--line);
+  user-select: none;
+}
+
+.Indicator {
+  border-radius: 999px;
+  background: var(--accent);
+  user-select: none;
+}
+
+.Thumb {
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--accent-ink);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 1px 3px rgb(0 0 0 / 0.35);
+  user-select: none;
+  transition: scale 150ms var(--ease);
+
+  &[data-dragging] {
+    scale: 1.15;
+  }
+
+  &:has(:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}

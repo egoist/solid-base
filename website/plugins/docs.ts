@@ -322,12 +322,32 @@ export function docs(options: DocsPluginOptions): Plugin {
       }
       return undefined;
     },
+    configureServer(server) {
+      // Adding, removing or renaming pages changes the index: invalidate it and reload.
+      server.watcher.add(docsDir);
+      const refreshIndex = (file: string) => {
+        if (!file.startsWith(docsDir) || !file.endsWith('.md')) {
+          return;
+        }
+        for (const environment of Object.values(server.environments)) {
+          const index = environment.moduleGraph.getModuleById(RESOLVED_INDEX);
+          if (index) {
+            environment.moduleGraph.invalidateModule(index);
+          }
+        }
+        server.ws.send({ type: 'full-reload' });
+      };
+      server.watcher.on('add', refreshIndex);
+      server.watcher.on('unlink', refreshIndex);
+    },
     handleHotUpdate(context) {
-      // Adding, removing or renaming pages (or editing frontmatter) changes the index.
+      // Frontmatter edits change the index too.
       if (context.file.startsWith(docsDir) && context.file.endsWith('.md')) {
-        const index = context.server.moduleGraph.getModuleById(RESOLVED_INDEX);
-        if (index) {
-          context.server.moduleGraph.invalidateModule(index);
+        for (const environment of Object.values(context.server.environments)) {
+          const index = environment.moduleGraph.getModuleById(RESOLVED_INDEX);
+          if (index) {
+            environment.moduleGraph.invalidateModule(index);
+          }
         }
       }
     },

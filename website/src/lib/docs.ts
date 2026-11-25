@@ -58,7 +58,6 @@ export interface ApiModule {
 }
 
 export interface DocModule {
-  default?: never;
   frontmatter: DocFrontmatter;
   toc: TocEntry[];
   segments: DocSegment[];
@@ -98,11 +97,10 @@ export async function loadDocModule(route: string) {
   if (!page) {
     return undefined;
   }
-  let module = moduleCache.get(page.route);
-  if (!module) {
-    module = (await page.load()).default;
-    moduleCache.set(page.route, module);
-  }
+  // Always ask the loader: it resolves the already-loaded module (or a fresh one after an edit
+  // in development) without refetching.
+  const module: DocModule = (await page.load()).default;
+  moduleCache.set(page.route, module);
   return module;
 }
 
