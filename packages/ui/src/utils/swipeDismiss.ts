@@ -166,9 +166,9 @@ export function createSwipeDismiss(options: CreateSwipeDismissOptions): CreateSw
 
   const [currentSwipeDirection, setCurrentSwipeDirection] = createSignal<
     SwipeDirection | undefined
-  >(undefined, { ownedWrite: true });
-  const [isSwiping, setIsSwiping] = createSignal(false, { ownedWrite: true });
-  const [dragDismissed, setDragDismissedSignal] = createSignal(false, { ownedWrite: true });
+  >(undefined);
+  const [isSwiping, setIsSwiping] = createSignal(false);
+  const [dragDismissed, setDragDismissedSignal] = createSignal(false);
 
   let dragDismissedValue = false;
   let dragStartPos = { x: 0, y: 0 };

@@ -99,7 +99,7 @@ export function DrawerViewport(componentProps: DrawerViewport.Props): JSX.Elemen
   const getPopupElement = () => store.state.popupElement;
   const getBackdropElement = () => store.context.backdropElement;
 
-  const [swipeRelease, setSwipeRelease] = createSignal<number | null>(null, { ownedWrite: true });
+  const [swipeRelease, setSwipeRelease] = createSignal<number | null>(null);
 
   let pendingSwipeCloseSnapPoint: DrawerSnapPoint | null | undefined;
   const controlledDismissFrame = createAnimationFrame();

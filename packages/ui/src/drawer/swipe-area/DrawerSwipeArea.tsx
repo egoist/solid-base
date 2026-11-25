@@ -90,10 +90,8 @@ export function DrawerSwipeArea(componentProps: DrawerSwipeArea.Props): JSX.Elem
   const drawer = useDrawerRootContext();
   const providerContext = useDrawerProviderContext();
 
-  const [swipeActive, setSwipeActive] = createSignal(false, { ownedWrite: true });
-  const [swipeAreaElement, setSwipeAreaElement] = createSignal<HTMLElement | null>(null, {
-    ownedWrite: true,
-  });
+  const [swipeActive, setSwipeActive] = createSignal(false);
+  const [swipeAreaElement, setSwipeAreaElement] = createSignal<HTMLElement | null>(null);
 
   let swipeAreaRef: HTMLElement | null = null;
   let swipeActiveValue = false;

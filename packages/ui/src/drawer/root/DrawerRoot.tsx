@@ -30,10 +30,10 @@ import type { ActionsRef, PayloadChildRenderFunction } from '../../utils/popups/
 export function DrawerRoot<Payload = unknown>(props: DrawerRoot.Props<Payload>): JSX.Element {
   const parentDrawerRootContext = useDrawerRootContext(true);
 
-  const [popupHeight, setPopupHeight] = createSignal(0, { ownedWrite: true });
-  const [frontmostHeight, setFrontmostHeight] = createSignal(0, { ownedWrite: true });
-  const [hasNestedDrawer, setHasNestedDrawer] = createSignal(false, { ownedWrite: true });
-  const [nestedSwiping, setNestedSwiping] = createSignal(false, { ownedWrite: true });
+  const [popupHeight, setPopupHeight] = createSignal(0);
+  const [frontmostHeight, setFrontmostHeight] = createSignal(0);
+  const [hasNestedDrawer, setHasNestedDrawer] = createSignal(false);
+  const [nestedSwiping, setNestedSwiping] = createSignal(false);
   const nestedSwipeProgressStore = createNestedSwipeProgressStore();
 
   // Plain mirrors: reads of the signals lag their writes.

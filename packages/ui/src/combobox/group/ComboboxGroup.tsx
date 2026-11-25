@@ -17,9 +17,7 @@ export function ComboboxGroup(componentProps: ComboboxGroup.Props): JSX.Element 
 
   const store = useComboboxRootContext();
 
-  const [labelId, setLabelId] = createSignal<string | undefined>(undefined, {
-    ownedWrite: true,
-  });
+  const [labelId, setLabelId] = createSignal<string | undefined>(undefined);
 
   const contextValue: ComboboxGroupContext = {
     labelId,

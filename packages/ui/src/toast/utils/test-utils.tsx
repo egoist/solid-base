@@ -90,7 +90,7 @@ export function renderWithProps<P extends object>(
   createComponent: (props: P) => JSX.Element,
   initialProps: P,
 ) {
-  const [state, setState] = createSignal<{ value: P }>({ value: initialProps }, { ownedWrite: true });
+  const [state, setState] = createSignal<{ value: P }>({ value: initialProps });
   const live = new Proxy({} as P, {
     get: (_target, key) => (state().value as any)[key],
     has: (_target, key) => key in (state().value as any),

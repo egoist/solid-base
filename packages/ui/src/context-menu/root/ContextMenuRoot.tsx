@@ -22,7 +22,6 @@ export function ContextMenuRoot(props: ContextMenuRoot.Props): JSX.Element {
         return DOMRect.fromRect({ width: 0, height: 0, x: 0, y: 0 });
       },
     },
-    { ownedWrite: true },
   );
 
   const id = createBaseUiId()();

@@ -69,7 +69,6 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
 
   const [controlledAlignItemWithTrigger, setControlledAlignItemWithTrigger] = createSignal(
     untrack(alignItemWithTrigger),
-    { ownedWrite: true },
   );
 
   // The prop applies again once the popup has unmounted.

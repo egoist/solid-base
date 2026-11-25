@@ -87,9 +87,7 @@ export function MenuTrigger<Payload = unknown>(
     store().select('triggerControlsId', thisTriggerId()) as string | undefined;
   const lastOpenChangeReason = () => store().select('lastOpenChangeReason');
 
-  const [triggerElement, setTriggerElement] = createSignal<HTMLElement | null>(null, {
-    ownedWrite: true,
-  });
+  const [triggerElement, setTriggerElement] = createSignal<HTMLElement | null>(null);
   let triggerEl: HTMLElement | null = null;
   onCleanup(() => {
     triggerEl = null;
@@ -243,7 +241,7 @@ export function MenuTrigger<Payload = unknown>(
   });
 
   // Whether to ignore clicks to open the menu: only "patient" clicks close a menu opened on hover.
-  const [stickIfOpen, setStickIfOpen] = createSignal(false, { ownedWrite: true });
+  const [stickIfOpen, setStickIfOpen] = createSignal(false);
   const stickIfOpenTimeout = new Timeout();
   onCleanup(stickIfOpenTimeout.clear);
   createEffect(
@@ -386,7 +384,7 @@ export function MenuTrigger<Payload = unknown>(
   // the trigger in the same pass replaces (moves) the trigger element, which drops its focus. The
   // guard before the trigger is therefore added in a later pass, once the one after it is in place.
   const guardsVisible = createMemo(isOpenedByThisTrigger);
-  const [beforeGuardReady, setBeforeGuardReady] = createSignal(false, { ownedWrite: true });
+  const [beforeGuardReady, setBeforeGuardReady] = createSignal(false);
   createEffect(guardsVisible, (visible) => {
     setBeforeGuardReady(visible);
   });

@@ -20,8 +20,8 @@ export function createDialogInteractions(
   const mounted = () => store.select('mounted');
   const modal = () => store.select('modal');
 
-  const [ownNestedOpenDialogs, setOwnNestedOpenDialogs] = createSignal(0, { ownedWrite: true });
-  const [ownNestedOpenDrawers, setOwnNestedOpenDrawers] = createSignal(0, { ownedWrite: true });
+  const [ownNestedOpenDialogs, setOwnNestedOpenDialogs] = createSignal(0);
+  const [ownNestedOpenDrawers, setOwnNestedOpenDrawers] = createSignal(0);
   // Plain mirrors: reads of the signals lag their writes.
   let nestedDialogs = 0;
   const isTopmost = () => ownNestedOpenDialogs() === 0;

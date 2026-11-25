@@ -11,7 +11,7 @@ import type { DrawerVisualState, DrawerVisualStateStore } from './DrawerProvider
  */
 export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
   const openDrawers = new Set<object>();
-  const [active, setActive] = createSignal(false, { ownedWrite: true });
+  const [active, setActive] = createSignal(false);
   const visualStateStore = createVisualStateStore();
 
   const setDrawerOpen = (drawer: object, open: boolean) => {

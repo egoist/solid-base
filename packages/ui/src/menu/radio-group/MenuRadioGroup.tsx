@@ -27,9 +27,7 @@ export function MenuRadioGroupPlain(
     "aria-labelledby",
   );
 
-  const [labelId, setLabelId] = createSignal<string | undefined>(undefined, {
-    ownedWrite: true,
-  });
+  const [labelId, setLabelId] = createSignal<string | undefined>(undefined);
 
   const [value, setValueUnwrapped] = createControllableSignal<any>({
     value: () => componentProps.value,

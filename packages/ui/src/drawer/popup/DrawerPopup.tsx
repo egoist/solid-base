@@ -139,7 +139,7 @@ export function DrawerPopup(componentProps: DrawerPopup.Props): JSX.Element {
   const nestedDrawerOpen = () => nestedOpenDrawerCount() > 0;
   const swiping = () => swipe?.swiping ?? false;
 
-  const [popupHeight, setPopupHeight] = createSignal(0, { ownedWrite: true });
+  const [popupHeight, setPopupHeight] = createSignal(0);
   let popupHeightValue = 0;
 
   if (isDev && !swipe) {

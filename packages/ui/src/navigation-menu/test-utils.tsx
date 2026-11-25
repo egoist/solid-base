@@ -51,7 +51,7 @@ export function renderWithProps<P extends object>(
   initialProps: P,
   options?: Parameters<typeof render>[1],
 ) {
-  const [state, setState] = createSignal<{ value: P }>({ value: initialProps }, { ownedWrite: true });
+  const [state, setState] = createSignal<{ value: P }>({ value: initialProps });
   const props = () => state().value;
   const keys = new Set<string>(Object.keys(initialProps));
   const live = new Proxy({} as P, {

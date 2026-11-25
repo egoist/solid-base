@@ -33,23 +33,19 @@ export function FilterDropdownRoot(props: FilterDropdownRoot.Props): JSX.Element
     current: null,
   };
 
-  const [renderedListId, setRenderedListId] = createSignal<string | undefined>(undefined, {
-    ownedWrite: true,
-  });
+  const [renderedListId, setRenderedListId] = createSignal<string | undefined>(undefined);
   // Both reset when the host reports a new `openedByKeyboard`.
   const [inputFocusVisible, setInputFocusVisible] = createSignal(
     () => props.openedByKeyboard ?? false,
-    { ownedWrite: true },
   );
   const [keyboardModality, setKeyboardModality] = createSignal(
     () => props.openedByKeyboard ?? false,
-    { ownedWrite: true },
   );
 
   const store = new FilterDropdownStore();
   const liveItems = new Map<symbol, FilterDropdownItemRegistration>();
   // Bumped whenever the registry changes, so the filtering pass runs again.
-  const [registryVersion, setRegistryVersion] = createSignal(0, { ownedWrite: true });
+  const [registryVersion, setRegistryVersion] = createSignal(0);
 
   // The count is published as items register, so a `Menu.Empty` mounting alongside the items
   // never reads a stale zero.

@@ -63,9 +63,7 @@ function MenuSubmenuTriggerPlain(componentProps: MenuSubmenuTrigger.Props): JSX.
   let focusReturnedThroughGuard = false;
   let triggerElement: HTMLElement | null = null;
   // Reactive copy for the hover interaction, which attaches its listeners to the trigger.
-  const [hoverTriggerElement, setHoverTriggerElement] = createSignal<HTMLElement | null>(null, {
-    ownedWrite: true,
-  });
+  const [hoverTriggerElement, setHoverTriggerElement] = createSignal<HTMLElement | null>(null);
 
   const { registerTrigger } = createTriggerDataForwarding<MenuStoreState<unknown>>(
     thisTriggerId,

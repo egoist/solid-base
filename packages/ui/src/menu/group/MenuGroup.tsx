@@ -12,9 +12,7 @@ import { MenuGroupContext } from "./MenuGroupContext";
 export function MenuGroupPlain(componentProps: MenuGroup.Props): JSX.Element {
   const elementProps = omit(componentProps, "render", "class", "style");
 
-  const [labelId, setLabelId] = createSignal<string | undefined>(undefined, {
-    ownedWrite: true,
-  });
+  const [labelId, setLabelId] = createSignal<string | undefined>(undefined);
 
   // A component boundary: the children are created under the context provider below, and the
   // element creation stays untracked.

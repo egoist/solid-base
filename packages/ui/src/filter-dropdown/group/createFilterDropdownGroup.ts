@@ -25,7 +25,7 @@ export function createFilterDropdownGroup(): CreateFilterDropdownGroupReturnValu
   const parentContext = useFilterDropdownGroupContext();
 
   const items = new Map<symbol, boolean>();
-  const [version, setVersion] = createSignal(0, { ownedWrite: true });
+  const [version, setVersion] = createSignal(0);
 
   function registerItem(id: symbol, retained: boolean) {
     items.set(id, retained);

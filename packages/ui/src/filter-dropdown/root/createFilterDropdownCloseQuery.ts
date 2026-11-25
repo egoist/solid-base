@@ -21,7 +21,7 @@ export function createFilterDropdownCloseQuery(
 ): Accessor<string> {
   const { open, mounted, value, onValueChange } = params;
 
-  const [closeQuery, setCloseQuery] = createSignal<string | null>(null, { ownedWrite: true });
+  const [closeQuery, setCloseQuery] = createSignal<string | null>(null);
 
   let previousOpen = untrack(open);
   let pendingReset = false;
