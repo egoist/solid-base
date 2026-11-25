@@ -14,6 +14,25 @@ export interface FloatingUIOpenChangeDetails {
 
 export type IntrinsicTagName = keyof JSX.IntrinsicElements & string;
 
+interface BaseUIEventExtras {
+  /**
+   * Prevents the Base UI handlers that run after this one (the component's internal logic).
+   */
+  preventBaseUIHandler: () => void;
+  readonly baseUIHandlerPrevented?: boolean | undefined;
+}
+
+type WithPreventBaseUIHandler<Handler> = Handler extends (event: infer E) => infer R
+  ? (event: E & BaseUIEventExtras) => R
+  : Handler;
+
+/**
+ * Adds `preventBaseUIHandler()` to the events received by the `on*` handlers of `Props`.
+ */
+export type WithBaseUIEvent<Props> = {
+  [K in keyof Props]: K extends `on${string}` ? WithPreventBaseUIHandler<Props[K]> : Props[K];
+};
+
 /**
  * The `class` prop of Base UI components: any Solid class value, or a function of the state.
  */
@@ -35,7 +54,7 @@ export type BaseUIComponentProps<
   Tag extends IntrinsicTagName,
   State,
   RenderFunctionProps = HTMLProps,
-> = Omit<JSX.IntrinsicElements[Tag], 'class' | 'style'> & {
+> = Omit<WithBaseUIEvent<JSX.IntrinsicElements[Tag]>, 'class' | 'style'> & {
   /**
    * CSS class applied to the element, or a function that
    * returns a class based on the component's state.
