@@ -1,0 +1,95 @@
+/*
+ * Design tokens. Dark is the default; `[data-theme='light']` switches to light.
+ * Demos in ../docs read these variables too, so keep the names stable.
+ */
+:root {
+  color-scheme: dark;
+
+  --paper: #16171b;
+  --paper-sunken: #111215;
+  --surface: #1d1e23;
+  --surface-raised: #24252b;
+  --ink: #f1f1f3;
+  --ink-soft: #b3b4bc;
+  --muted: #7c7e88;
+  --line: #2a2c33;
+  --line-soft: #212228;
+  --accent: #7c6cff;
+  --accent-ink: #ffffff;
+  --accent-soft: #26224a;
+  --accent-text: #a89dff;
+  --accent-2: #3ee6c8;
+  --danger: #ff6b6b;
+  --success: #4ade80;
+  --overlay: rgb(5 5 8 / 0.62);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 30px -12px rgb(0 0 0 / 0.65);
+  --shadow-lg: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 64px -16px rgb(0 0 0 / 0.75);
+  --gradient: linear-gradient(115deg, #3a1dd6 0%, #6c4cff 34%, #4aa8ff 68%, #3ee6c8 100%);
+
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --header-height: 72px;
+  --sidebar-width: 272px;
+  --content-width: 720px;
+  --frame-width: 1440px;
+
+  /* Syntax colors (Shiki css-variables theme). */
+  --code-foreground: #d9d9e0;
+  --code-background: transparent;
+  --code-token-comment: #6c6e79;
+  --code-token-keyword: #a99dff;
+  --code-token-string: #7ee0c3;
+  --code-token-string-expression: #7ee0c3;
+  --code-token-constant: #ffb86b;
+  --code-token-function: #8ec5ff;
+  --code-token-parameter: #d9d9e0;
+  --code-token-punctuation: #8a8c97;
+  --code-token-link: #8ec5ff;
+  --code-token-inserted: #7ee0c3;
+  --code-token-deleted: #ff8a8a;
+  --code-token-changed: #ffd479;
+}
+
+:root[data-theme='light'],
+.theme-light {
+  color-scheme: light;
+
+  --paper: #ffffff;
+  --paper-sunken: #f6f6f8;
+  --surface: #ffffff;
+  --surface-raised: #f6f6f8;
+  --ink: #17171b;
+  --ink-soft: #4a4b54;
+  --muted: #80828c;
+  --line: #e4e4ea;
+  --line-soft: #efeff3;
+  --accent: #6a5af9;
+  --accent-ink: #ffffff;
+  --accent-soft: #eeecff;
+  --accent-text: #5545e6;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --overlay: rgb(20 20 28 / 0.32);
+  --shadow: 0 1px 2px rgb(20 20 28 / 0.05), 0 10px 30px -12px rgb(20 20 28 / 0.18);
+  --shadow-lg: 0 1px 2px rgb(20 20 28 / 0.05), 0 24px 64px -16px rgb(20 20 28 / 0.28);
+
+  --code-foreground: #2a2b33;
+  --code-token-comment: #9a9ca6;
+  --code-token-keyword: #5545e6;
+  --code-token-string: #0f8a6a;
+  --code-token-string-expression: #0f8a6a;
+  --code-token-constant: #b45309;
+  --code-token-function: #1d64c8;
+  --code-token-parameter: #2a2b33;
+  --code-token-punctuation: #8a8c97;
+  --code-token-link: #1d64c8;
+  --code-token-inserted: #0f8a6a;
+  --code-token-deleted: #c2410c;
+  --code-token-changed: #a16207;
+}

@@ -8,13 +8,8 @@ import { isServer } from '@solidjs/web';
  * Upstream: `utils/useIsHydrating`.
  */
 export function createIsHydrating(): Accessor<boolean> {
-  if (isServer) {
-    return () => true;
-  }
-  if (!isHydrating()) {
-    return () => false;
-  }
-  const [hydrating, setHydrating] = createSignal(true);
+  // The same reactive structure on the server and the client, so hydration ids line up.
+  const [hydrating, setHydrating] = createSignal(isServer || isHydrating());
   onSettled(() => {
     setHydrating(false);
   });

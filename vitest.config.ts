@@ -12,6 +12,6 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     include: ['packages/*/src/**/*.test.{ts,tsx}', 'test/**/*.test.{ts,tsx}'],
     // Server rendering runs in its own Node environment: `bun run test:ssr`.
-    exclude: ['test/ssr/**', '**/node_modules/**'],
+    exclude: ['test/ssr/**', 'test/hydration/**', '**/node_modules/**'],
   },
 });

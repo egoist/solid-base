@@ -4,15 +4,19 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "playground"
+    "playground",
+    "website"
   ],
   "scripts": {
     "dev": "bun run --filter playground dev",
     "build": "bun run --filter @egoist/solid-base-utils build && bun run --filter @egoist/solid-base build",
-    "test": "vitest run && vitest run --config test/ssr/vitest.config.ts",
+    "test": "vitest run && bun run test:ssr && bun run test:hydration",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:ssr": "vitest run --config test/ssr/vitest.config.ts"
+    "test:ssr": "vitest run --config test/ssr/vitest.config.ts",
+    "website": "bun run --filter website dev",
+    "website:build": "bun run --filter website build",
+    "test:hydration": "vitest run -c test/hydration/server.config.ts && vitest run -c test/hydration/client.config.ts"
   },
   "devDependencies": {
     "@solidjs/testing-library": "1.0.0-rc.2",
@@ -24,6 +28,7 @@
     "solid-js": "2.0.4",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.2"
+    "vitest": "^5.1.2",
+    "@egoist/solid-base": "workspace:*"
   }
 }

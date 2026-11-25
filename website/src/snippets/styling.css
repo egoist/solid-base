@@ -1,0 +1,17 @@
+/* State is exposed as data attributes. */
+.switch {
+  background: var(--paper);
+  transition: background-color 180ms;
+}
+
+.switch[data-checked] {
+  background: var(--accent);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.thumb[data-checked] {
+  translate: 1.25rem 0;
+}

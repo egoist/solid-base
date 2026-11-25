@@ -5,3 +5,4 @@ dist
 coverage
 .vite
 .vitest
+test/hydration/.out

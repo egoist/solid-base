@@ -10,13 +10,8 @@ import { isServer } from '@solidjs/web';
 export function createFormatLocale(
   locale: Accessor<Intl.LocalesArgument | undefined>,
 ): Accessor<Intl.LocalesArgument | undefined> {
-  if (isServer) {
-    return () => locale() ?? 'en-US';
-  }
-  if (!isHydrating()) {
-    return locale;
-  }
-  const [hydrated, setHydrated] = createSignal(false);
+  // The same reactive structure on the server and the client, so hydration ids line up.
+  const [hydrated, setHydrated] = createSignal(!isServer && !isHydrating());
   onSettled(() => {
     setHydrated(true);
   });
