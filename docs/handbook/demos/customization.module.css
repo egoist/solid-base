@@ -1,0 +1,146 @@
+.Container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.5rem 2.5rem;
+  min-height: 9rem;
+  font-family: var(--font-sans);
+}
+
+.Controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.Button {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover,
+  &[data-popup-open] {
+    background: var(--surface-raised);
+  }
+
+  &[data-popup-open] {
+    border-color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Positioner {
+  z-index: 50;
+}
+
+.Popup {
+  box-sizing: border-box;
+  width: 16rem;
+  max-width: var(--available-width);
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 150ms var(--ease),
+    transform 150ms var(--ease);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.Title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.Description {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.Label {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.Switch {
+  box-sizing: border-box;
+  display: flex;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 1.25rem;
+  padding: 2px;
+  border: 1px solid color-mix(in oklab, var(--ink) 22%, var(--line));
+  border-radius: 999px;
+  background: var(--surface-raised);
+  transition: background-color 180ms var(--ease);
+
+  &[data-checked] {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 999px;
+  background: var(--ink-soft);
+  transition: translate 200ms var(--ease-out);
+
+  &[data-checked] {
+    translate: 1rem 0;
+    background: var(--accent-ink);
+  }
+}
+
+.Output {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.OutputLabel {
+  color: var(--muted);
+}

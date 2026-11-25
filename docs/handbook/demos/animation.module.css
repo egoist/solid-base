@@ -1,0 +1,109 @@
+.Button {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover,
+  &[data-popup-open] {
+    background: var(--surface-raised);
+  }
+
+  &[data-popup-open] {
+    border-color: var(--accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Positioner {
+  z-index: 50;
+}
+
+.Popup {
+  box-sizing: border-box;
+  width: 15rem;
+  max-width: var(--available-width);
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-lg);
+  outline: none;
+  transform-origin: var(--transform-origin);
+}
+
+.Title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.Description {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* CSS transitions: style the starting and ending states. */
+.Transition {
+  transition:
+    transform 150ms var(--ease),
+    opacity 150ms var(--ease);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* CSS animations: play keyframes on open and close. */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.Keyframes {
+  &[data-open] {
+    animation: scaleIn 250ms var(--ease-out);
+  }
+
+  &[data-closed] {
+    animation: scaleOut 250ms ease-in;
+  }
+}

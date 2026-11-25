@@ -446,6 +446,65 @@
         "cssVariables": []
       },
       {
+        "name": "Trigger",
+        "jsxName": "Drawer.Trigger",
+        "description": "A button that opens the drawer.\nRenders a `<button>` element.",
+        "props": [
+          {
+            "name": "handle",
+            "type": "DrawerHandle<Payload>",
+            "description": "A handle to associate the trigger with a drawer.\nCan be created with the Drawer.createHandle() method.",
+            "required": false
+          },
+          {
+            "name": "id",
+            "type": "string",
+            "description": "ID of the trigger. In addition to being forwarded to the rendered element,\nit is also used to specify the active trigger for the dialog in controlled mode (with the DialogRoot `triggerId` prop).",
+            "required": false
+          },
+          {
+            "name": "disabled",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component ignores user interaction.",
+            "required": false
+          },
+          {
+            "name": "payload",
+            "type": "Payload",
+            "description": "A payload to pass to the dialog when it is opened.",
+            "required": false
+          },
+          {
+            "name": "nativeButton",
+            "type": "boolean",
+            "default": "true",
+            "description": "Whether the component renders a native `<button>` element when replacing it\nvia the `render` prop.\nSet to `false` if the rendered element is not a button (for example, `<div>`).",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
         "name": "Backdrop",
         "jsxName": "Drawer.Backdrop",
         "description": "An overlay displayed beneath the popup.\nRenders a `<div>` element.",
@@ -486,9 +545,77 @@
         ]
       },
       {
+        "name": "Close",
+        "jsxName": "Drawer.Close",
+        "description": "A button that closes the drawer.\nRenders a `<button>` element.",
+        "props": [
+          {
+            "name": "disabled",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component ignores user interaction.",
+            "required": false
+          },
+          {
+            "name": "nativeButton",
+            "type": "boolean",
+            "default": "true",
+            "description": "Whether the component renders a native `<button>` element when replacing it\nvia the `render` prop.\nSet to `false` if the rendered element is not a button (for example, `<div>`).",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
         "name": "Content",
         "jsxName": "Drawer.Content",
         "description": "A container for the drawer contents.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "Description",
+        "jsxName": "Drawer.Description",
+        "description": "A paragraph with additional information about the drawer.\nRenders a `<p>` element.",
         "props": [
           {
             "name": "class",
@@ -668,6 +795,46 @@
         ]
       },
       {
+        "name": "Portal",
+        "jsxName": "Drawer.Portal",
+        "description": "A portal element that moves the popup to a different part of the DOM.\nBy default, the portal element is appended to `<body>`.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "keepMounted",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether to keep the portal mounted in the DOM while the popup is hidden.",
+            "required": false
+          },
+          {
+            "name": "container",
+            "type": "PortalContainer",
+            "description": "A parent element to render the portal element into.",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
         "name": "SwipeArea",
         "jsxName": "Drawer.SwipeArea",
         "description": "An invisible area that listens for swipe gestures to open the drawer.\nRenders a `<div>` element.",
@@ -719,6 +886,33 @@
             "description": "Present when the drawer is being swiped."
           }
         ],
+        "cssVariables": []
+      },
+      {
+        "name": "Title",
+        "jsxName": "Drawer.Title",
+        "description": "A heading that labels the drawer.\nRenders an `<h2>` element.",
+        "props": [
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
         "cssVariables": []
       },
       {
@@ -2688,6 +2882,93 @@
         "cssVariables": []
       },
       {
+        "name": "Trigger",
+        "jsxName": "Autocomplete.Trigger",
+        "description": "A button that opens the popup.\nRenders a `<button>` element.",
+        "props": [
+          {
+            "name": "disabled",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component should ignore user interaction.",
+            "required": false
+          },
+          {
+            "name": "nativeButton",
+            "type": "boolean",
+            "default": "true",
+            "description": "Whether the component renders a native `<button>` element when replacing it\nvia the `render` prop.\nSet to `false` if the rendered element is not a button (for example, `<div>`).",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [
+          {
+            "name": "data-disabled",
+            "description": "Present when the component is disabled."
+          },
+          {
+            "name": "data-readonly",
+            "description": "Present when the component is readonly."
+          },
+          {
+            "name": "data-popup-side",
+            "description": "Indicates which side the corresponding popup is positioned relative to its anchor.",
+            "type": "'top' | 'bottom' | 'left' | 'right' | 'inline-end' | 'inline-start' | null"
+          },
+          {
+            "name": "data-required",
+            "description": "Present when the component is required."
+          },
+          {
+            "name": "data-valid",
+            "description": "Present when the component is in a valid state (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-invalid",
+            "description": "Present when the component is in an invalid state (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-touched",
+            "description": "Present when the component has been touched (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-dirty",
+            "description": "Present when the component's value has changed (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-filled",
+            "description": "Present when the component has a value (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-focused",
+            "description": "Present when the trigger is focused (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-list-empty",
+            "description": "Present when the corresponding items list is empty."
+          }
+        ],
+        "cssVariables": []
+      },
+      {
         "name": "Value",
         "jsxName": "Autocomplete.Value",
         "description": "The current value of the autocomplete.\nDoesn't render its own HTML element.",
@@ -2727,6 +3008,83 @@
           }
         ],
         "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "InputGroup",
+        "jsxName": "Autocomplete.InputGroup",
+        "description": "A wrapper for the input and its associated controls.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [
+          {
+            "name": "data-popup-open",
+            "description": "Present when the corresponding popup is open."
+          },
+          {
+            "name": "data-pressed",
+            "description": "Present when the input group is pressed."
+          },
+          {
+            "name": "data-disabled",
+            "description": "Present when the component is disabled."
+          },
+          {
+            "name": "data-readonly",
+            "description": "Present when the component is readonly."
+          },
+          {
+            "name": "data-popup-side",
+            "description": "Indicates which side the corresponding popup is positioned relative to its anchor.",
+            "type": "'top' | 'bottom' | 'left' | 'right' | 'inline-end' | 'inline-start' | null"
+          },
+          {
+            "name": "data-valid",
+            "description": "Present when the component is in a valid state (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-invalid",
+            "description": "Present when the component is in an invalid state (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-touched",
+            "description": "Present when the component has been touched (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-dirty",
+            "description": "Present when the component's value has changed (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-filled",
+            "description": "Present when the component has a value (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-focused",
+            "description": "Present when the component is focused (when wrapped in Field.Root)."
+          },
+          {
+            "name": "data-list-empty",
+            "description": "Present when the corresponding items list is empty."
+          }
+        ],
         "cssVariables": []
       },
       {
@@ -3161,6 +3519,66 @@
         "cssVariables": []
       },
       {
+        "name": "Item",
+        "jsxName": "Autocomplete.Item",
+        "description": "An individual item in the list.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "onClick",
+            "type": "BaseUIComponentProps<'div', AutocompleteItemState>['onClick']",
+            "description": "An optional click handler for the item when selected.\nIt fires when clicking the item with the pointer, as well as when pressing `Enter` with the keyboard if the item is highlighted when the `Input` or `List` element has focus.",
+            "required": false
+          },
+          {
+            "name": "index",
+            "type": "number",
+            "description": "The index of the item in the list. Improves performance when specified by avoiding the need to calculate the index automatically from the DOM.",
+            "required": false
+          },
+          {
+            "name": "value",
+            "type": "any",
+            "default": "null",
+            "description": "A unique value that identifies this item.",
+            "required": false
+          },
+          {
+            "name": "disabled",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component should ignore user interaction.",
+            "required": false
+          },
+          {
+            "name": "nativeButton",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component renders a native `<button>` element when replacing it\nvia the `render` prop.\nSet to `true` if the rendered element is a native button.",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
         "name": "Row",
         "jsxName": "Autocomplete.Row",
         "description": "Displays a single row of items in a grid list.\nEnable `grid` on the root component to turn the listbox into a grid.\nRenders a `<div>` element.",
@@ -3200,6 +3618,40 @@
         "jsxName": "Autocomplete.Empty",
         "description": "Renders its children only when the list is empty.\nRequires the `items` prop on the root component.\nAnnounces changes politely to screen readers.\nRenders a `<div>` element.",
         "props": [
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "Separator",
+        "jsxName": "Autocomplete.Separator",
+        "description": "A separator element accessible to screen readers.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "orientation",
+            "type": "Orientation",
+            "default": "'horizontal'",
+            "description": "The orientation of the separator.",
+            "required": false
+          },
           {
             "name": "class",
             "type": "string | ClassValue | ((state: State) => ClassValue)",
@@ -3612,6 +4064,70 @@
           }
         ],
         "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "Trigger",
+        "jsxName": "AlertDialog.Trigger",
+        "description": "A button that opens the alert dialog.\nRenders a `<button>` element.",
+        "props": [
+          {
+            "name": "handle",
+            "type": "AlertDialogHandle<Payload>",
+            "description": "A handle to associate the trigger with an alert dialog.\nCan be created with the AlertDialog.createHandle() method.",
+            "required": false
+          },
+          {
+            "name": "id",
+            "type": "string",
+            "description": "ID of the trigger. In addition to being forwarded to the rendered element,\nit is also used to specify the active trigger for the dialog in controlled mode (with the DialogRoot `triggerId` prop).",
+            "required": false
+          },
+          {
+            "name": "disabled",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether the component ignores user interaction.",
+            "required": false
+          },
+          {
+            "name": "payload",
+            "type": "Payload",
+            "description": "A payload to pass to the dialog when it is opened.",
+            "required": false
+          },
+          {
+            "name": "nativeButton",
+            "type": "boolean",
+            "default": "true",
+            "description": "Whether the component renders a native `<button>` element when replacing it\nvia the `render` prop.\nSet to `false` if the rendered element is not a button (for example, `<div>`).",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [
+          {
+            "name": "data-disabled",
+            "description": "Present when the trigger is disabled."
+          }
+        ],
         "cssVariables": []
       },
       {
@@ -8942,6 +9458,40 @@
           }
         ],
         "cssVariables": []
+      },
+      {
+        "name": "Separator",
+        "jsxName": "Combobox.Separator",
+        "description": "A separator element accessible to screen readers.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "orientation",
+            "type": "Orientation",
+            "default": "'horizontal'",
+            "description": "The orientation of the separator.",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
       }
     ]
   },
@@ -9188,6 +9738,105 @@
             "name": "container",
             "type": "PortalContainer",
             "description": "A parent element to render the portal element into.",
+            "required": false
+          },
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "Positioner",
+        "jsxName": "ContextMenu.Positioner",
+        "description": "Positions the context menu popup against the pointer or a custom anchor.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "anchor",
+            "type": "MenuPositionerProps['anchor']",
+            "description": "An element to position the popup against.\nBy default, root context menus are positioned at the pointer, and submenus are positioned\nagainst their trigger.",
+            "required": false
+          },
+          {
+            "name": "side",
+            "type": "MenuPositionerProps['side']",
+            "default": "'bottom'",
+            "description": "Which side of the anchor element to align the popup against.\nMay automatically change to avoid collisions.\n\nSubmenus default to `'inline-end'`.",
+            "required": false
+          },
+          {
+            "name": "sideOffset",
+            "type": "MenuPositionerProps['sideOffset']",
+            "description": "Distance between the anchor and the popup in pixels.\nAlso accepts a function that returns the distance to read the dimensions of the anchor\nand positioner elements, along with its side and alignment.\n\nThe function takes a `data` object parameter with the following properties:\n- `data.anchor`: the dimensions of the anchor element with properties `width` and `height`.\n- `data.positioner`: the dimensions of the positioner element with properties `width` and `height`.\n- `data.side`: which side of the anchor element the positioner is aligned against.\n- `data.align`: how the positioner is aligned relative to the specified side.\n\nDefaults to `-5` for root context menus when `side` is not specified and `align` is not\n`'center'`. Otherwise, it defaults to `0`.",
+            "required": false
+          },
+          {
+            "name": "align",
+            "type": "MenuPositionerProps['align']",
+            "default": "'start'",
+            "description": "How to align the popup relative to the specified side.",
+            "required": false
+          },
+          {
+            "name": "alignOffset",
+            "type": "MenuPositionerProps['alignOffset']",
+            "description": "Additional offset along the alignment axis in pixels.\nAlso accepts a function that returns the offset to read the dimensions of the anchor\nand positioner elements, along with its side and alignment.\n\nThe function takes a `data` object parameter with the following properties:\n- `data.anchor`: the dimensions of the anchor element with properties `width` and `height`.\n- `data.positioner`: the dimensions of the positioner element with properties `width` and `height`.\n- `data.side`: which side of the anchor element the positioner is aligned against.\n- `data.align`: how the positioner is aligned relative to the specified side.\n\nDefaults to `2` for root context menus when `side` is not specified and `align` is not\n`'center'`. Otherwise, it defaults to `0`.",
+            "required": false
+          },
+          {
+            "name": "arrowPadding",
+            "type": "MenuPositionerProps['arrowPadding']",
+            "description": "Minimum distance to maintain between the arrow and the edges of the popup.\n\nRoot context menus always use `0`. Submenus default to `5`.",
+            "required": false
+          },
+          {
+            "name": "collisionBoundary",
+            "type": "Boundary",
+            "default": "'clipping-ancestors'",
+            "description": "An element or a rectangle that delimits the area that the popup is confined to.",
+            "required": false
+          },
+          {
+            "name": "collisionPadding",
+            "type": "Padding",
+            "default": "5",
+            "description": "Additional space to maintain from the edge of the collision boundary.",
+            "required": false
+          },
+          {
+            "name": "sticky",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether to maintain the popup in the viewport after\nthe anchor element was scrolled out of view.",
+            "required": false
+          },
+          {
+            "name": "disableAnchorTracking",
+            "type": "boolean",
+            "default": "false",
+            "description": "Whether to disable the popup from tracking any layout shift of its positioning anchor.",
+            "required": false
+          },
+          {
+            "name": "collisionAvoidance",
+            "type": "CollisionAvoidance",
+            "description": "Determines how to handle collisions when positioning the popup.\n\n`side` controls overflow on the preferred placement axis (`top`/`bottom` or `left`/`right`):\n- `'flip'`: keep the requested side when it fits; otherwise try the opposite side\n  (`top` and `bottom`, or `left` and `right`).\n- `'shift'`: never change side; keep the requested side and move the popup within\n  the clipping boundary so it stays visible.\n- `'none'`: do not correct side-axis overflow.\n\n`align` controls overflow on the alignment axis (`start`/`center`/`end`):\n- `'flip'`: keep side, but swap `start` and `end` when the requested alignment overflows.\n- `'shift'`: keep side and requested alignment, then nudge the popup along the\n  alignment axis to fit.\n- `'none'`: do not correct alignment-axis overflow.\n\n`fallbackAxisSide` controls fallback behavior on the perpendicular axis when the\npreferred axis cannot fit:\n- `'start'`: allow perpendicular fallback and try the logical start side first\n  (`top` before `bottom`, or `left` before `right` in LTR).\n- `'end'`: allow perpendicular fallback and try the logical end side first\n  (`bottom` before `top`, or `right` before `left` in LTR).\n- `'none'`: do not fallback to the perpendicular axis.\n\nWhen `side` is `'shift'`, explicitly setting `align` only supports `'shift'` or `'none'`.\nIf `align` is omitted, it defaults to `'flip'`.",
             "required": false
           },
           {
@@ -14484,6 +15133,40 @@
         "jsxName": "Select.GroupLabel",
         "description": "An accessible label that is automatically associated with its parent group.\nRenders a `<div>` element.",
         "props": [
+          {
+            "name": "class",
+            "type": "string | ClassValue | ((state: State) => ClassValue)",
+            "description": "CSS class applied to the element, or a function that\nreturns a class based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "JSX.CSSProperties | string | ((state: State) => JSX.CSSProperties | string)",
+            "description": "Style applied to the element, or a function that\nreturns a style based on the component's state.",
+            "required": false
+          },
+          {
+            "name": "render",
+            "type": "keyof JSX.IntrinsicElements | ((props: HTMLProps, state: State) => JSX.Element)",
+            "description": "Allows you to replace the component's HTML element\nwith a different tag, or compose it with another component.\n\nAccepts a tag name, or a function that receives the props to spread and the\ncomponent's state, and returns the element to render.",
+            "required": false
+          }
+        ],
+        "dataAttributes": [],
+        "cssVariables": []
+      },
+      {
+        "name": "Separator",
+        "jsxName": "Select.Separator",
+        "description": "A visual separator between items or groups.\nRenders a `<div>` element.",
+        "props": [
+          {
+            "name": "orientation",
+            "type": "Orientation",
+            "default": "'horizontal'",
+            "description": "The orientation of the separator.",
+            "required": false
+          },
           {
             "name": "class",
             "type": "string | ClassValue | ((state: State) => ClassValue)",

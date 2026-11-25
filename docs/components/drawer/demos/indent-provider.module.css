@@ -1,0 +1,178 @@
+.Button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 160ms var(--ease);
+
+  &:hover {
+    background: var(--surface-raised);
+  }
+
+  &:active {
+    background: var(--paper-sunken);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.Root {
+  --bleed: 3rem;
+  position: relative;
+  width: min(36rem, 100%);
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.IndentBackground {
+  position: absolute;
+  inset: 0;
+  background: var(--paper-sunken);
+}
+
+.Indent {
+  --indent-radius: calc(var(--radius-lg) * (1 - var(--drawer-swipe-progress)));
+  --indent-transition: calc(1 - clamp(0, calc(var(--drawer-swipe-progress) * 100000), 1));
+  box-sizing: border-box;
+  position: relative;
+  min-height: 20rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  contain: layout;
+  transform-origin: center top;
+  transition:
+    transform 400ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-radius 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition-duration:
+    calc(400ms * var(--indent-transition)), calc(250ms * var(--indent-transition));
+  will-change: transform;
+
+  &[data-active] {
+    transform: scale(calc(0.96 + (0.04 * var(--drawer-swipe-progress))))
+      translateY(calc(0.75rem * (1 - var(--drawer-swipe-progress))));
+    border-top-left-radius: var(--indent-radius);
+    border-top-right-radius: var(--indent-radius);
+  }
+}
+
+.Center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18rem;
+}
+
+.Backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  opacity: calc(1 - var(--drawer-swipe-progress));
+  transition: opacity 450ms cubic-bezier(0.32, 0.72, 0, 1);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+
+  &[data-swiping] {
+    transition-duration: 0ms;
+  }
+
+  &[data-ending-style] {
+    transition-duration: calc(var(--drawer-swipe-strength) * 400ms);
+  }
+}
+
+.Viewport {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.Popup {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: calc(80% + var(--bleed));
+  margin-bottom: calc(-1 * var(--bleed));
+  padding: 0.75rem 1.5rem calc(1.5rem + var(--bleed));
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface-raised);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  outline: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateY(var(--drawer-swipe-movement-y));
+  transition: transform 450ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    transform: translateY(calc(100% - var(--bleed) + 2px));
+  }
+
+  &[data-ending-style] {
+    transition-duration: calc(var(--drawer-swipe-strength) * 400ms);
+  }
+}
+
+.Handle {
+  width: 2.5rem;
+  height: 0.25rem;
+  margin: 0 auto 1.25rem;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.Content {
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.Actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* Scoped under .Root: the portal renders inside the docs page, whose prose styles would win. */
+.Root .Title {
+  margin: 0 0 0.25rem;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.Root .Description {
+  margin: 0 0 1.5rem;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}

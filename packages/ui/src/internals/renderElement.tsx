@@ -61,14 +61,12 @@ export function createRenderElementProps<State extends object>(
 
   const sources: PropsSource<any>[] = [];
 
+  // Defaults of the default tag, like upstream's `renderTag`. They only exist while the default
+  // tag renders: a `render` function receives no `type` key, so its own default applies.
   if (tag === 'button') {
-    sources.push({
-      get type() {
-        return componentProps.render == null ? 'button' : undefined;
-      },
-    });
+    sources.push(merge(() => (componentProps.render == null ? { type: 'button' } : {})));
   } else if (tag === 'img') {
-    sources.push({ alt: '' });
+    sources.push(merge(() => (componentProps.render == null ? { alt: '' } : {})));
   }
 
   if (params.state) {

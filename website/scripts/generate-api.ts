@@ -226,7 +226,12 @@ for (const slug of modules) {
   for (const exported of checker.getExportsOfModule(moduleSymbol)) {
     const symbol =
       exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
-    if (!(symbol.flags & ts.SymbolFlags.Function)) {
+    // Components are functions, or typed constants aliasing another part (`DrawerTrigger`).
+    const isCallableConstant =
+      symbol.flags & ts.SymbolFlags.Variable &&
+      symbol.valueDeclaration &&
+      checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration).getCallSignatures().length > 0;
+    if (!(symbol.flags & ts.SymbolFlags.Function) && !isCallableConstant) {
       continue;
     }
     const implementationName = symbol.getName();
