@@ -1,7 +1,6 @@
-import { For, createEffect, createMemo, flush, onCleanup, untrack } from 'solid-js';
+import { For, createMemo, createSignal, flush, onCleanup, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
-import { createPreviousValue } from '@egoist/solid-base-utils/previousValue';
 import { applyRef, type RefProp } from '@egoist/solid-base-utils/refs';
 import { EMPTY_ARRAY } from '@egoist/solid-base-utils/empty';
 import { isElementDisabled } from '@egoist/solid-base-utils/isElementDisabled';
@@ -13,12 +12,20 @@ import { createClick } from '../../utils/popups/interactions/click';
 import { createDismiss } from '../../utils/popups/interactions/dismiss';
 import { createListNavigation } from '../../utils/popups/interactions/listNavigation';
 import { createTypeahead } from '../../utils/popups/interactions/typeahead';
-import { createOpenInteractionType } from '../../utils/popups/interactions/openInteractionType';
+import { createOpenMethodTriggerProps } from '../../utils/popups/interactions/openInteractionType';
+import type { InteractionType } from '../../utils/popups/interactions/enhancedClickHandler';
 import { SelectRootContext } from './SelectRootContext';
 import { useFieldRootContext } from '../../internals/field-root-context/FieldRootContext';
 import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { createFieldValueChanged } from '../../internals/field-register-control/createFieldValueChanged';
 import { createLabelableId } from '../../internals/labelable-provider/createLabelableId';
-import { SelectStore, createSelectStoreContext, selectors, type SelectItems } from '../store';
+import {
+  SelectStore,
+  createSelectStoreContext,
+  selectors,
+  type SelectItems,
+  type SelectPositionerSource,
+} from '../store';
 import {
   createChangeEventDetails,
   type BaseUIChangeEventDetails,
@@ -147,8 +154,12 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
       ),
   );
 
-  const { openMethod, triggerProps: interactionTypeProps } = createOpenInteractionType(open);
-  const previousOpenMethod = createPreviousValue(openMethod);
+  // The interaction type that opened the popup most recently. It is kept once the popup closes,
+  // so the closing popup keeps the presentation it opened with.
+  const [openMethod, setOpenMethod] = createSignal<InteractionType | null>(null, {
+    name: 'SelectRoot.openMethod',
+  });
+  const interactionTypeProps = createOpenMethodTriggerProps(open, setOpenMethod);
 
   // The store reads every bound value whenever it's written, including from ref callbacks, where
   // reading a prop compiled to a lazy memo (e.g. a ternary) can't create it: read them in memos
@@ -169,7 +180,7 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
   bindMemo('itemToStringLabel', () => props.itemToStringLabel as any);
   bindMemo('itemToStringValue', () => props.itemToStringValue as any);
   bindMemo('isItemEqualToValue', isItemEqualToValue);
-  store.bind('openMethod', () => openMethod() ?? previousOpenMethod());
+  store.bind('openMethod', openMethod);
 
   const serializedValue = createMemo(() => {
     // In multiple mode the shared input is nameless; per-value entries are submitted via
@@ -190,6 +201,18 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
     return stringifyAsValue(currentValue, itemToStringValue);
   };
 
+  // Mirror the `hasSelectedValue` store selector so the Field's filled state agrees with the
+  // trigger/value placeholder semantics (a value serializing to `''` counts as empty).
+  const hasSelectedValue = createMemo(
+    () => {
+      const currentValue = value();
+      return multiple()
+        ? Array.isArray(currentValue) && currentValue.length > 0
+        : currentValue != null && serializedValue() !== '';
+    },
+    { name: 'SelectRoot.hasSelectedValue' },
+  );
+
   createRegisterFieldControl({
     controlRef: {
       get current() {
@@ -204,61 +227,38 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
     getValue: () => untrack(fieldStringValue),
     enabled: () => !disabled(),
     name: () => props.name,
+    dirty: () =>
+      isSelectedValueDirty(value(), field.validityData().initialValue, isItemEqualToValue()),
+    filled: hasSelectedValue,
   });
 
-  // Mirror the `hasSelectedValue` store selector so the Field's filled state agrees with the
-  // trigger/value placeholder semantics (a value serializing to `''` counts as empty).
-  const hasSelectedValue = createMemo(() => {
-    const currentValue = value();
-    return multiple()
-      ? Array.isArray(currentValue) && currentValue.length > 0
-      : currentValue != null && serializedValue() !== '';
+  createFieldValueChanged(value, (currentValue) => {
+    form.clearErrors(name());
+    validation.change(currentValue);
   });
 
-  createEffect(hasSelectedValue, (filled) => {
-    field.setFilled(filled);
+  // The mounted positioner, which publishes the rendered item values and the popup side.
+  const [positioner, setPositioner] = createSignal<SelectPositionerSource | null>(null, {
+    name: 'SelectRoot.positioner',
   });
+  const itemValues = () => positioner()?.itemValues() ?? EMPTY_ARRAY;
+  store.bind('popupSide', () => positioner()?.side() ?? null);
 
-  createEffect(
-    () => [multiple(), open(), value(), isItemEqualToValue()] as const,
-    ([isMultiple, isOpen, currentValue, comparer]) => {
-      const nextIndex = findSelectionIndex(
-        store.context.valuesRef.current,
-        currentValue,
-        comparer,
-        isMultiple,
-      );
-
-      if (nextIndex === null) {
-        store.context.selectedItemTextRef.current = null;
-      }
-
-      if (isOpen) {
-        return;
-      }
-
-      store.set('selectedIndex', nextIndex);
-    },
+  // The value the selected index points at. The open popup keeps the index it opened with: in
+  // multiple mode the value changes while items are toggled, and moving the index would move the
+  // highlight with it.
+  const anchorValue = createMemo<{ readonly value: unknown }>(
+    (previous) => (previous !== undefined && open() ? previous : { value: value() }),
+    { name: 'SelectRoot.anchorValue', equals: (a, b) => Object.is(a.value, b.value) },
   );
 
-  createEffect(
-    value,
-    (currentValue) => {
-      untrack(() => {
-        form.clearErrors(name());
-        field.setDirty(
-          isSelectedValueDirty(
-            currentValue,
-            field.validityData().initialValue,
-            isItemEqualToValue(),
-          ),
-        );
-      });
-
-      validation.change(currentValue);
-    },
-    { defer: true },
+  // The index of the selected item (the first one in list order in multiple mode), or `null`.
+  const selectedIndex = createMemo(
+    () =>
+      findSelectionIndex(itemValues(), anchorValue().value, isItemEqualToValue(), multiple()),
+    { name: 'SelectRoot.selectedIndex' },
   );
+  store.bind('selectedIndex', selectedIndex);
 
   function setValue(nextValue: any, eventDetails: SelectRoot.ChangeEventDetails) {
     untrack(() => props.onValueChange)?.(nextValue, eventDetails);
@@ -364,6 +364,12 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
   );
 
   store.context.itemProps = listNavigation.item;
+  store.context.registerPositioner = (source) => {
+    setPositioner(() => source);
+    return () => {
+      setPositioner((current) => (current === source ? null : current));
+    };
+  };
   store.context.isItemEqualToValue = (itemValue, selectedValue) =>
     untrack(isItemEqualToValue)(itemValue, selectedValue);
   store.context.setValue = setValue;
@@ -454,8 +460,8 @@ export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
 
         const matchingValue = values[matchingIndex];
         if (matchingValue != null) {
-          // `setValue` may be canceled by `onValueChange`; the value effect marks the field dirty
-          // and runs validation only when the value actually changes.
+          // `setValue` may be canceled by `onValueChange`; the field derives `dirty` from the
+          // value and runs validation only when the value actually changes.
           setValue(matchingValue, details);
         }
       }

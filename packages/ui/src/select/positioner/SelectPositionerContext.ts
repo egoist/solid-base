@@ -14,8 +14,19 @@ export interface SelectPositionerContext {
   arrowRef: (element: Element | null) => void;
   readonly arrowUncentered: boolean;
   readonly isPositioned: boolean;
+  /**
+   * Whether the popup should align the selected item with the trigger, before measuring whether
+   * there is room for it.
+   */
+  readonly alignItemWithTriggerRequested: boolean;
+  /**
+   * Whether the selected item is aligned with the trigger.
+   */
   readonly alignItemWithTriggerActive: boolean;
-  setControlledAlignItemWithTrigger: (value: boolean) => void;
+  /**
+   * Positions the popup against the trigger instead, until it unmounts.
+   */
+  fallBackFromAlignItemWithTrigger: () => void;
   scrollUpArrowRef: RefObject<HTMLDivElement | null>;
   scrollDownArrowRef: RefObject<HTMLDivElement | null>;
 }

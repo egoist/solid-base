@@ -212,6 +212,19 @@ export function SelectPopup(componentProps: SelectPopup.Props): JSX.Element {
     },
   );
 
+  // Whether the measurement below fell back from aligning the item with the trigger while the
+  // popup is mounted (it then tells the positioner). The measurement keeps its own record rather
+  // than reacting to the positioner's state, which its own decision changes.
+  let fellBackFromAlignment = false;
+
+  createEffect(mounted, (isMounted) => {
+    if (!isMounted) {
+      fellBackFromAlignment = false;
+    }
+  });
+
+  // Places the popup once Floating UI has positioned it. Measures the DOM, so it reads the
+  // current state when it runs rather than taking the tracked values as an argument.
   createEffect(
     () =>
       [
@@ -219,203 +232,208 @@ export function SelectPopup(componentProps: SelectPopup.Props): JSX.Element {
         store.select('triggerElement'),
         positionerElement(),
         popupElement(),
-        alignItemWithTriggerActive(),
+        positioner.alignItemWithTriggerRequested,
         positioner.isPositioned,
         listElement(),
         store.select('highlightItemOnHover'),
         direction(),
       ] as const,
-    ([
-      isOpen,
-      triggerElement,
-      positionerEl,
-      popupEl,
-      active,
-      isPositioned,
-      listEl,
-      highlightItemOnHover,
-      dir,
-    ]) => {
-      // Wait for Floating UI's first positioning pass before reading DOM geometry.
-      // We replace the final coordinates for aligned selects, but still need middleware
-      // like `size()` to set CSS variables such as `--anchor-width`.
-      if (
-        !isOpen ||
-        !triggerElement ||
-        !positionerEl ||
-        !popupEl ||
-        (active && !isPositioned) ||
-        store.state.transitionStatus === 'ending'
-      ) {
-        return;
-      }
-
-      initialPlaced = true;
-      popupEl.style.removeProperty(SelectPositionerCssVars.transformOrigin);
-
-      if (!active) {
-        // The wrapper supplies the scroller: the list owns scrolling once it has mounted, and
-        // this effect re-runs (cancelling the stale frame) when that happens.
-        scrollArrowFrame.request(() =>
-          store.context.handleScrollArrowVisibility(listEl || popupEl),
-        );
-        return;
-      }
-
-      // Ensure we remove any transforms that can affect the location of the popup
-      // and therefore the calculations.
-      const restoreTransformStyles = unsetTransformStyles(popupEl);
-
-      try {
-        let textElement = store.context.selectedItemTextRef.current;
-
-        if (!textElement?.isConnected) {
-          const hasSelectedValue = store.select('hasSelectedValue');
-          textElement =
-            !hasSelectedValue && store.context.firstItemTextRef.current?.isConnected
-              ? store.context.firstItemTextRef.current
-              : null;
-        }
-
-        const valueElement = store.context.valueRef.current;
-
-        const win = ownerWindow(positionerEl);
-        const positionerStyles = win.getComputedStyle(positionerEl);
-        const popupStyles = win.getComputedStyle(popupEl);
-
-        const doc = ownerDocument(triggerElement);
-        const scale = getScale(triggerElement);
-        const triggerRect = normalizeRect(triggerElement.getBoundingClientRect(), scale);
-
-        const positionerRect = normalizeRect(positionerEl.getBoundingClientRect(), scale);
-        const triggerHeight = triggerRect.height;
-        const scroller = listEl || popupEl;
-        const scrollHeight = scroller.scrollHeight;
-
-        const borderBottom = parseFloat(popupStyles.borderBottomWidth);
-        // The `|| N` fallbacks cover an unset/`auto` value (parses to `NaN`). Note a literal `0`
-        // also resolves to the fallback, so an explicit `margin: 0` or `min-height: 0` still takes
-        // the default below.
-        const marginTop = parseFloat(positionerStyles.marginTop) || 10;
-        const marginBottom = parseFloat(positionerStyles.marginBottom) || 10;
-        const minHeight = parseFloat(positionerStyles.minHeight) || 100;
-        const maxPopupHeight = getMaxPopupHeight(popupStyles);
-
-        const paddingLeft = 5;
-        const paddingRight = 5;
-        const triggerCollisionThreshold = 20;
-
-        const viewportHeight = doc.documentElement.clientHeight - marginTop - marginBottom;
-        const viewportWidth = doc.documentElement.clientWidth;
-        const availableSpaceBeneathTrigger = viewportHeight - triggerRect.bottom + triggerHeight;
-
-        let textRect: ClientRectObject | undefined;
-        let alignedLeft =
-          dir === 'rtl' ? triggerRect.right - positionerRect.width : triggerRect.left;
-        let offsetY = 0;
-
-        if (textElement && valueElement) {
-          const valueRect = normalizeRect(valueElement.getBoundingClientRect(), scale);
-          textRect = normalizeRect(textElement.getBoundingClientRect(), scale);
-
-          alignedLeft =
-            positionerRect.left +
-            (dir === 'rtl' ? valueRect.right - textRect.right : valueRect.left - textRect.left);
-          const valueCenterFromTriggerTop = valueRect.top - triggerRect.top + valueRect.height / 2;
-          const textCenterFromPositionerTop =
-            textRect.top - positionerRect.top + textRect.height / 2;
-
-          offsetY = textCenterFromPositionerTop - valueCenterFromTriggerTop;
-        }
-
-        const idealHeight = availableSpaceBeneathTrigger + offsetY + marginBottom + borderBottom;
-        let height = Math.min(viewportHeight, idealHeight);
-        const maxHeight = viewportHeight - marginTop - marginBottom;
-        const scrollTop = idealHeight - height;
-
-        const maxRight = viewportWidth - paddingRight;
-
-        positionerEl.style.left = `${clamp(
-          alignedLeft,
-          paddingLeft,
-          maxRight - positionerRect.width,
-        )}px`;
-        positionerEl.style.height = `${height}px`;
-        // `none` (not the invalid `auto`) so the explicit height governs in align mode and isn't
-        // clamped by a `max-height` from user CSS.
-        positionerEl.style.maxHeight = 'none';
-        positionerEl.style.marginTop = `${marginTop}px`;
-        positionerEl.style.marginBottom = `${marginBottom}px`;
-        popupEl.style.height = '100%';
-
-        const maxScrollTop = getMaxScrollTop(scroller);
-        const isTopPositioned = scrollTop >= maxScrollTop - SCROLL_EDGE_TOLERANCE_PX;
-
-        if (isTopPositioned) {
-          height = Math.min(viewportHeight, positionerRect.height) - (scrollTop - maxScrollTop);
-        }
-
-        // When the trigger is too close to the top or bottom of the viewport, or the minHeight is
-        // reached, we fallback to aligning the popup to the trigger as the UX is poor otherwise.
-        const fallbackToAlignPopupToTrigger =
-          triggerRect.top < triggerCollisionThreshold ||
-          triggerRect.bottom > viewportHeight - triggerCollisionThreshold ||
-          Math.ceil(height) + SCROLL_EDGE_TOLERANCE_PX < Math.min(scrollHeight, minHeight);
-
-        // Safari doesn't position the popup correctly when pinch-zoomed.
-        const isPinchZoomed = (win.visualViewport?.scale ?? 1) !== 1 && platform.engine.webkit;
-
-        if (fallbackToAlignPopupToTrigger || isPinchZoomed) {
-          clearStyles(positionerEl, originalPositionerStyles);
-          positioner.setControlledAlignItemWithTrigger(false);
-          return;
-        }
-
-        const initialHeight = Math.max(minHeight, height);
-
-        if (isTopPositioned) {
-          const topOffset = Math.max(0, viewportHeight - idealHeight);
-          positionerEl.style.top = positionerRect.height >= maxHeight ? '0' : `${topOffset}px`;
-          positionerEl.style.height = `${height}px`;
-          scroller.scrollTop = getMaxScrollTop(scroller);
-        } else {
-          positionerEl.style.bottom = '0';
-          scroller.scrollTop = scrollTop;
-        }
-
-        if (textRect) {
-          const popupTop = positionerRect.top;
-          const popupHeight = positionerRect.height;
-          const textCenterY = textRect.top + textRect.height / 2;
-
-          const clampedY = clamp(
-            popupHeight > 0 ? ((textCenterY - popupTop) / popupHeight) * 100 : 50,
-            0,
-            100,
-          );
-
-          popupEl.style.setProperty(SelectPositionerCssVars.transformOrigin, `50% ${clampedY}%`);
-        }
-
-        if (initialHeight === viewportHeight || height >= maxPopupHeight) {
-          reachedMaxHeight = true;
-        }
-
-        store.context.handleScrollArrowVisibility(scroller);
-
-        if (
-          highlightItemOnHover &&
-          store.state.selectedIndex === null &&
-          store.state.activeIndex === null &&
-          store.context.listRef.current[0] != null
-        ) {
-          store.set('activeIndex', 0);
-        }
-      } finally {
-        restoreTransformStyles();
-      }
-    },
+    () => untrack(placePopup),
   );
+
+  function placePopup() {
+    const triggerElement = store.select('triggerElement');
+    const positionerEl = positionerElement();
+    const popupEl = popupElement();
+    const listEl = listElement();
+    const active = positioner.alignItemWithTriggerRequested && !fellBackFromAlignment;
+
+    // Wait for Floating UI's first positioning pass before reading DOM geometry.
+    // We replace the final coordinates for aligned selects, but still need middleware
+    // like `size()` to set CSS variables such as `--anchor-width`.
+    if (
+      !open() ||
+      !triggerElement ||
+      !positionerEl ||
+      !popupEl ||
+      (active && !positioner.isPositioned) ||
+      store.state.transitionStatus === 'ending'
+    ) {
+      return;
+    }
+
+    initialPlaced = true;
+    popupEl.style.removeProperty(SelectPositionerCssVars.transformOrigin);
+
+    if (!active) {
+      requestScrollArrowVisibility(listEl || popupEl);
+      return;
+    }
+
+    const highlightItemOnHover = store.select('highlightItemOnHover');
+    const dir = direction();
+
+    // Ensure we remove any transforms that can affect the location of the popup
+    // and therefore the calculations.
+    const restoreTransformStyles = unsetTransformStyles(popupEl);
+
+    try {
+      let textElement = store.context.selectedItemTextRef.current;
+
+      if (!textElement?.isConnected) {
+        const hasSelectedValue = store.select('hasSelectedValue');
+        textElement =
+          !hasSelectedValue && store.context.firstItemTextRef.current?.isConnected
+            ? store.context.firstItemTextRef.current
+            : null;
+      }
+
+      const valueElement = store.context.valueRef.current;
+
+      const win = ownerWindow(positionerEl);
+      const positionerStyles = win.getComputedStyle(positionerEl);
+      const popupStyles = win.getComputedStyle(popupEl);
+
+      const doc = ownerDocument(triggerElement);
+      const scale = getScale(triggerElement);
+      const triggerRect = normalizeRect(triggerElement.getBoundingClientRect(), scale);
+
+      const positionerRect = normalizeRect(positionerEl.getBoundingClientRect(), scale);
+      const triggerHeight = triggerRect.height;
+      const scroller = listEl || popupEl;
+      const scrollHeight = scroller.scrollHeight;
+
+      const borderBottom = parseFloat(popupStyles.borderBottomWidth);
+      // The `|| N` fallbacks cover an unset/`auto` value (parses to `NaN`). Note a literal `0`
+      // also resolves to the fallback, so an explicit `margin: 0` or `min-height: 0` still takes
+      // the default below.
+      const marginTop = parseFloat(positionerStyles.marginTop) || 10;
+      const marginBottom = parseFloat(positionerStyles.marginBottom) || 10;
+      const minHeight = parseFloat(positionerStyles.minHeight) || 100;
+      const maxPopupHeight = getMaxPopupHeight(popupStyles);
+
+      const paddingLeft = 5;
+      const paddingRight = 5;
+      const triggerCollisionThreshold = 20;
+
+      const viewportHeight = doc.documentElement.clientHeight - marginTop - marginBottom;
+      const viewportWidth = doc.documentElement.clientWidth;
+      const availableSpaceBeneathTrigger = viewportHeight - triggerRect.bottom + triggerHeight;
+
+      let textRect: ClientRectObject | undefined;
+      let alignedLeft =
+        dir === 'rtl' ? triggerRect.right - positionerRect.width : triggerRect.left;
+      let offsetY = 0;
+
+      if (textElement && valueElement) {
+        const valueRect = normalizeRect(valueElement.getBoundingClientRect(), scale);
+        textRect = normalizeRect(textElement.getBoundingClientRect(), scale);
+
+        alignedLeft =
+          positionerRect.left +
+          (dir === 'rtl' ? valueRect.right - textRect.right : valueRect.left - textRect.left);
+        const valueCenterFromTriggerTop = valueRect.top - triggerRect.top + valueRect.height / 2;
+        const textCenterFromPositionerTop =
+          textRect.top - positionerRect.top + textRect.height / 2;
+
+        offsetY = textCenterFromPositionerTop - valueCenterFromTriggerTop;
+      }
+
+      const idealHeight = availableSpaceBeneathTrigger + offsetY + marginBottom + borderBottom;
+      let height = Math.min(viewportHeight, idealHeight);
+      const maxHeight = viewportHeight - marginTop - marginBottom;
+      const scrollTop = idealHeight - height;
+
+      const maxRight = viewportWidth - paddingRight;
+
+      positionerEl.style.left = `${clamp(
+        alignedLeft,
+        paddingLeft,
+        maxRight - positionerRect.width,
+      )}px`;
+      positionerEl.style.height = `${height}px`;
+      // `none` (not the invalid `auto`) so the explicit height governs in align mode and isn't
+      // clamped by a `max-height` from user CSS.
+      positionerEl.style.maxHeight = 'none';
+      positionerEl.style.marginTop = `${marginTop}px`;
+      positionerEl.style.marginBottom = `${marginBottom}px`;
+      popupEl.style.height = '100%';
+
+      const maxScrollTop = getMaxScrollTop(scroller);
+      const isTopPositioned = scrollTop >= maxScrollTop - SCROLL_EDGE_TOLERANCE_PX;
+
+      if (isTopPositioned) {
+        height = Math.min(viewportHeight, positionerRect.height) - (scrollTop - maxScrollTop);
+      }
+
+      // When the trigger is too close to the top or bottom of the viewport, or the minHeight is
+      // reached, we fallback to aligning the popup to the trigger as the UX is poor otherwise.
+      const fallbackToAlignPopupToTrigger =
+        triggerRect.top < triggerCollisionThreshold ||
+        triggerRect.bottom > viewportHeight - triggerCollisionThreshold ||
+        Math.ceil(height) + SCROLL_EDGE_TOLERANCE_PX < Math.min(scrollHeight, minHeight);
+
+      // Safari doesn't position the popup correctly when pinch-zoomed.
+      const isPinchZoomed = (win.visualViewport?.scale ?? 1) !== 1 && platform.engine.webkit;
+
+      if (fallbackToAlignPopupToTrigger || isPinchZoomed) {
+        clearStyles(positionerEl, originalPositionerStyles);
+        fellBackFromAlignment = true;
+        positioner.fallBackFromAlignItemWithTrigger();
+        requestScrollArrowVisibility(scroller);
+        return;
+      }
+
+      const initialHeight = Math.max(minHeight, height);
+
+      if (isTopPositioned) {
+        const topOffset = Math.max(0, viewportHeight - idealHeight);
+        positionerEl.style.top = positionerRect.height >= maxHeight ? '0' : `${topOffset}px`;
+        positionerEl.style.height = `${height}px`;
+        scroller.scrollTop = getMaxScrollTop(scroller);
+      } else {
+        positionerEl.style.bottom = '0';
+        scroller.scrollTop = scrollTop;
+      }
+
+      if (textRect) {
+        const popupTop = positionerRect.top;
+        const popupHeight = positionerRect.height;
+        const textCenterY = textRect.top + textRect.height / 2;
+
+        const clampedY = clamp(
+          popupHeight > 0 ? ((textCenterY - popupTop) / popupHeight) * 100 : 50,
+          0,
+          100,
+        );
+
+        popupEl.style.setProperty(SelectPositionerCssVars.transformOrigin, `50% ${clampedY}%`);
+      }
+
+      if (initialHeight === viewportHeight || height >= maxPopupHeight) {
+        reachedMaxHeight = true;
+      }
+
+      store.context.handleScrollArrowVisibility(scroller);
+
+      if (
+        highlightItemOnHover &&
+        store.state.selectedIndex === null &&
+        store.state.activeIndex === null &&
+        store.context.listRef.current[0] != null
+      ) {
+        store.set('activeIndex', 0);
+      }
+    } finally {
+      restoreTransformStyles();
+    }
+  }
+
+  function requestScrollArrowVisibility(scroller: HTMLElement) {
+    // The list owns scrolling once it has mounted, and the placement runs again (cancelling the
+    // stale frame) when that happens.
+    scrollArrowFrame.request(() => store.context.handleScrollArrowVisibility(scroller));
+  }
 
   createEffect(
     () => [alignItemWithTriggerActive(), positionerElement(), open()] as const,

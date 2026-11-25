@@ -14,11 +14,7 @@ import { SelectItemContext } from './SelectItemContext';
 import { createButton } from '../../internals/use-button/createButton';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import { REASONS } from '../../internals/reasons';
-import {
-  compareItemEquality,
-  removeItem,
-  resolveSelectedIndex,
-} from '../../internals/itemEquality';
+import { removeItem } from '../../internals/itemEquality';
 import { isVirtualClick } from '../../utils/popups/event';
 import { createDynamicPropsSource } from '../../utils/popups/popupStoreUtils';
 
@@ -45,16 +41,19 @@ export function SelectItem(componentProps: SelectItem.Props): JSX.Element {
   const itemValue = () => componentProps.value ?? null;
 
   const textRef = createRefObject<HTMLElement | null>(null);
-  const listItem = useCompositeListItem({
+  const listItem = useCompositeListItem<SelectItemMetadata>({
     label: () => componentProps.label ?? textRef.current?.textContent ?? null,
+    metadata: {
+      get value() {
+        return itemValue();
+      },
+    },
   });
-  // A memo: the list map changes whenever any item registers, and the effects below must only
+  // A memo: the list map changes whenever any item registers, and the effect below must only
   // re-run when this item's own index changes (upstream's effect dependencies).
   const index = createMemo(listItem.index);
 
-  const multiple = () => store.select('multiple');
   const selectDisabled = () => store.select('disabled');
-  const isItemEqualToValue = () => store.select('isItemEqualToValue');
 
   const disabled = () => selectDisabled() || (componentProps.disabled ?? false);
   const highlighted = () => store.select('isActive', index());
@@ -80,49 +79,6 @@ export function SelectItem(componentProps: SelectItem.Props): JSX.Element {
           delete values[currentIndex];
         }
       };
-    },
-  );
-
-  createEffect(
-    () => [index(), multiple(), isItemEqualToValue(), itemValue()] as const,
-    ([currentIndex, isMultiple, comparer, currentValue]) => {
-      if (currentIndex < 0) {
-        return;
-      }
-
-      const selectedValue = store.state.selectedValue;
-
-      const currentSelectedIndex = store.state.selectedIndex;
-      let nextIndex = currentSelectedIndex;
-      let claims: boolean;
-      if (isMultiple && Array.isArray(selectedValue)) {
-        // The claiming item also owns the text ref that aligns the popup.
-        nextIndex = resolveSelectedIndex(
-          currentIndex,
-          currentValue,
-          store.context.valuesRef.current,
-          selectedValue,
-          comparer,
-          currentSelectedIndex,
-        );
-        claims = nextIndex === currentIndex;
-        if (currentIndex === currentSelectedIndex && !claims) {
-          store.context.selectedItemTextRef.current = null;
-        }
-      } else {
-        claims =
-          selectedValue !== undefined && compareItemEquality(currentValue, selectedValue, comparer);
-        if (claims) {
-          nextIndex = currentIndex;
-        }
-      }
-      store.set('selectedIndex', nextIndex);
-
-      // Make sure SelectPopup can measure the selected item on first open.
-      // SelectItemText can still update this ref later when focus moves.
-      if (claims && textRef.current) {
-        store.context.selectedItemTextRef.current = textRef.current;
-      }
     },
   );
 
@@ -300,6 +256,11 @@ export function SelectItem(componentProps: SelectItem.Props): JSX.Element {
       <Element />
     </SelectItemContext>
   );
+}
+
+export interface SelectItemMetadata {
+  /** The value of the item. */
+  readonly value: unknown;
 }
 
 export interface SelectItemState {

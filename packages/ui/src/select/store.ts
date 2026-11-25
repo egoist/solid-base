@@ -1,6 +1,8 @@
+import type { Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createRefObject, type RefObject } from '@egoist/solid-base-utils/refObject';
 import type { HTMLProps } from '../internals/types';
+import type { Side } from '../internals/anchorPositioning';
 import { compareItemEquality } from '../internals/itemEquality';
 import { hasNullItemLabel, stringifyAsValue } from '../internals/resolveValueLabel';
 import type { Group } from '../internals/resolveValueLabel';
@@ -32,6 +34,13 @@ export type State = ValuePopupState & {
   hasScrollArrows: boolean;
 };
 
+export interface SelectPositionerSource {
+  /** The values of the rendered items, in list order (the selected index is derived from them). */
+  itemValues: Accessor<readonly unknown[]>;
+  /** The side of the trigger the popup is placed on. */
+  side: Accessor<Side>;
+}
+
 export interface SelectionRef {
   allowUnselectedMouseUp: boolean;
   allowSelectedMouseUp: boolean;
@@ -59,6 +68,11 @@ export type SelectStoreContext = ValuePopupContext<SelectRoot.OpenChangeEventDet
   itemProps: HTMLProps | ((props: ItemPropsArg) => HTMLProps) | undefined;
 
   // Callbacks, assigned by the Root.
+  /**
+   * Publishes the state of the mounted positioner the Root derives its own from. Returns the
+   * function removing it.
+   */
+  registerPositioner: (positioner: SelectPositionerSource) => () => void;
   isItemEqualToValue: State['isItemEqualToValue'];
   setValue: (nextValue: any, eventDetails: SelectRoot.ChangeEventDetails) => void;
   handleScrollArrowVisibility: (scroller: HTMLElement) => void;
@@ -158,6 +172,7 @@ export function createSelectStoreContext(initialValue: any): SelectStoreContext 
     alignItemWithTriggerActiveRef: createRefObject(false),
     initialValueRef: createRefObject<any>(initialValue),
     itemProps: undefined,
+    registerPositioner: () => NOOP,
     isItemEqualToValue: Object.is,
     setValue: NOOP,
     handleScrollArrowVisibility: NOOP,

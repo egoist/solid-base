@@ -28,8 +28,11 @@ export function SelectItemText(componentProps: SelectItemText.Props): JSX.Elemen
       if (index === 0) {
         store.context.firstItemTextRef.current = textElement;
       }
+      // The text of the selected item aligns the popup with the trigger.
       if (selectedByFocus) {
         store.context.selectedItemTextRef.current = textElement;
+      } else if (store.context.selectedItemTextRef.current === textElement) {
+        store.context.selectedItemTextRef.current = null;
       }
     },
   );

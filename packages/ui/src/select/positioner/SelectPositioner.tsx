@@ -1,4 +1,13 @@
-import { Show, createEffect, createSignal, merge, omit, onCleanup, untrack } from 'solid-js';
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  merge,
+  omit,
+  onCleanup,
+  onSettled,
+} from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import { useSelectRootContext } from '../root/SelectRootContext';
@@ -21,6 +30,7 @@ import { clearStyles } from '../popup/utils';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import { REASONS } from '../../internals/reasons';
 import { findItemIndex } from '../../internals/itemEquality';
+import type { SelectItemMetadata } from '../item/SelectItem';
 import { renderPositioner } from '../../utils/popups/positioning/positioner';
 import { createAnchoredPopupScrollLock } from '../../utils/popups/anchoredPopupScrollLock';
 
@@ -67,22 +77,27 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
 
   const alignItemWithTrigger = () => componentProps.alignItemWithTrigger ?? true;
 
-  const [controlledAlignItemWithTrigger, setControlledAlignItemWithTrigger] = createSignal(
-    untrack(alignItemWithTrigger),
+  // The prop is read when the popup mounts and applies again once it has unmounted.
+  const mountedAlignItemWithTrigger = createMemo<boolean>(
+    (previous) => (previous !== undefined && mounted() ? previous : alignItemWithTrigger()),
+    { name: 'SelectPositioner.mountedAlignItemWithTrigger' },
   );
 
-  // The prop applies again once the popup has unmounted.
-  createEffect(
-    () => [mounted(), alignItemWithTrigger()] as const,
-    ([isMounted, value]) => {
-      if (!isMounted) {
-        setControlledAlignItemWithTrigger(value);
-      }
+  // Set by the popup when it measures that the trigger lacks room for an aligned popup. Only lasts
+  // while the popup is mounted.
+  const [alignItemWithTriggerFallback, setAlignItemWithTriggerFallback] = createSignal<boolean>(
+    () => {
+      mounted();
+      return false;
     },
+    { name: 'SelectPositioner.alignItemWithTriggerFallback' },
   );
+
+  const alignItemWithTriggerRequested = () =>
+    mounted() && mountedAlignItemWithTrigger() && openMethod() !== 'touch';
 
   const alignItemWithTriggerActive = () =>
-    mounted() && controlledAlignItemWithTrigger() && openMethod() !== 'touch';
+    alignItemWithTriggerRequested() && !alignItemWithTriggerFallback();
 
   createEffect(alignItemWithTriggerActive, (active) => {
     store.context.alignItemWithTriggerActiveRef.current = active;
@@ -157,18 +172,11 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
     },
   };
 
-  createEffect(
-    () => positioning.side,
-    (side) => {
-      store.set('popupSide', side);
-    },
-  );
-
   let prevMapSize = 0;
 
   // The items write their values (`valuesRef`) in their own effects, which run after the list's
   // map change is reported (upstream's item layout effects run first). Wait for them.
-  function onMapChange(map: Map<HTMLElement, CompositeMetadata<unknown>>) {
+  function onMapChange(map: Map<HTMLElement, CompositeMetadata<SelectItemMetadata>>) {
     const size = map.size;
     queueMicrotask(() => handleMapChange(size));
   }
@@ -200,11 +208,6 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
             -1;
         const nextValue = hasInitial ? initialSelectedValue : null;
         store.context.setValue(nextValue, eventDetails);
-
-        if (nextValue === null) {
-          store.set('selectedIndex', null);
-          store.context.selectedItemTextRef.current = null;
-        }
       }
     }
 
@@ -216,11 +219,6 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
       );
       if (nextValue.length !== value.length) {
         store.context.setValue(nextValue, eventDetails);
-
-        if (nextValue.length === 0) {
-          store.set('selectedIndex', null);
-          store.context.selectedItemTextRef.current = null;
-        }
       }
     }
 
@@ -236,11 +234,26 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
     }
   }
 
-  const list = createCompositeList({
+  const list = createCompositeList<SelectItemMetadata>({
     elementsRef: store.context.listRef,
     labelsRef: store.context.labelsRef,
     onMapChange,
   });
+
+  // The selected index is derived from the item values in list order.
+  const itemValues = createMemo(
+    () => {
+      const values: unknown[] = [];
+      for (const metadata of list.map().values()) {
+        values[metadata.index] = metadata.value;
+      }
+      return values;
+    },
+    { name: 'SelectPositioner.itemValues', equals: areSameValues },
+  );
+  onSettled(() =>
+    store.context.registerPositioner({ itemValues, side: () => positioning.side }),
+  );
 
   const contextValue: SelectPositionerContext = {
     get side() {
@@ -259,10 +272,15 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
     get isPositioned() {
       return positioning.isPositioned;
     },
+    get alignItemWithTriggerRequested() {
+      return alignItemWithTriggerRequested();
+    },
     get alignItemWithTriggerActive() {
       return alignItemWithTriggerActive();
     },
-    setControlledAlignItemWithTrigger,
+    fallBackFromAlignItemWithTrigger() {
+      setAlignItemWithTriggerFallback(true);
+    },
     scrollUpArrowRef,
     scrollDownArrowRef,
   };
@@ -315,6 +333,18 @@ export function SelectPositioner(componentProps: SelectPositioner.Props): JSX.El
       {element}
     </>
   );
+}
+
+function areSameValues(a: readonly unknown[], b: readonly unknown[]) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i += 1) {
+    if (!Object.is(a[i], b[i]) || (i in a) !== (i in b)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export interface SelectPositionerState {
