@@ -1,0 +1,165 @@
+import type { JSX } from '@solidjs/web';
+import { createRefObject, type RefObject } from '@egoist/solid-base-utils/refObject';
+import type { HTMLProps } from '../internals/types';
+import { compareItemEquality } from '../internals/itemEquality';
+import { hasNullItemLabel, stringifyAsValue } from '../internals/resolveValueLabel';
+import type { Group } from '../internals/resolveValueLabel';
+import { NOOP } from '../internals/noop';
+import { createPopupStoreContext, popupStoreSelectors } from '../utils/popups/store';
+import type { ItemPropsArg } from '../utils/popups/types';
+import { ValuePopupStore, valuePopupSelectors } from '../utils/popups/value-popup/ValuePopupStore';
+import type {
+  ValuePopupContext,
+  ValuePopupState,
+} from '../utils/popups/value-popup/ValuePopupStore';
+import type { SelectRoot } from './root/SelectRoot';
+
+export type SelectItems =
+  | Record<string, JSX.Element>
+  | ReadonlyArray<{ label: JSX.Element; value: any }>
+  | ReadonlyArray<Group<any>>
+  | undefined;
+
+export type State = ValuePopupState & {
+  items: SelectItems;
+  highlightItemOnHover: boolean;
+  itemToStringValue: ((item: any) => string) | undefined;
+  listElement: HTMLDivElement | null;
+
+  scrollUpArrowVisible: boolean;
+  scrollDownArrowVisible: boolean;
+
+  hasScrollArrows: boolean;
+};
+
+export interface SelectionRef {
+  allowUnselectedMouseUp: boolean;
+  allowSelectedMouseUp: boolean;
+  dragY: number;
+}
+
+/**
+ * Non-reactive values shared with the select parts. Nothing here is observable through
+ * `selectors`, so writing to a ref never notifies subscribers.
+ */
+export type SelectStoreContext = ValuePopupContext<SelectRoot.OpenChangeEventDetails> & {
+  readonly scrollHandlerRef: RefObject<((element: HTMLDivElement) => void) | null>;
+  readonly scrollArrowsMountedCountRef: RefObject<number>;
+  readonly valueRef: RefObject<HTMLSpanElement | null>;
+  readonly typingRef: RefObject<boolean>;
+  readonly selectionRef: RefObject<SelectionRef>;
+  readonly firstItemTextRef: RefObject<HTMLElement | null>;
+  readonly selectedItemTextRef: RefObject<HTMLElement | null>;
+  readonly alignItemWithTriggerActiveRef: RefObject<boolean>;
+  readonly initialValueRef: RefObject<any>;
+
+  /**
+   * The props of the list navigation for each item (created once by the Root).
+   */
+  itemProps: HTMLProps | ((props: ItemPropsArg) => HTMLProps) | undefined;
+
+  // Callbacks, assigned by the Root.
+  isItemEqualToValue: State['isItemEqualToValue'];
+  setValue: (nextValue: any, eventDetails: SelectRoot.ChangeEventDetails) => void;
+  handleScrollArrowVisibility: (scroller: HTMLElement) => void;
+};
+
+export const selectors = {
+  ...valuePopupSelectors,
+  items: (state: State) => state.items,
+  hasNullItemLabel: (state: State, enabled: boolean) =>
+    enabled ? hasNullItemLabel(state.items) : false,
+  multiple: (state: State) => state.selectionMode === 'multiple',
+  highlightItemOnHover: (state: State) => state.highlightItemOnHover,
+  itemToStringValue: (state: State) => state.itemToStringValue,
+
+  hasSelectedValue: (state: State) => {
+    const { selectedValue, itemToStringValue } = state;
+    if (selectedValue == null) {
+      return false;
+    }
+    if (state.selectionMode === 'multiple' && Array.isArray(selectedValue)) {
+      return selectedValue.length > 0;
+    }
+
+    return stringifyAsValue(selectedValue, itemToStringValue) !== '';
+  },
+
+  // `open` is the effective open state, so a controlled `open` prop counts.
+  isActiveWhileOpen: (state: State, index: number) =>
+    popupStoreSelectors.open(state) && state.activeIndex === index,
+
+  isSelected: (state: State, itemValue: any) => {
+    const comparer = state.isItemEqualToValue;
+    const selectedValue = state.selectedValue;
+
+    if (state.selectionMode === 'multiple') {
+      return (
+        Array.isArray(selectedValue) &&
+        selectedValue.some((selectedItem) => compareItemEquality(itemValue, selectedItem, comparer))
+      );
+    }
+
+    // The value is the source of truth: a stale `selectedIndex` (e.g. the controlled
+    // value changes while the popup is open, where the index sync is deferred) must not
+    // keep a previously selected item marked as selected.
+    return compareItemEquality(itemValue, selectedValue, comparer);
+  },
+  isSelectedByFocus: (state: State, index: number) => {
+    return state.selectedIndex === index;
+  },
+
+  scrollUpArrowVisible: (state: State) => state.scrollUpArrowVisible,
+  scrollDownArrowVisible: (state: State) => state.scrollDownArrowVisible,
+
+  hasScrollArrows: (state: State) => state.hasScrollArrows,
+};
+
+export class SelectStore extends ValuePopupStore<
+  State,
+  SelectStoreContext,
+  typeof selectors,
+  SelectRoot.OpenChangeEventDetails
+> {
+  protected getAnchorElement(state: Readonly<State>) {
+    return state.triggerElement;
+  }
+
+  protected override prepareUnmount() {
+    return {
+      activeIndex: null,
+      openMethod: null,
+      scrollUpArrowVisible: false,
+      scrollDownArrowVisible: false,
+    };
+  }
+}
+
+/**
+ * Creates the initial (non-reactive) context of a select store.
+ */
+export function createSelectStoreContext(initialValue: any): SelectStoreContext {
+  return {
+    ...createPopupStoreContext(),
+    listRef: createRefObject<Array<HTMLElement | null>>([]),
+    labelsRef: createRefObject<Array<string | null>>([]),
+    valuesRef: createRefObject<Array<any>>([]),
+    scrollHandlerRef: createRefObject<((element: HTMLDivElement) => void) | null>(null),
+    scrollArrowsMountedCountRef: createRefObject(0),
+    valueRef: createRefObject<HTMLSpanElement | null>(null),
+    typingRef: createRefObject(false),
+    selectionRef: createRefObject<SelectionRef>({
+      allowSelectedMouseUp: false,
+      allowUnselectedMouseUp: false,
+      dragY: 0,
+    }),
+    firstItemTextRef: createRefObject<HTMLElement | null>(null),
+    selectedItemTextRef: createRefObject<HTMLElement | null>(null),
+    alignItemWithTriggerActiveRef: createRefObject(false),
+    initialValueRef: createRefObject<any>(initialValue),
+    itemProps: undefined,
+    isItemEqualToValue: Object.is,
+    setValue: NOOP,
+    handleScrollArrowVisibility: NOOP,
+  } as SelectStoreContext;
+}
