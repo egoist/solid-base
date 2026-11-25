@@ -3,7 +3,7 @@ import type { JSX } from '@solidjs/web';
 import type { BaseUIComponentProps } from '../../internals/types';
 import { renderElement } from '../../internals/renderElement';
 import { formatRangeValue } from '../../utils/formatRangeValue';
-import { createFormatLocale } from '../utils/createFormatLocale';
+import { createFormatLocale } from '../../utils/createFormatLocale';
 import { useProgressRootContext } from '../root/ProgressRootContext';
 import type { ProgressRootState } from '../root/ProgressRoot';
 import { progressStateAttributesMapping } from '../root/stateAttributesMapping';

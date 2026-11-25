@@ -3,7 +3,7 @@ import { useMeterRootContext } from '../root/MeterRootContext';
 import type { MeterRootState } from '../root/MeterRoot';
 import type { BaseUIComponentProps } from '../../internals/types';
 import { renderElement } from '../../internals/renderElement';
-import { createRegisteredLabelId } from '../../progress/utils/createRegisteredLabelId';
+import { createRegisteredLabelId } from '../../utils/createRegisteredLabelId';
 
 /**
  * An accessible label for the meter.

@@ -1,7 +1,7 @@
 import { omit } from 'solid-js';
 import { renderElement } from '../../internals/renderElement';
 import type { BaseUIComponentProps } from '../../internals/types';
-import { createRegisteredLabelId } from '../utils/createRegisteredLabelId';
+import { createRegisteredLabelId } from '../../utils/createRegisteredLabelId';
 import { useProgressRootContext } from '../root/ProgressRootContext';
 import { progressStateAttributesMapping } from '../root/stateAttributesMapping';
 import type { ProgressRootState } from '../root/ProgressRoot';

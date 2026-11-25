@@ -5,7 +5,7 @@ import type { BaseUIComponentProps, HTMLProps } from '../../internals/types';
 import { renderElement } from '../../internals/renderElement';
 import { formatRangeValue } from '../../utils/formatRangeValue';
 import { valueToPercent } from '../../utils/valueToPercent';
-import { createFormatLocale } from '../../progress/utils/createFormatLocale';
+import { createFormatLocale } from '../../utils/createFormatLocale';
 import { MeterRootContext } from './MeterRootContext';
 
 /**

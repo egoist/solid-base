@@ -5,7 +5,7 @@ import { useMeterRootContext } from '../root/MeterRootContext';
 import type { MeterRootState } from '../root/MeterRoot';
 import { renderElement } from '../../internals/renderElement';
 import { formatRangeValue } from '../../utils/formatRangeValue';
-import { createFormatLocale } from '../../progress/utils/createFormatLocale';
+import { createFormatLocale } from '../../utils/createFormatLocale';
 
 /**
  * A text element displaying the current value.

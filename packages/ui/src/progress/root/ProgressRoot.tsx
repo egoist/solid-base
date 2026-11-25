@@ -5,7 +5,7 @@ import { formatRangeValue } from '../../utils/formatRangeValue';
 import { valueToPercent } from '../../utils/valueToPercent';
 import { renderElement } from '../../internals/renderElement';
 import type { BaseUIComponentProps, HTMLProps } from '../../internals/types';
-import { createFormatLocale } from '../utils/createFormatLocale';
+import { createFormatLocale } from '../../utils/createFormatLocale';
 import { ProgressRootContext } from './ProgressRootContext';
 import { progressStateAttributesMapping } from './stateAttributesMapping';
 
