@@ -1,0 +1,36 @@
+/* Stacks the panels in one grid cell so the leaving and entering panels overlap. */
+.PanelViewport {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.Panel {
+  grid-area: 1 / 1;
+  transition:
+    opacity 160ms var(--ease),
+    translate 320ms var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &[data-starting-style][data-activation-direction='left'] {
+      translate: -40% 0;
+    }
+
+    &[data-starting-style][data-activation-direction='right'] {
+      translate: 40% 0;
+    }
+
+    &[data-ending-style][data-activation-direction='left'] {
+      translate: 40% 0;
+    }
+
+    &[data-ending-style][data-activation-direction='right'] {
+      translate: -40% 0;
+    }
+  }
+}

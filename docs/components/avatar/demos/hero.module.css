@@ -1,0 +1,38 @@
+.Row {
+  display: flex;
+  gap: 1rem;
+}
+
+.Root {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.Image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.Fallback {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}

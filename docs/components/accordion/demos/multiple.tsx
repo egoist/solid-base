@@ -1,0 +1,68 @@
+import { Accordion } from '@egoist/solid-base/accordion';
+import styles from './accordion.module.css';
+
+export default function ExampleAccordionMultiple() {
+  return (
+    <Accordion.Root class={styles.Accordion} multiple>
+      <Accordion.Item class={styles.Item}>
+        <Accordion.Header class={styles.Header}>
+          <Accordion.Trigger class={styles.Trigger}>
+            What is solid-base?
+            <PlusIcon class={styles.Icon} />
+          </Accordion.Trigger>
+        </Accordion.Header>
+        <Accordion.Panel class={styles.Panel}>
+          <div class={styles.Content}>
+            A library of high-quality unstyled SolidJS components for design systems and web
+            apps, ported from Base UI.
+          </div>
+        </Accordion.Panel>
+      </Accordion.Item>
+
+      <Accordion.Item class={styles.Item}>
+        <Accordion.Header class={styles.Header}>
+          <Accordion.Trigger class={styles.Trigger}>
+            How do I get started?
+            <PlusIcon class={styles.Icon} />
+          </Accordion.Trigger>
+        </Accordion.Header>
+        <Accordion.Panel class={styles.Panel}>
+          <div class={styles.Content}>
+            Head to the “Quick start” guide in the docs. If you’ve used unstyled libraries before,
+            you’ll feel at home.
+          </div>
+        </Accordion.Panel>
+      </Accordion.Item>
+
+      <Accordion.Item class={styles.Item}>
+        <Accordion.Header class={styles.Header}>
+          <Accordion.Trigger class={styles.Trigger}>
+            Can I use it for my project?
+            <PlusIcon class={styles.Icon} />
+          </Accordion.Trigger>
+        </Accordion.Header>
+        <Accordion.Panel class={styles.Panel}>
+          <div class={styles.Content}>Of course! It is free and open source.</div>
+        </Accordion.Panel>
+      </Accordion.Item>
+    </Accordion.Root>
+  );
+}
+
+function PlusIcon(props: { class?: string }) {
+  return (
+    <svg
+      class={props.class}
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="square"
+      aria-hidden="true"
+    >
+      <path d="M1.5 8h13M8 14.5v-13" />
+    </svg>
+  );
+}

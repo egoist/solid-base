@@ -1,0 +1,14 @@
+.Text {
+  display: block;
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+
+strong.Text {
+  color: var(--accent-text);
+  font-weight: 600;
+}
