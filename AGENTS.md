@@ -87,6 +87,21 @@ export function SwitchThumb(componentProps: SwitchThumb.Props) {
 }
 ```
 
+Pitfalls learned while porting:
+
+- Call `renderElement(...)` in the component body (`const element = renderElement(...)`) or in
+  its own component, then insert `{element}`. Calling it inline inside a JSX expression or a
+  memo makes that scope track the reads it performs, and the element is recreated (losing focus
+  and handlers) whenever they change.
+- Reading `props.children` creates the children. Never read it in more than one place.
+- Effect `apply` callbacks are untracked but still report `STRICT_READ_UNTRACKED` for reactive
+  reads: read what you need in the `compute` function, or call imperative helpers that untrack.
+- Solid effects never compare their inputs: if `compute` returns an equal value the `apply`
+  still runs. Read a memo in `compute` to skip unchanged values.
+- There are no `on*Capture` props: attach native capture listeners in `onSettled`/effects.
+  `onFocus`/`onBlur` don't bubble; use `onFocusIn`/`onFocusOut` where React relied on bubbling.
+- Ref callbacks are never called with `null`: clear element references in `onCleanup`.
+
 ### Mapping React → Solid
 
 | Upstream (React)                               | This port (Solid 2)                                                                 |

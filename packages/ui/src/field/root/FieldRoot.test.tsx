@@ -3,6 +3,11 @@ import type { JSX } from '@solidjs/web';
 import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { Field } from '..';
 import { Form } from '../../form';
+import { Checkbox } from '../../checkbox';
+import { CheckboxGroup } from '../../checkbox-group';
+import { Radio } from '../../radio';
+import { RadioGroup } from '../../radio-group';
+import { Switch } from '../../switch';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import {
   extendFieldRootState,
@@ -259,7 +264,27 @@ describe('<Field.Root />', () => {
     expect(label).toHaveAttribute('for', control.id);
   });
 
-  // Skipped: 're-associates the label when a CheckboxGroup is replaced' (CheckboxGroup not ported).
+  it('re-associates the label when a CheckboxGroup is replaced by another control', () => {
+    const [multi, setMulti] = createSignal(true);
+    render(() => (
+      <Field.Root>
+        <Field.Label>Answer</Field.Label>
+        <Show when={multi()} fallback={<Field.Control data-testid="control" />}>
+          <CheckboxGroup allValues={['a']}>
+            <Checkbox.Root value="a" />
+          </CheckboxGroup>
+        </Show>
+      </Field.Root>
+    ));
+
+    // The group is named through `aria-labelledby`, so it suppresses `for` entirely.
+    expect(screen.getByText('Answer')).not.toHaveAttribute('for');
+
+    setMulti(false);
+    flush();
+
+    expect(screen.getByText('Answer')).toHaveAttribute('for', screen.getByTestId('control').id);
+  });
 
   it('updates label associations when the control id changes', async () => {
     const [controlId, setControlId] = createSignal('control-a');
@@ -771,13 +796,33 @@ describe('<Field.Root />', () => {
     });
 
     it('receives all form values as the 2nd argument', () => {
-      // Reduced to the ported controls (upstream also covers Checkbox, NumberField, Radio, Select,
-      // Slider and Switch).
+      // Reduced to the ported controls (upstream also covers NumberField, Select and Slider).
       const validateSpy = vi.fn();
       const onSubmit = vi.fn(preventDefault);
 
       render(() => (
         <Form onSubmit={onSubmit}>
+          <Field.Root name="checkbox">
+            <Checkbox.Root defaultChecked />
+          </Field.Root>
+          <Field.Root name="checkbox-group">
+            <CheckboxGroup defaultValue={['apple', 'banana']}>
+              <Field.Item>
+                <Checkbox.Root value="apple" />
+              </Field.Item>
+              <Field.Item>
+                <Checkbox.Root value="banana" />
+              </Field.Item>
+            </CheckboxGroup>
+          </Field.Root>
+          <Field.Root name="radio-group">
+            <RadioGroup defaultValue="cats">
+              <Radio.Root value="cats" />
+            </RadioGroup>
+          </Field.Root>
+          <Field.Root name="switch">
+            <Switch.Root defaultChecked={false} />
+          </Field.Root>
           <Field.Root name="input" validate={validateSpy}>
             <Field.Control data-testid="input" type="url" defaultValue="https://base-ui.com" />
           </Field.Root>
@@ -795,6 +840,10 @@ describe('<Field.Root />', () => {
 
       expect(validateSpy.mock.calls.length).toBe(1);
       expect(validateSpy.mock.calls[0][1]).toEqual({
+        checkbox: true,
+        'checkbox-group': ['apple', 'banana'],
+        'radio-group': 'cats',
+        switch: false,
         input: 'https://base-ui.com',
         other: 'value',
         toggle: true,
@@ -869,8 +918,40 @@ describe('<Field.Root />', () => {
       expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: true });
     });
 
-    // Skipped: 'excludes registration-gated controls ... when their field name is removed'
-    // (CheckboxGroup not ported).
+    it('excludes registration-gated controls from onFormSubmit when their field name is removed', () => {
+      const handleSubmit = vi.fn();
+      const [name, setName] = createSignal<string | undefined>('fruits');
+
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root name={name()}>
+            <CheckboxGroup defaultValue={['apple']}>
+              <Field.Item>
+                <Checkbox.Root value="apple" />
+              </Field.Item>
+              <Field.Item>
+                <Checkbox.Root value="banana" />
+              </Field.Item>
+            </CheckboxGroup>
+          </Field.Root>
+          <button type="button" onClick={() => setName(undefined)}>
+            Clear name
+          </button>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+
+      expect(handleSubmit).toHaveBeenCalledTimes(1);
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ fruits: ['apple'] });
+
+      click(screen.getByText('Clear name'));
+      click(screen.getByText('submit'));
+
+      expect(handleSubmit).toHaveBeenCalledTimes(2);
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({});
+    });
 
     it('uses the Field.Control name for form submission and form validation values', () => {
       const handleSubmit = vi.fn();
@@ -1445,17 +1526,16 @@ describe('<Field.Root />', () => {
     });
 
     it('should debounce validation for field-aware controls', () => {
-      // Upstream uses Checkbox.Root; this uses the test Toggle.
       const validate = vi.fn((value: unknown) => (value ? 'error' : null));
 
       render(() => (
         <Field.Root validationDebounceTime={100} validationMode="onChange" validate={validate}>
-          <Toggle data-testid="toggle" />
+          <Checkbox.Root data-testid="checkbox" />
           <Field.Error />
         </Field.Root>
       ));
 
-      const control = screen.getByTestId('toggle');
+      const control = screen.getByTestId('checkbox');
 
       click(control);
 
@@ -1474,7 +1554,38 @@ describe('<Field.Root />', () => {
       expect(screen.queryByText('error')).not.toBe(null);
     });
 
-    // Skipped: 'should debounce validation for radio groups' (RadioGroup not ported).
+    it('should debounce validation for radio groups', () => {
+      const validate = vi.fn((value: unknown) => (value === 'b' ? 'error' : null));
+
+      render(() => (
+        <Field.Root validationDebounceTime={100} validationMode="onChange" validate={validate}>
+          <RadioGroup>
+            <Radio.Root value="a" data-testid="item-a" />
+            <Radio.Root value="b" data-testid="item-b" />
+          </RadioGroup>
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      const control = screen.getByRole('radiogroup');
+
+      click(screen.getByTestId('item-b'));
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(99);
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(1);
+
+      expect(validate).toHaveBeenCalledTimes(1);
+      expect(validate.mock.lastCall?.[0]).toBe('b');
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByText('error')).not.toBe(null);
+    });
 
     it('drops a pending debounced validation when the control unmounts', () => {
       const validate = vi.fn(() => 'error');
@@ -1632,9 +1743,8 @@ describe('<Field.Root />', () => {
     });
 
     it('drops a pending validation when another field-aware control takes ownership', () => {
-      // Upstream adds a Switch; this adds the test Toggle.
       const validate = vi.fn(() => 'error');
-      const [showToggle, setShowToggle] = createSignal(false);
+      const [showSwitch, setShowSwitch] = createSignal(false);
 
       render(() => (
         <Field.Root
@@ -1644,8 +1754,8 @@ describe('<Field.Root />', () => {
           validate={validate}
         >
           <Field.Control data-testid="control" />
-          <Show when={showToggle()}>
-            <Toggle />
+          <Show when={showSwitch()}>
+            <Switch.Root />
           </Show>
           <Field.Error data-testid="error" />
         </Field.Root>
@@ -1655,7 +1765,7 @@ describe('<Field.Root />', () => {
 
       tick(99);
 
-      setShowToggle(true);
+      setShowSwitch(true);
       flush();
 
       tick(100);
@@ -1918,8 +2028,44 @@ describe('<Field.Root />', () => {
       expect(control.validationMessage).toBe('');
     });
 
-    // Skipped: 'keeps a message set outside the field on another input of the same field'
-    // (RadioGroup not ported), and the two barred-control tests (upstream skips them in jsdom).
+    it('keeps a message set outside the field on another input of the same field', () => {
+      const handleValidity = vi.fn();
+      const actionsRef = createRefObject<FieldRoot.Actions | null>(null);
+
+      render(() => (
+        <div>
+          <Field.Root
+            actionsRef={actionsRef}
+            validationMode="onBlur"
+            validate={(value) => (value === 'cats' ? 'custom error' : null)}
+          >
+            <RadioGroup defaultValue="cats">
+              <Radio.Root value="cats" data-testid="cats" />
+              <Radio.Root value="dogs" data-testid="dogs" />
+            </RadioGroup>
+            <Field.Validity>{handleValidity}</Field.Validity>
+          </Field.Root>
+          <button type="button" onClick={() => actionsRef.current?.validate()}>
+            validate
+          </button>
+        </div>
+      ));
+
+      const [cats, dogs] = document.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+
+      click(screen.getByText('validate'));
+      expect(cats.validationMessage).toBe('custom error');
+
+      dogs.setCustomValidity('external error');
+      click(screen.getByTestId('dogs'));
+
+      expect(cats.validationMessage).toBe('');
+      expect(dogs.validationMessage).toBe('external error');
+      expect(handleValidity.mock.lastCall?.[0].validity.customError).toBe(true);
+      expect(handleValidity.mock.lastCall?.[0].errors).toEqual(['external error']);
+    });
+
+    // Skipped: the two barred-control tests (upstream skips them in jsdom).
   });
 
   describe('style hooks', () => {
@@ -1977,7 +2123,38 @@ describe('<Field.Root />', () => {
       }
     });
 
-    // Skipped: dirty tests for NumberField / Select / RadioGroup (not ported).
+    it('keeps [data-dirty] on a RadioGroup when returning to the first picked value', () => {
+      const [value, setValue] = createSignal<string | null>(null);
+      render(() => (
+        <div>
+          <Field.Root data-testid="root">
+            <RadioGroup value={value()} onValueChange={(next) => setValue(next as string | null)}>
+              <Radio.Root value="a" />
+              <Radio.Root value="b" />
+            </RadioGroup>
+          </Field.Root>
+          <button type="button" onClick={() => setValue('a')}>
+            a
+          </button>
+          <button type="button" onClick={() => setValue('b')}>
+            b
+          </button>
+        </div>
+      ));
+      const root = screen.getByTestId('root');
+
+      expect(root).not.toHaveAttribute('data-dirty');
+
+      click(screen.getByText('a'));
+      expect(root).toHaveAttribute('data-dirty', '');
+
+      click(screen.getByText('b'));
+      click(screen.getByText('a'));
+
+      expect(root).toHaveAttribute('data-dirty', '');
+    });
+
+    // Skipped: dirty tests for NumberField / Select (not ported).
 
     describe('control remount', () => {
       // Skipped: 'clears dirty after an empty text control returns to empty following a
