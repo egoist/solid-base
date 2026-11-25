@@ -1,4 +1,4 @@
-# solid-base documentation
+# Solid Base documentation
 
 The Markdown source of the documentation. The website in `../website` renders it (this README
 is not published).

@@ -16,7 +16,7 @@ export const Route = createFileRoute('/$section/$slug')({
     return {
       meta: page
         ? [
-            { title: `${page.frontmatter.title} — solid-base` },
+            { title: `${page.frontmatter.title} — Solid Base` },
             { name: 'description', content: page.frontmatter.description ?? '' },
           ]
         : [],

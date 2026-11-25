@@ -1,6 +1,6 @@
 ---
 title: Direction Provider
-description: Enables RTL behavior for solid-base components.
+description: Enables RTL behavior for Solid Base components.
 ---
 
 ::demo{src="./demos/hero.tsx"}

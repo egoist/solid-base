@@ -1,6 +1,6 @@
 ---
 title: Customization
-description: A guide to customizing the behavior of solid-base components.
+description: A guide to customizing the behavior of Solid Base components.
 order: 4
 ---
 

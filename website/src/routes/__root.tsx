@@ -10,7 +10,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'solid-base — Unstyled UI components for Solid' },
+      { title: 'Solid Base — Unstyled UI components for Solid' },
       {
         name: 'description',
         content: 'Unstyled, accessible UI components for SolidJS 2. A faithful port of Base UI.',

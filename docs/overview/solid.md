@@ -1,6 +1,6 @@
 ---
 title: Coming from React
-description: Every difference between solid-base and Base UI's React API.
+description: Every difference between Solid Base and Base UI's React API.
 order: 4
 ---
 

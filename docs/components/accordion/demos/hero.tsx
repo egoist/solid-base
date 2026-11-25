@@ -7,7 +7,7 @@ export default function ExampleAccordion() {
       <Accordion.Item class={styles.Item}>
         <Accordion.Header class={styles.Header}>
           <Accordion.Trigger class={styles.Trigger}>
-            What is solid-base?
+            What is Solid Base?
             <PlusIcon class={styles.Icon} />
           </Accordion.Trigger>
         </Accordion.Header>

@@ -1,6 +1,6 @@
 ---
 title: Forms
-description: A guide to building forms with solid-base components.
+description: A guide to building forms with Solid Base components.
 order: 5
 ---
 

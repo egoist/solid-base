@@ -4,7 +4,7 @@ description: An open-source SolidJS component library for building accessible us
 order: 1
 ---
 
-solid-base (`@egoist/solid-base`) is an unstyled component library for building accessible user
+Solid Base (`@egoist/solid-base`) is an unstyled component library for building accessible user
 interfaces with **SolidJS 2**. It is a faithful port of [Base UI](https://base-ui.com), the React
 library from the creators of Radix, Material UI and Floating UI.
 
@@ -60,7 +60,7 @@ element or compose it with your own components. See [Composition](/handbook/comp
 
 ## Credits and license
 
-solid-base is MIT licensed. It is based on [Base UI](https://github.com/mui/base-ui) by the MUI
+Solid Base is MIT licensed. It is based on [Base UI](https://github.com/mui/base-ui) by the MUI
 team, also MIT licensed: the component design, behavior, documentation structure and much of the
 documentation text come from Base UI. Credit for the original work goes to the Base UI team and
 contributors.

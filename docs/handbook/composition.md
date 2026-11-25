@@ -1,6 +1,6 @@
 ---
 title: Composition
-description: A guide to composing solid-base components with your own Solid components.
+description: A guide to composing Solid Base components with your own Solid components.
 order: 3
 ---
 
@@ -130,9 +130,9 @@ export default () => (
   <Accordion.Root>
     <Accordion.Item>
       <Accordion.Header render="h2">
-        <Accordion.Trigger>What is solid-base?</Accordion.Trigger>
+        <Accordion.Trigger>What is Solid Base?</Accordion.Trigger>
       </Accordion.Header>
-      <Accordion.Panel>solid-base is a library of unstyled Solid components.</Accordion.Panel>
+      <Accordion.Panel>Solid Base is a library of unstyled Solid components.</Accordion.Panel>
     </Accordion.Item>
   </Accordion.Root>
 );

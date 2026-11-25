@@ -1,12 +1,12 @@
 ---
 title: Quick start
-description: A quick guide to getting started with solid-base.
+description: A quick guide to getting started with Solid Base.
 order: 2
 ---
 
 ## Install the library
 
-Install solid-base and its Solid peer dependencies with a package manager.
+Install Solid Base and its Solid peer dependencies with a package manager.
 
 ```sh title="Terminal"
 # bun

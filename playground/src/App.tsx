@@ -40,7 +40,7 @@ export function App() {
   return (
     <div class="layout">
       <nav class="sidebar">
-        <h1 class="brand">solid-base</h1>
+        <h1 class="brand">Solid Base</h1>
         <p class="tagline">Base UI for Solid 2</p>
         <ul>
           <For each={demos}>

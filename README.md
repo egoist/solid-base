@@ -1,4 +1,4 @@
-# solid-base
+# Solid Base
 
 Unstyled, accessible UI components for **SolidJS 2** — a faithful port of
 [Base UI](https://base-ui.com) (`@base-ui/react`).

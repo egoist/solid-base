@@ -12,9 +12,9 @@ export function Header() {
     <header class="site-header">
       <div class="site-header-inner">
         <MobileNav />
-        <Link to="/" class="wordmark" aria-label="solid-base home">
+        <Link to="/" class="wordmark" aria-label="Solid Base home">
           <span class="wordmark-mark" aria-hidden="true" />
-          <span class="wordmark-text">solid-base</span>
+          <span class="wordmark-text">Solid Base</span>
         </Link>
         <nav class="site-nav" aria-label="Main">
           <DocLink route="/overview/quick-start">Guide</DocLink>

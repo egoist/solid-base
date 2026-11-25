@@ -1,6 +1,6 @@
 ---
 title: CSP Provider
-description: Configures CSP-related behavior for inline tags rendered by solid-base components.
+description: Configures CSP-related behavior for inline tags rendered by Solid Base components.
 ---
 
 ## Anatomy

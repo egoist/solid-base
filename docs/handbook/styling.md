@@ -1,6 +1,6 @@
 ---
 title: Styling
-description: A guide to styling solid-base components with your preferred styling engine.
+description: A guide to styling Solid Base components with your preferred styling engine.
 order: 1
 ---
 

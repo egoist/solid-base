@@ -1,6 +1,6 @@
 ---
 title: Animation
-description: A guide to animating solid-base components.
+description: A guide to animating Solid Base components.
 order: 2
 ---
 

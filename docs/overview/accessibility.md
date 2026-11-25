@@ -1,6 +1,6 @@
 ---
 title: Accessibility
-description: Learn how to make the most of solid-base's accessibility features and guidelines.
+description: Learn how to make the most of Solid Base's accessibility features and guidelines.
 order: 3
 ---
 

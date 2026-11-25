@@ -184,7 +184,7 @@ export function Home() {
         </div>
         <div class="footer-bottom">
           MIT licensed. A port of Base UI by the MUI team.{' '}
-          <Link to="/">solid-base</Link>
+          <Link to="/">Solid Base</Link>
         </div>
       </footer>
     </main>

@@ -1,6 +1,6 @@
 ---
 title: TypeScript
-description: A guide to using TypeScript with solid-base.
+description: A guide to using TypeScript with Solid Base.
 order: 6
 ---
 
