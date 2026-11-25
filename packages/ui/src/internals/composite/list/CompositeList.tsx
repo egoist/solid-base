@@ -245,25 +245,26 @@ export function useCompositeListItem<Metadata>(
   params: UseCompositeListItemParameters<Metadata> = {},
 ): UseCompositeListItemReturnValue {
   const list = params.list ?? useCompositeListContext<Metadata>();
-  const [element, setElement] = createSignal<HTMLElement | null>(null);
+  // A plain variable: the ref runs inside the effect that applies the element's props, which
+  // reads `index()`. The list publishes the registration in its own (microtask) update, so
+  // `index()` still updates without the ref writing a signal its own effect depends on.
+  let element: HTMLElement | null = null;
 
   onCleanup(() => {
-    const current = untrack(element);
-    if (current) {
-      list?.unregister(current);
+    if (element) {
+      list?.unregister(element);
     }
   });
 
   return {
     ref(node) {
-      const previous = untrack(element);
-      if (previous === node) {
+      if (element === node) {
         return;
       }
-      if (previous) {
-        list?.unregister(previous);
+      if (element) {
+        list?.unregister(element);
       }
-      setElement(node);
+      element = node;
       list?.register(node, {
         metadata: params.metadata,
         index: params.index,
@@ -275,7 +276,12 @@ export function useCompositeListItem<Metadata>(
       if (explicit != null) {
         return explicit;
       }
-      return list?.indexOf(element()) ?? -1;
+      if (!list) {
+        return -1;
+      }
+      // Track the list, then look the element up.
+      const map = list.map();
+      return element ? (map.get(element)?.index ?? -1) : -1;
     },
   };
 }

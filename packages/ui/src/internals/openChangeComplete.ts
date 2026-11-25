@@ -23,13 +23,15 @@ export interface CreateOpenChangeCompleteParameters {
 
 /**
  * Calls `onComplete` when the open/close animation of an element completes.
- * Restarts whenever `open`, `enabled` or the element change.
+ * Restarts whenever `open` or `enabled` change.
  */
 export function createOpenChangeComplete(parameters: CreateOpenChangeCompleteParameters) {
   const runOnceAnimationsFinish = createAnimationsFinished(parameters.element, parameters.open);
 
+  // Like upstream, the element is read when the wait starts, not tracked: tracking it would make
+  // the effect re-run when `onComplete` unmounts the element (a write feeding its own input).
   createEffect(
-    () => [parameters.enabled?.() ?? true, parameters.open(), parameters.element()] as const,
+    () => [parameters.enabled?.() ?? true, parameters.open()] as const,
     ([enabled]) => {
       if (!enabled) {
         return undefined;
