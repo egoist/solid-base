@@ -152,9 +152,9 @@ export function MenuComponent(props: MenuProps) {
     };
   });
 
-  // Stands in for `<FloatingFocusManager modal={false} initialFocus={!isNested}>`: the root menu
-  // focuses its popup when it opens. TODO: use FloatingFocusManager once it no longer reports
-  // STRICT_READ_UNTRACKED (it reads the tree nodes' live `domReference` in an effect callback).
+  // Stands in for `<FloatingFocusManager modal={false} initialFocus={!isNested}>`: these list
+  // navigation tests only depend on the root menu focusing its popup when it opens, and leave
+  // return focus to the list navigation itself.
   createEffect(
     () => isOpen() && store.select('positionerElement'),
     (floating) => {
