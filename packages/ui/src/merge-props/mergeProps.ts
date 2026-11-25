@@ -1,3 +1,4 @@
+import { untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { applyRef } from '@egoist/solid-base-utils/refs';
 import type { BaseUIEvent } from '../types';
@@ -132,9 +133,13 @@ export function createMergedView(
       return handler;
     }
 
+    // `children` never comes from a dynamic key set (`merge(() => ...)`): checking which source
+    // provides it untracked keeps a source gaining or losing an unrelated key (such as
+    // `aria-invalid`) from re-reading `children`, which would recreate JSX children.
+    const isChildren = key === 'children';
     for (let i = sources.length - 1; i >= 0; i -= 1) {
       const source = sources[i];
-      if (key in source) {
+      if (isChildren ? untrack(() => key in source) : key in source) {
         const value = source[key];
         if (typeof value === 'boolean' && key.startsWith('aria-')) {
           return value ? 'true' : 'false';

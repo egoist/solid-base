@@ -1,0 +1,260 @@
+import { createEffect, createSignal, onCleanup } from 'solid-js';
+import { addEventListener } from '@egoist/solid-base-utils/addEventListener';
+import { contains, getTarget } from '@egoist/solid-base-utils/shadowDom';
+import { getWindow } from '@floating-ui/utils/dom';
+import type { HTMLProps } from '../../../internals/types';
+import type { ElementProps, PopupInteractionContext, PopupInteractionStore } from '../types';
+import { isMouseLikePointerType } from '../event';
+
+function createVirtualElement(
+  domElement: Element | null | undefined,
+  data: {
+    axis: 'x' | 'y' | 'both';
+    storeContext: Pick<PopupInteractionContext, 'openEvent'>;
+    pointerType: string | undefined;
+    x: number | null;
+    y: number | null;
+  },
+) {
+  let offsetX: number | null = null;
+  let offsetY: number | null = null;
+  let isAutoUpdateEvent = false;
+
+  return {
+    contextElement: domElement || undefined,
+    getBoundingClientRect() {
+      const domRect = domElement?.getBoundingClientRect() || {
+        width: 0,
+        height: 0,
+        x: 0,
+        y: 0,
+      };
+
+      const isXAxis = data.axis === 'x' || data.axis === 'both';
+      const isYAxis = data.axis === 'y' || data.axis === 'both';
+      const canTrackCursorOnAutoUpdate =
+        ['mouseenter', 'mousemove'].includes(data.storeContext.openEvent?.type || '') &&
+        data.pointerType !== 'touch';
+
+      const width = data.axis === 'y' ? domRect.width : 0;
+      const height = data.axis === 'x' ? domRect.height : 0;
+      let x = domRect.x;
+      let y = domRect.y;
+
+      if (offsetX == null && data.x && isXAxis) {
+        offsetX = domRect.x - data.x;
+      }
+
+      if (offsetY == null && data.y && isYAxis) {
+        offsetY = domRect.y - data.y;
+      }
+
+      x -= offsetX || 0;
+      y -= offsetY || 0;
+
+      if (!isAutoUpdateEvent || canTrackCursorOnAutoUpdate) {
+        x = isXAxis && data.x != null ? data.x : x;
+        y = isYAxis && data.y != null ? data.y : y;
+      }
+
+      isAutoUpdateEvent = true;
+
+      return {
+        width,
+        height,
+        x,
+        y,
+        top: y,
+        right: x + width,
+        bottom: y + height,
+        left: x,
+      };
+    },
+  };
+}
+
+function isMouseBasedEvent(event: Event | undefined): event is MouseEvent {
+  return event != null && (event as MouseEvent).clientX != null;
+}
+
+export interface CreateClientPointOptions {
+  /**
+   * Whether the interaction is enabled, including all internal effects and event
+   * handlers.
+   * @default true
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Whether to restrict the client point to an axis and use the reference
+   * element (if it exists) as the other axis. This can be useful if the
+   * floating element is also interactive.
+   * @default 'both'
+   */
+  axis?: 'x' | 'y' | 'both' | undefined;
+}
+
+/**
+ * Positions the floating element relative to a client point (in the viewport),
+ * such as the mouse position. By default, it follows the mouse cursor.
+ *
+ * Options are read lazily: pass getters for reactive values. The returned props are created once;
+ * their handlers do nothing while the interaction is disabled.
+ * @see https://floating-ui.com/docs/useClientPoint
+ */
+export function createClientPoint(
+  store: PopupInteractionStore,
+  options: CreateClientPointOptions = {},
+): ElementProps {
+  const enabled = () => options.enabled ?? true;
+  const axis = () => options.axis ?? 'both';
+
+  const storeContext = store.context;
+
+  let initial = false;
+  let cleanupListener: null | (() => void) = null;
+
+  // `pointerType` is read by the handlers (latest value) and by the listener effect (signal).
+  let pointerTypeValue: string | undefined;
+  const [pointerType, setPointerType] = createSignal<string | undefined>(undefined, {
+    ownedWrite: true,
+  });
+  // Bumped to re-run the listener effect, like a React state update.
+  const [reactive, setReactive] = createSignal(0, { ownedWrite: true });
+
+  function resetReference(reference: Element | null) {
+    store.set('anchorOverride', reference);
+  }
+
+  function setReference(newX: number | null, newY: number | null, referenceElement?: Element | null) {
+    if (initial) {
+      return;
+    }
+
+    // Prevent setting if the open event was not a mouse-like one
+    // (e.g. focus to open, then hover over the reference element).
+    // Only apply if the event exists.
+    if (storeContext.openEvent && !isMouseBasedEvent(storeContext.openEvent)) {
+      return;
+    }
+
+    store.set(
+      'anchorOverride',
+      createVirtualElement(referenceElement ?? store.select('anchorElement'), {
+        x: newX,
+        y: newY,
+        axis: axis(),
+        storeContext,
+        pointerType: pointerTypeValue,
+      }),
+    );
+  }
+
+  function handleReferenceEnterOrMove(event: MouseEvent) {
+    if (!enabled()) {
+      return;
+    }
+    if (!store.select('open')) {
+      setReference(event.clientX, event.clientY, event.currentTarget as Element);
+    } else if (!cleanupListener) {
+      // If there's no cleanup, there's no listener, but we want to ensure
+      // we add the listener if the cursor landed on the floating element and
+      // then back on the reference (i.e. it's interactive).
+      setReference(event.clientX, event.clientY, event.currentTarget as Element);
+      setReactive((value) => value + 1);
+    }
+  }
+
+  function clearListener() {
+    cleanupListener?.();
+    cleanupListener = null;
+  }
+
+  createEffect(
+    () => {
+      const floating = store.select('positionerElement');
+      // If the pointer is a mouse-like pointer, we want to continue following the
+      // mouse even if the floating element is transitioning out. On touch
+      // devices, this is undesirable because the floating element will move to
+      // the dismissal touch point.
+      const openCheck = isMouseLikePointerType(pointerType()) ? floating : store.select('open');
+      return {
+        enabled: enabled(),
+        openCheck: Boolean(openCheck),
+        floating,
+        domReference: store.select('anchorElement'),
+        reactive: reactive(),
+      };
+    },
+    ({ enabled: isEnabled, openCheck, floating, domReference }) => {
+      if (!isEnabled) {
+        resetReference(domReference);
+        return undefined;
+      }
+
+      if (!openCheck) {
+        return undefined;
+      }
+
+      const win = getWindow(floating);
+
+      function handleMouseMove(event: MouseEvent) {
+        const target = getTarget(event) as Element | null;
+
+        if (!contains(floating, target)) {
+          setReference(event.clientX, event.clientY);
+        } else {
+          clearListener();
+        }
+      }
+
+      if (!storeContext.openEvent || isMouseBasedEvent(storeContext.openEvent)) {
+        cleanupListener = addEventListener(win, 'mousemove', handleMouseMove);
+      } else {
+        resetReference(domReference);
+      }
+
+      return clearListener;
+    },
+  );
+
+  // Clear virtual cursor references when the interaction is disposed. Enabled flips are handled
+  // above.
+  onCleanup(() => {
+    store.set('anchorOverride', null);
+  });
+
+  createEffect(
+    () => enabled() && !store.select('positionerElement'),
+    (shouldReset) => {
+      if (shouldReset) {
+        initial = false;
+      }
+    },
+  );
+
+  createEffect(
+    () => !enabled() && store.select('open'),
+    (shouldLock) => {
+      if (shouldLock) {
+        initial = true;
+      }
+    },
+  );
+
+  function setPointerTypeFromEvent(event: PointerEvent) {
+    if (!enabled()) {
+      return;
+    }
+    pointerTypeValue = event.pointerType;
+    setPointerType(event.pointerType);
+  }
+
+  const reference: HTMLProps = {
+    onPointerDown: setPointerTypeFromEvent,
+    onPointerEnter: setPointerTypeFromEvent,
+    onMouseMove: handleReferenceEnterOrMove,
+    onMouseEnter: handleReferenceEnterOrMove,
+  };
+
+  return { reference, trigger: reference };
+}
