@@ -131,7 +131,7 @@ export interface FloatingPortalProps extends BaseUIComponentProps<'div', Floatin
  */
 function renderPortalNode(
   componentProps: FloatingPortalProps,
-  children: () => JSX.Element,
+  children: (portalNode: Accessor<HTMLElement | null>) => JSX.Element,
 ): { element: JSX.Element; portalNode: Accessor<HTMLElement | null>; portalNodeId: Accessor<string> } {
   const container = createPortalContainer(() => componentProps.container);
   const [portalNode, setPortalNode] = createSignal<HTMLElement | null>(null, { ownedWrite: true });
@@ -152,7 +152,7 @@ function renderPortalNode(
   const element = (
     <Show when={container()}>
       {(mount) => {
-        const content = children();
+        const content = children(portalNode);
         return (
           <Portal mount={mount() as HTMLElement}>
             {renderElement('div', componentProps, {
@@ -194,18 +194,16 @@ export function FloatingPortal(componentProps: FloatingPortalProps): JSX.Element
     afterOutside: null,
   };
 
-  let portalNodeAccessor: Accessor<HTMLElement | null> = () => null;
-
-  const contextValue: PortalContextValue = {
-    portalNode: () => portalNodeAccessor(),
-    setFocusManagerState: (state) => setFocusManagerState(() => state),
-    guards,
-  };
-
-  const { element, portalNode, portalNodeId } = renderPortalNode(componentProps, () => (
-    <PortalContext value={contextValue}>{componentProps.children}</PortalContext>
-  ));
-  portalNodeAccessor = portalNode;
+  // The children are created before `renderPortalNode` returns, so the context reads the node
+  // accessor it receives: nested portals must track it to move into the node once it renders.
+  const { element, portalNode, portalNodeId } = renderPortalNode(componentProps, (node) => {
+    const contextValue: PortalContextValue = {
+      portalNode: node,
+      setFocusManagerState: (state) => setFocusManagerState(() => state),
+      guards,
+    };
+    return <PortalContext value={contextValue}>{componentProps.children}</PortalContext>;
+  });
 
   let focusInsideDisabled = false;
 

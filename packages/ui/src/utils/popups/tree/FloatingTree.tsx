@@ -1,4 +1,4 @@
-import { createContext, createUniqueId, onCleanup, untrack, useContext } from 'solid-js';
+import { createContext, createEffect, createUniqueId, onCleanup, untrack, useContext } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import type { FloatingNodeType, FloatingTreeType } from '../types';
 import { FloatingTreeStore } from './FloatingTreeStore';
@@ -17,6 +17,15 @@ export function useFloatingParentNodeId(): string | null {
 }
 
 /**
+ * Like `useFloatingParentNodeId`, but returns an accessor that follows the parent node's id
+ * (a popup with detached triggers moves to the active trigger's node while it's open).
+ */
+export function useFloatingParentNodeIdAccessor(): () => string | null {
+  const context = useContext(FloatingNodeContext);
+  return () => context?.id || null;
+}
+
+/**
  * Returns the nearest floating tree, if available.
  */
 export function useFloatingTree(externalTree?: FloatingTreeStore): FloatingTreeType | null {
@@ -28,13 +37,45 @@ export function useFloatingTree(externalTree?: FloatingTreeStore): FloatingTreeT
  * Registers a node into the `FloatingTree` for the lifetime of the owner, returning its id.
  * Positioning (`createFloating`) attaches the popup's positioning context to the node.
  */
-export function createFloatingNodeId(externalTree?: FloatingTreeStore): string {
+export function createFloatingNodeId(
+  externalTree?: FloatingTreeStore | (() => FloatingTreeStore | undefined),
+): string {
   const id = createUniqueId();
+  const parentId = useFloatingParentNodeIdAccessor();
+
+  // A tree accessor moves the node to the current tree, like upstream's re-registration when the
+  // `tree` dependency changes (a submenu follows its parent menu to a detached trigger's tree).
+  if (typeof externalTree === 'function') {
+    const contextTree = useFloatingTree();
+    const node: FloatingNodeType = {
+      id,
+      get parentId() {
+        return parentId();
+      },
+    };
+    createEffect(
+      () => externalTree() ?? contextTree,
+      (currentTree) => {
+        if (!currentTree) {
+          return undefined;
+        }
+        currentTree.addNode(node);
+        return () => currentTree.removeNode(node);
+      },
+    );
+    return id;
+  }
+
   const tree = useFloatingTree(externalTree);
-  const parentId = useFloatingParentNodeId();
 
   if (tree) {
-    const node: FloatingNodeType = { id, parentId };
+    // The parent id is live: upstream re-registers the node whenever its parent id changes.
+    const node: FloatingNodeType = {
+      id,
+      get parentId() {
+        return parentId();
+      },
+    };
     tree.addNode(node);
     onCleanup(() => tree.removeNode(node));
   }

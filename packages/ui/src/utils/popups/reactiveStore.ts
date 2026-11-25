@@ -224,7 +224,8 @@ export class ReactiveStore<
   private snapshot(): State {
     const result: Record<PropertyKey, any> = { ...this.values };
     this.bindings.forEach((binding, key) => {
-      result[key] = untrack(binding);
+      // Without an owner, like the untracked reads in the constructor.
+      result[key] = untrack(() => runWithOwner(null, binding));
     });
     return result as State;
   }

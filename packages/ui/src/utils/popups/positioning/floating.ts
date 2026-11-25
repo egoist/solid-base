@@ -1,4 +1,4 @@
-import { createEffect, createSignal, flush, onCleanup, untrack } from 'solid-js';
+import { createEffect, createSignal, flush, getObserver, onCleanup, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { computePosition } from '@floating-ui/dom';
 import type {
@@ -288,12 +288,14 @@ export function createFloating(options: CreateFloatingOptions): CreateFloatingRe
     setPositionReference,
   };
 
+  // Like `store.select`, reads outside a tracking scope (e.g. focus checks in effect cleanups that
+  // walk the floating tree) are intentional snapshots.
   const elements: ExtendedElements = {
     get reference() {
-      return referenceEl();
+      return getObserver() ? referenceEl() : untrack(referenceEl);
     },
     get floating() {
-      return floatingEl();
+      return getObserver() ? floatingEl() : untrack(floatingEl);
     },
     get domReference() {
       return store.select('anchorElement');

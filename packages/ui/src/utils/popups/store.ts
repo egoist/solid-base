@@ -178,7 +178,10 @@ const activeTriggerElementSelector = (state: S) =>
   state.mounted ? state.activeTriggerElement : null;
 
 const popupIdSelector = (state: S) => {
-  const popupId = state.popupElement?.id || state.defaultPopupId;
+  // The element's id isn't reactive: always read (and track) the default id, which a popup that
+  // overrides its id updates, so removing the override recomputes from the element.
+  const defaultPopupId = state.defaultPopupId;
+  const popupId = state.popupElement?.id || defaultPopupId;
   return popupId || undefined;
 };
 
