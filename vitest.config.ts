@@ -4,7 +4,7 @@ import solid from '@solidjs/vite-plugin';
 export default defineConfig({
   plugins: [solid()],
   resolve: {
-    conditions: ['browser', 'development'],
+    conditions: ['source', 'browser', 'development'],
   },
   test: {
     environment: 'jsdom',

@@ -3,7 +3,11 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
     "strict": true,
@@ -15,6 +19,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"]
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
+    "customConditions": [
+      "source"
+    ]
   }
 }

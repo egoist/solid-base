@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist/source",
+    "declarationDir": "dist/types",
+    "rootDir": "src",
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.tsx", "src/**/*.test.ts", "src/**/*.spec.tsx", "src/**/*.spec.ts"]
+}

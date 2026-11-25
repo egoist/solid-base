@@ -6,8 +6,17 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./platform": "./src/platform/index.ts",
-    "./*": "./src/*.ts"
+    "./platform": {
+      "source": "./src/platform/index.ts",
+      "types": "./dist/platform/index.d.ts",
+      "default": "./dist/platform/index.js"
+    },
+    "./*": {
+      "source": "./src/*.ts",
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
   },
   "dependencies": {
     "@floating-ui/utils": "^0.2.12",
@@ -16,5 +25,13 @@
   "peerDependencies": {
     "solid-js": "^2.0.0",
     "@solidjs/web": "^2.0.0"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.*"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json"
   }
 }
