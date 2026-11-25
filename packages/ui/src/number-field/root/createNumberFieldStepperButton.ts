@@ -1,0 +1,200 @@
+import { flush, merge, omit } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import type { BaseUIComponentProps, HTMLProps, NativeButtonProps } from '../../internals/types';
+import { renderElement } from '../../internals/renderElement';
+import { createButton } from '../../internals/use-button/createButton';
+import { isTouchLikePointerType, createPressAndHold } from '../../internals/pressAndHold';
+import { parseNumber } from '../utils/parse';
+import {
+  createChangeEventDetails,
+  createGenericEventDetails,
+} from '../../internals/createBaseUIEventDetails';
+import type { EventWithOptionalKeyState } from '../utils/types';
+import type { NumberFieldRoot, NumberFieldRootState } from './NumberFieldRoot';
+import { REASONS } from '../../internals/reasons';
+import { useNumberFieldRootContext } from './NumberFieldRootContext';
+import { stateAttributesMapping } from '../utils/stateAttributesMapping';
+
+const SELECT_NONE_STYLE: JSX.CSSProperties = {
+  '-webkit-user-select': 'none',
+  'user-select': 'none',
+};
+
+type StepperButtonProps = NativeButtonProps & BaseUIComponentProps<'button', NumberFieldRootState>;
+
+/**
+ * Shared implementation for the increment and decrement stepper buttons. They differ only in the
+ * direction they step and the boundary (`max` vs `min`) at which they become disabled.
+ */
+export function createNumberFieldStepperButton(
+  componentProps: StepperButtonProps,
+  isIncrement: boolean,
+): JSX.Element {
+  const elementProps = omit(
+    componentProps,
+    'render',
+    'class',
+    'style',
+    'disabled',
+    'nativeButton',
+  );
+
+  const {
+    allowInputSyncRef,
+    formatOptions,
+    getStepAmount,
+    id,
+    incrementValue,
+    inputRef,
+    focusInput,
+    maxWithDefault,
+    minWithDefault,
+    setValue,
+    state,
+    valueRef,
+    locale,
+    lastChangedValueRef,
+    onValueCommitted,
+  } = useNumberFieldRootContext();
+
+  const readOnly = () => state.readOnly;
+  const isAtBoundary = () => {
+    const value = state.value;
+    return value != null && (isIncrement ? value >= maxWithDefault() : value <= minWithDefault());
+  };
+  const disabled = () => (componentProps.disabled ?? false) || state.disabled || isAtBoundary();
+
+  const pressReason: NumberFieldRoot.ChangeEventReason = isIncrement
+    ? REASONS.incrementPress
+    : REASONS.decrementPress;
+
+  function commitValue(nativeEvent: MouseEvent) {
+    const shouldCommitInputValue = !allowInputSyncRef.current;
+    allowInputSyncRef.current = true;
+
+    if (!shouldCommitInputValue) {
+      // The input is already synced, so step from the authoritative numeric value rather than
+      // re-parsing the rounded display text. Refresh the commit ref to the current value so a
+      // subsequent canceled step can't commit a stale `lastChangedValueRef` left over from an
+      // earlier change.
+      lastChangedValueRef.current = valueRef.current;
+      return;
+    }
+
+    // The input is dirty but not yet blurred, so the value won't have been committed.
+    const parsedValue = parseNumber(state.inputValue, locale(), formatOptions());
+    if (parsedValue !== null) {
+      // Sync the dirty typed value with no direction so it isn't directionally snapped
+      // (`snapOnStep`) before the real increment/decrement runs, which would otherwise emit a
+      // spurious intermediate value.
+      const details = createChangeEventDetails(pressReason, nativeEvent);
+      setValue(parsedValue, details);
+      // Only sync the ref base when the commit wasn't canceled, so a subsequent increment in the
+      // same interaction steps from the value actually applied.
+      if (!details.isCanceled) {
+        valueRef.current = parsedValue;
+      }
+    }
+  }
+
+  const { pointerHandlers, shouldSkipClick } = createPressAndHold({
+    disabled: () => disabled() || readOnly(),
+    elementRef: inputRef,
+    tick(triggerEvent) {
+      // Repeat ticks run from timers: apply the previous tick's update first so `valueRef` is
+      // current (React re-renders between ticks).
+      flush();
+      const amount = getStepAmount(triggerEvent as EventWithOptionalKeyState);
+      return incrementValue(amount, {
+        direction: isIncrement ? 1 : -1,
+        event: triggerEvent,
+        reason: pressReason,
+      });
+    },
+    onStop(nativeEvent: PointerEvent) {
+      // `onStop` fires on every release; fall back to the current value when no tick changed it.
+      // Step interactions never commit `null`, so the `??` can't mask a legitimate null commit.
+      const committed = lastChangedValueRef.current ?? valueRef.current;
+      onValueCommitted(committed, createGenericEventDetails(pressReason, nativeEvent));
+    },
+  });
+
+  const props: HTMLProps = {
+    get disabled() {
+      return disabled();
+    },
+    'aria-label': isIncrement ? 'Increase' : 'Decrease',
+    get 'aria-controls'() {
+      return id();
+    },
+    // Keyboard users shouldn't have access to the buttons, since they can use the input element
+    // to change the value. On the other hand, `aria-hidden` is not applied because touch screen
+    // readers should be able to use the buttons.
+    tabindex: -1,
+    style: SELECT_NONE_STYLE,
+    ...pointerHandlers,
+    onClick(event: MouseEvent) {
+      const isDisabled = disabled() || readOnly();
+      if (event.defaultPrevented || isDisabled || shouldSkipClick(event)) {
+        return;
+      }
+
+      commitValue(event);
+
+      const amount = getStepAmount(event);
+      const prev = valueRef.current;
+
+      incrementValue(amount, {
+        direction: isIncrement ? 1 : -1,
+        event,
+        reason: pressReason,
+      });
+
+      const committed = lastChangedValueRef.current ?? valueRef.current;
+      if (committed !== prev) {
+        onValueCommitted(committed, createGenericEventDetails(pressReason, event));
+      }
+    },
+    onPointerDown(event: PointerEvent) {
+      if (event.defaultPrevented || readOnly() || event.button || disabled()) {
+        return;
+      }
+
+      // Sync dirty input value before starting the hold sequence.
+      commitValue(event);
+
+      // Treat `lastChangedValueRef` as a per-hold result slot. If the first tick is a no-op or is
+      // canceled, `onStop` should fall back to the current value, not a previous interaction.
+      lastChangedValueRef.current = null;
+
+      if (!isTouchLikePointerType(event.pointerType)) {
+        // Focus the input so the user can continue with keyboard interactions.
+        focusInput();
+      }
+
+      pointerHandlers.onPointerDown(event);
+    },
+  };
+
+  const { getButtonProps, buttonRef } = createButton({
+    // Read-only steppers are exposed as unavailable through button disabled semantics, while
+    // `data-readonly` (from `state`) is preserved for styling. `aria-readonly` isn't valid on the
+    // `button` role, so it's intentionally not set.
+    disabled: () => disabled() || readOnly(),
+    native: () => componentProps.nativeButton ?? true,
+    focusableWhenDisabled: () => true,
+  });
+
+  const buttonState: NumberFieldRootState = merge(state, {
+    get disabled() {
+      return disabled();
+    },
+  });
+
+  return renderElement('button', componentProps, {
+    ref: buttonRef,
+    state: buttonState,
+    props: [props, elementProps, getButtonProps],
+    stateAttributesMapping,
+  });
+}

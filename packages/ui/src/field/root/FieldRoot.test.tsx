@@ -8,6 +8,8 @@ import { CheckboxGroup } from '../../checkbox-group';
 import { Radio } from '../../radio';
 import { RadioGroup } from '../../radio-group';
 import { Switch } from '../../switch';
+import { NumberField } from '../../number-field';
+import { Slider } from '../../slider';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import {
   extendFieldRootState,
@@ -796,7 +798,7 @@ describe('<Field.Root />', () => {
     });
 
     it('receives all form values as the 2nd argument', () => {
-      // Reduced to the ported controls (upstream also covers NumberField, Select and Slider).
+      // Reduced to the ported controls (upstream also covers Select).
       const validateSpy = vi.fn();
       const onSubmit = vi.fn(preventDefault);
 
@@ -832,6 +834,21 @@ describe('<Field.Root />', () => {
           <Field.Root name="toggle">
             <Toggle defaultChecked />
           </Field.Root>
+          <Field.Root name="number-field">
+            <NumberField.Root defaultValue={13}>
+              <NumberField.Input />
+            </NumberField.Root>
+          </Field.Root>
+          <Field.Root name="slider">
+            <Slider.Root defaultValue={12}>
+              <Slider.Control />
+            </Slider.Root>
+          </Field.Root>
+          <Field.Root name="range-slider">
+            <Slider.Root defaultValue={[25, 70]}>
+              <Slider.Control />
+            </Slider.Root>
+          </Field.Root>
           <button type="submit">submit</button>
         </Form>
       ));
@@ -847,6 +864,9 @@ describe('<Field.Root />', () => {
         input: 'https://base-ui.com',
         other: 'value',
         toggle: true,
+        'number-field': 13,
+        slider: 12,
+        'range-slider': [25, 70],
       });
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
@@ -890,15 +910,17 @@ describe('<Field.Root />', () => {
     });
 
     it('submits the replacement control value when swapping field-aware controls', () => {
-      // Upstream swaps Select for Slider; this uses Field.Control and the test Toggle.
+      // Upstream swaps Select for Slider; Field.Control stands in for Select.
       const handleSubmit = vi.fn();
-      const [showToggle, setShowToggle] = createSignal(false);
+      const [showSlider, setShowSlider] = createSignal(false);
 
       render(() => (
         <Form onFormSubmit={handleSubmit}>
           <Field.Root name="value">
-            <Show when={showToggle()} fallback={<Field.Control defaultValue="sans" />}>
-              <Toggle defaultChecked />
+            <Show when={showSlider()} fallback={<Field.Control defaultValue="sans" />}>
+              <Slider.Root defaultValue={12}>
+                <Slider.Control />
+              </Slider.Root>
             </Show>
           </Field.Root>
           <button type="submit">submit</button>
@@ -910,12 +932,12 @@ describe('<Field.Root />', () => {
       expect(handleSubmit).toHaveBeenCalledTimes(1);
       expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: 'sans' });
 
-      setShowToggle(true);
+      setShowSlider(true);
       flush();
       click(screen.getByText('submit'));
 
       expect(handleSubmit).toHaveBeenCalledTimes(2);
-      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: true });
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: 12 });
     });
 
     it('excludes registration-gated controls from onFormSubmit when their field name is removed', () => {
@@ -1032,8 +1054,34 @@ describe('<Field.Root />', () => {
       expect(screen.getByTestId('default-error')).toHaveTextContent('Email is already taken');
     });
 
-    // Skipped: 'updates field-aware control name fallbacks when the name changes'
-    // (NumberField not ported).
+    it('updates field-aware control name fallbacks when the name changes', () => {
+      const handleSubmit = vi.fn();
+      const [name, setName] = createSignal<string | undefined>('quantity');
+
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root>
+            <NumberField.Root name={name()} defaultValue={13}>
+              <NumberField.Input />
+            </NumberField.Root>
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ quantity: 13 });
+
+      setName('amount');
+      flush();
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ amount: 13 });
+
+      setName(undefined);
+      flush();
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({});
+    });
   });
 
   describe('prop: validationMode', () => {
@@ -2154,11 +2202,60 @@ describe('<Field.Root />', () => {
       expect(root).toHaveAttribute('data-dirty', '');
     });
 
-    // Skipped: dirty tests for NumberField / Select (not ported).
+    it('should clear [data-dirty] when a null-valued control returns to its empty initial value', async () => {
+      render(() => (
+        <Field.Root data-testid="root">
+          <NumberField.Root>
+            <NumberField.Input data-testid="control" />
+          </NumberField.Root>
+        </Field.Root>
+      ));
+
+      const root = screen.getByTestId('root');
+      const control = screen.getByTestId('control');
+
+      expect(root).not.toHaveAttribute('data-dirty');
+
+      change(control, '5');
+      await waitFor(() => {
+        expect(root).toHaveAttribute('data-dirty', '');
+      });
+
+      change(control, '');
+      await waitFor(() => {
+        expect(root).not.toHaveAttribute('data-dirty');
+      });
+    });
+
+    // Skipped: dirty tests for Select (not ported).
 
     describe('control remount', () => {
-      // Skipped: 'clears dirty after an empty text control returns to empty following a
-      // null-valued control' and 'captures the baseline only once in StrictMode' (NumberField).
+      // Skipped: 'captures the baseline only once in StrictMode' (no StrictMode in Solid).
+
+      it('clears dirty after an empty text control returns to empty following a null-valued control', () => {
+        render(() => (
+          <SwappableField
+            data-testid="root"
+            firstControl={() => (
+              <NumberField.Root>
+                <NumberField.Input />
+              </NumberField.Root>
+            )}
+            secondControl={() => <Field.Control data-testid="control" defaultValue="" />}
+          />
+        ));
+        const root = screen.getByTestId('root');
+
+        click(screen.getByText('swap'));
+        const control = screen.getByTestId('control');
+        expect(root).not.toHaveAttribute('data-dirty');
+
+        change(control, 'x');
+        expect(root).toHaveAttribute('data-dirty', '');
+
+        change(control, '');
+        expect(root).not.toHaveAttribute('data-dirty');
+      });
 
       it('keeps the original baseline when a controlled control remounts', async () => {
         const [value, setValue] = createSignal('a');
