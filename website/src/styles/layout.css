@@ -52,11 +52,9 @@
 }
 
 .wordmark-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: var(--gradient);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 .wordmark-text {

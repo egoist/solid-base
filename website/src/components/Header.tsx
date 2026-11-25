@@ -4,6 +4,7 @@ import { DocLink } from './DocLink';
 import { ThemeSwitch } from './ThemeSwitch';
 import { MobileNav } from './MobileNav';
 import { GitHubIcon } from './icons';
+import { Logo } from './Logo';
 
 export const REPOSITORY_URL = 'https://github.com/egoist/solid-base';
 
@@ -13,7 +14,7 @@ export function Header() {
       <div class="site-header-inner">
         <MobileNav />
         <Link to="/" class="wordmark" aria-label="Solid Base home">
-          <span class="wordmark-mark" aria-hidden="true" />
+          <Logo class="wordmark-mark" />
           <span class="wordmark-text">Solid Base</span>
         </Link>
         <nav class="site-nav" aria-label="Main">
