@@ -1,0 +1,2371 @@
+import { createEffect, createSignal, flush, Show, untrack } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
+import { Field } from '..';
+import { Form } from '../../form';
+import { createRefObject } from '@egoist/solid-base-utils/refObject';
+import {
+  extendFieldRootState,
+  useFieldRootContext,
+} from '../../internals/field-root-context/FieldRootContext';
+import { createSetFieldFocused } from '../../internals/field-root-context/createSetFieldFocused';
+import { createRegisterFieldControl } from '../../internals/field-register-control/createRegisterFieldControl';
+import { useFormContext } from '../../internals/form-context/FormContext';
+import { useLabelableContext } from '../../internals/labelable-provider/LabelableContext';
+import { createLabelableId } from '../../internals/labelable-provider/createLabelableId';
+import { createAriaLabelledBy } from '../../internals/labelable-provider/createAriaLabelledBy';
+import { createBaseUiId } from '../../internals/baseUiId';
+import { fieldValidityMapping } from '../../internals/field-constants/constants';
+import { renderElement } from '../../internals/renderElement';
+import type { HTMLProps } from '../../internals/types';
+import type { FieldRoot } from './FieldRoot';
+
+async function flushMicrotasks() {
+  for (let i = 0; i < 5; i += 1) {
+    await Promise.resolve();
+  }
+  flush();
+}
+
+function change(element: Element, value: string) {
+  fireEvent.input(element, { target: { value } });
+  flush();
+}
+
+function focus(element: Element) {
+  fireEvent.focus(element);
+  flush();
+}
+
+function blur(element: Element) {
+  fireEvent.blur(element);
+  flush();
+}
+
+function click(element: Element) {
+  fireEvent.click(element);
+  flush();
+}
+
+const preventDefault = (event: Event) => event.preventDefault();
+
+/**
+ * A minimal field-aware control built with the internal control-author API, the same way
+ * Switch/Checkbox are ported: a `role="switch"` span with a hidden checkbox input.
+ */
+function Toggle(props: { name?: string; defaultChecked?: boolean; 'data-testid'?: string }) {
+  const field = useFieldRootContext();
+  const { validation } = field;
+  const form = useFormContext();
+  const { labelId } = useLabelableContext();
+
+  const disabled = () => field.disabled() ?? false;
+  // `default*` props are read once by contract.
+  const [checked, setChecked] = createSignal(untrack(() => props.defaultChecked ?? false));
+
+  const id = createBaseUiId();
+  const controlId = createLabelableId();
+  const rootRef = createRefObject<HTMLElement | null>(null);
+  let inputElement: HTMLInputElement | null = null;
+
+  createRegisterFieldControl({
+    controlRef: rootRef,
+    id,
+    value: checked,
+    enabled: () => !disabled(),
+    name: () => props.name,
+  });
+
+  createEffect(checked, field.setFilled);
+
+  createEffect(
+    checked,
+    (value) => {
+      untrack(() => {
+        form.clearErrors(field.name() ?? props.name);
+        field.setDirty(value !== field.validityData().initialValue);
+      });
+      validation.change(value);
+    },
+    { defer: true },
+  );
+
+  const setFocused = createSetFieldFocused(disabled, () => rootRef.current);
+
+  const ariaLabelledBy = createAriaLabelledBy({
+    labelId,
+    labelSource: () => inputElement,
+    labelSourceId: controlId,
+  });
+
+  const state = extendFieldRootState(field.state, {
+    get checked() {
+      return checked();
+    },
+  });
+
+  return (
+    <>
+      {renderElement('span', {} as { class?: undefined }, {
+        state,
+        ref: (element: HTMLElement) => {
+          rootRef.current = element;
+        },
+        stateAttributesMapping: fieldValidityMapping,
+        props: [
+          {
+            get id() {
+              return id();
+            },
+            role: 'switch',
+            tabindex: 0,
+            get 'data-testid'() {
+              return props['data-testid'];
+            },
+            get 'aria-checked'() {
+              return checked();
+            },
+            get 'aria-labelledby'() {
+              return ariaLabelledBy();
+            },
+            onClick() {
+              if (!disabled()) {
+                setChecked((prev) => !prev);
+              }
+            },
+            onFocus() {
+              setFocused(true);
+            },
+            onBlur() {
+              field.setTouched(true);
+              setFocused(false);
+              if (field.validationMode() === 'onBlur') {
+                validation.commit(checked());
+              }
+            },
+          },
+          (merged: HTMLProps) => validation.getValidationProps(disabled, merged),
+        ],
+      })}
+      <input
+        type="checkbox"
+        aria-hidden="true"
+        tabindex={-1}
+        id={controlId()}
+        name={field.name() ?? props.name}
+        checked={checked()}
+        disabled={disabled()}
+        ref={(element) => {
+          inputElement = element;
+          validation.inputRef.current = element;
+        }}
+      />
+    </>
+  );
+}
+
+describe('<Field.Root />', () => {
+  function SwappableField(props: {
+    firstControl: () => JSX.Element;
+    secondControl: () => JSX.Element;
+    'data-testid'?: string;
+  }) {
+    const [swapped, setSwapped] = createSignal(false);
+    return (
+      <div>
+        <Field.Root data-testid={props['data-testid']}>
+          <Show when={swapped()} fallback={props.firstControl()}>
+            {props.secondControl()}
+          </Show>
+        </Field.Root>
+        <button type="button" onClick={() => setSwapped(true)}>
+          swap
+        </button>
+      </div>
+    );
+  }
+
+  describe('conformance', () => {
+    it('renders a div and supports class, style, render and ref', () => {
+      let ref: HTMLElement | undefined;
+      render(() => (
+        <Field.Root
+          data-testid="root"
+          disabled
+          class={(state) => (state.disabled ? 'is-disabled' : '')}
+          style={{ color: 'red' }}
+          ref={(el) => {
+            ref = el;
+          }}
+        />
+      ));
+      const root = screen.getByTestId('root');
+      expect(root.tagName).toBe('DIV');
+      expect(root).toHaveClass('is-disabled');
+      expect(root).toHaveStyle({ color: 'rgb(255, 0, 0)' });
+      expect(ref).toBe(root);
+    });
+
+    it('supports the render prop', () => {
+      render(() => <Field.Root data-testid="root" render="section" />);
+      expect(screen.getByTestId('root').tagName).toBe('SECTION');
+    });
+  });
+
+  it('updates label association when replacing one control with another', async () => {
+    const [showB, setShowB] = createSignal(false);
+    render(() => (
+      <Field.Root>
+        <Field.Label>Label</Field.Label>
+        <Show when={showB()} fallback={<Field.Control id="control-a" />}>
+          <Field.Control id="control-b" />
+        </Show>
+      </Field.Root>
+    ));
+
+    const label = screen.getByText('Label');
+    expect(label).toHaveAttribute('for', 'control-a');
+
+    setShowB(true);
+    flush();
+
+    await waitFor(() => {
+      expect(label).toHaveAttribute('for', 'control-b');
+    });
+  });
+
+  it('drops a stale explicit id when an id-less control replaces the control that owned it', () => {
+    const [swapped, setSwapped] = createSignal(false);
+    render(() => (
+      <Field.Root>
+        <Field.Label>Label</Field.Label>
+        <Show
+          when={swapped()}
+          fallback={<Field.Control id="control" data-testid="control" />}
+        >
+          <Field.Control data-testid="control" />
+        </Show>
+      </Field.Root>
+    ));
+
+    const label = screen.getByText('Label');
+    expect(label).toHaveAttribute('for', 'control');
+
+    setSwapped(true);
+    flush();
+
+    const control = screen.getByTestId('control');
+    expect(control.id).not.toBe('control');
+    expect(label).toHaveAttribute('for', control.id);
+  });
+
+  // Skipped: 're-associates the label when a CheckboxGroup is replaced' (CheckboxGroup not ported).
+
+  it('updates label associations when the control id changes', async () => {
+    const [controlId, setControlId] = createSignal('control-a');
+    render(() => (
+      <Field.Root>
+        <Field.Label>Label</Field.Label>
+        <Field.Control id={controlId()} />
+      </Field.Root>
+    ));
+
+    const label = screen.getByText('Label');
+    expect(label).toHaveAttribute('for', 'control-a');
+
+    setControlId('control-b');
+    flush();
+
+    await waitFor(() => {
+      expect(label).toHaveAttribute('for', 'control-b');
+    });
+  });
+
+  it('falls back to a generated id when the control id is removed', () => {
+    const [controlId, setControlId] = createSignal<string | undefined>('control-a');
+    render(() => (
+      <Field.Root>
+        <Field.Label>Label</Field.Label>
+        <Field.Control id={controlId()} />
+      </Field.Root>
+    ));
+
+    const label = screen.getByText('Label');
+    const control = screen.getByRole('textbox');
+
+    expect(label).toHaveAttribute('for', 'control-a');
+    expect(control).toHaveAttribute('id', 'control-a');
+
+    setControlId(undefined);
+    flush();
+
+    const updatedId = screen.getByRole('textbox').id;
+
+    expect(updatedId).not.toBe('');
+    expect(updatedId).not.toBe('control-a');
+    expect(label).toHaveAttribute('for', updatedId);
+  });
+
+  // Skipped: SSR/hydration tests (jsdom-only run upstream skips them too) and React `<Activity>`
+  // tests (no equivalent in Solid); the remaining ones depend on Select/Checkbox (not ported).
+
+  describe('prop: disabled', () => {
+    it('should add data-disabled style hook to all components', () => {
+      render(() => (
+        <Field.Root data-testid="field" disabled>
+          <Field.Control data-testid="control" />
+          <Field.Label data-testid="label" />
+          <Field.Description data-testid="message" />
+        </Field.Root>
+      ));
+
+      for (const id of ['field', 'control', 'label', 'message']) {
+        expect(screen.getByTestId(id)).toHaveAttribute('data-disabled', '');
+      }
+    });
+
+    it('keeps an explicitly invalid field marked invalid while disabled', () => {
+      render(() => (
+        <Field.Root data-testid="field" disabled invalid>
+          <Field.Control data-testid="control" />
+          <Field.Label data-testid="label" />
+          <Field.Description data-testid="description" />
+        </Field.Root>
+      ));
+
+      for (const id of ['field', 'control', 'label', 'description']) {
+        expect(screen.getByTestId(id)).toHaveAttribute('data-invalid', '');
+      }
+
+      // It does not participate in native constraint validation.
+      expect(screen.getByTestId('control')).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('keeps a disabled field with form errors marked invalid', () => {
+      render(() => (
+        <Form errors={{ name: 'Server error' }}>
+          <Field.Root name="name" disabled>
+            <Field.Control data-testid="control" />
+          </Field.Root>
+        </Form>
+      ));
+
+      const control = screen.getByTestId('control');
+
+      expect(control).toHaveAttribute('data-invalid', '');
+      // It does not participate in native constraint validation.
+      expect(control).not.toHaveAttribute('aria-invalid');
+    });
+  });
+
+  describe('prop: validate', () => {
+    it('when not in <Form> the function does not run by default', () => {
+      const validateSpy = vi.fn(() => 'error');
+      render(() => (
+        <Field.Root validate={validateSpy}>
+          <Field.Control />
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      const control = screen.getByRole('textbox');
+
+      expect(screen.queryByText('error')).toBe(null);
+
+      focus(control);
+      change(control, 'abc');
+      expect(validateSpy.mock.calls.length).toBe(0);
+      expect(screen.queryByText('error')).toBe(null);
+
+      blur(control);
+      expect(validateSpy.mock.calls.length).toBe(0);
+      expect(screen.queryByText('error')).toBe(null);
+    });
+
+    it('runs after native validations', () => {
+      render(() => (
+        <Form onSubmit={preventDefault}>
+          <Field.Root validate={(val) => (val === 'ab' ? 'custom error' : null)}>
+            <Field.Control required />
+            <Field.Error match="valueMissing">value missing</Field.Error>
+            <Field.Error match="customError" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      expect(screen.queryByText('value missing')).toBe(null);
+      expect(screen.queryByText('custom error')).toBe(null);
+
+      const input = screen.getByRole<HTMLInputElement>('textbox');
+
+      click(screen.getByText('submit'));
+      expect(screen.queryByText('value missing')).not.toBe(null);
+      expect(screen.queryByText('custom error')).toBe(null);
+
+      focus(input);
+      // revalidate
+      change(input, 'ab');
+      expect(screen.queryByText('value missing')).toBe(null);
+      expect(screen.queryByText('custom error')).not.toBe(null);
+
+      change(input, '');
+      expect(screen.queryByText('value missing')).not.toBe(null);
+    });
+
+    it.each([
+      { label: 'an empty array', validate: () => [] },
+      { label: 'an undefined', validate: () => undefined },
+      { label: 'an empty string', validate: () => '' },
+      { label: 'an array of empty strings', validate: () => ['', ''] },
+    ])('treats $label result as valid', ({ validate }) => {
+      const onSubmit = vi.fn(preventDefault);
+
+      render(() => (
+        <Form onSubmit={onSubmit}>
+          <Field.Root name="field" validationMode="onChange" validate={validate}>
+            <Field.Control data-testid="control" />
+            <Field.Error data-testid="error" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      const control = screen.getByTestId('control');
+
+      change(control, 'abc');
+
+      expect(control).not.toHaveAttribute('aria-invalid');
+      expect(control).not.toHaveAttribute('data-invalid');
+      expect(screen.queryByTestId('error')).toBe(null);
+      expect(control).toHaveProperty('validationMessage', '');
+
+      click(screen.getByText('submit'));
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    describe('async validation pending state', () => {
+      it.each(['onSubmit', 'onChange', 'onBlur'] as const)(
+        'publishes neutral validity while a validator is in flight in %s mode',
+        async (validationMode) => {
+          let resolveValidate: ((value: string | null) => void) | undefined;
+          const validate = vi.fn(
+            () =>
+              new Promise<string | null>((resolve) => {
+                resolveValidate = resolve;
+              }),
+          );
+
+          render(() => (
+            <Form onSubmit={preventDefault}>
+              <Field.Root
+                data-testid="root"
+                name="username"
+                validationMode={validationMode}
+                validate={validate}
+              >
+                <Field.Control data-testid="control" />
+                <Field.Error data-testid="error" />
+              </Field.Root>
+              <button type="submit">submit</button>
+            </Form>
+          ));
+
+          const root = screen.getByTestId('root');
+          const control = screen.getByTestId('control');
+
+          change(control, 'taken');
+          if (validationMode === 'onBlur') {
+            blur(control);
+          } else if (validationMode === 'onSubmit') {
+            click(screen.getByText('submit'));
+          }
+
+          expect(validate).toHaveBeenCalledTimes(1);
+          expect(root).not.toHaveAttribute('data-valid');
+          expect(root).not.toHaveAttribute('data-invalid');
+          expect(control).not.toHaveAttribute('aria-invalid');
+          expect(screen.queryByTestId('error')).toBe(null);
+
+          resolveValidate?.('Username is taken');
+          await flushMicrotasks();
+
+          expect(root).toHaveAttribute('data-invalid', '');
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+          expect(screen.getByTestId('error')).toHaveTextContent('Username is taken');
+        },
+      );
+
+      it.each(['onChange', 'onBlur'] as const)(
+        'retires a previously valid result to neutral while revalidating in %s mode',
+        async (validationMode) => {
+          const resolvers: Array<(value: string | null) => void> = [];
+          const validate = vi.fn(
+            () =>
+              new Promise<string | null>((resolve) => {
+                resolvers.push(resolve);
+              }),
+          );
+
+          render(() => (
+            <Field.Root data-testid="root" validationMode={validationMode} validate={validate}>
+              <Field.Control data-testid="control" />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+          ));
+
+          const root = screen.getByTestId('root');
+          const control = screen.getByTestId('control');
+
+          change(control, 'good');
+          if (validationMode === 'onBlur') {
+            blur(control);
+          }
+
+          resolvers[0](null);
+          await flushMicrotasks();
+
+          expect(root).toHaveAttribute('data-valid', '');
+
+          if (validationMode === 'onBlur') {
+            focus(control);
+            blur(control);
+          } else {
+            change(control, 'taken');
+          }
+
+          // A valid result never blocks submission, so it retires to neutral mid-flight.
+          expect(root).not.toHaveAttribute('data-valid');
+          expect(root).not.toHaveAttribute('data-invalid');
+
+          resolvers[1]('Username is taken');
+          await flushMicrotasks();
+
+          expect(root).toHaveAttribute('data-invalid', '');
+          expect(screen.getByTestId('error')).toHaveTextContent('Username is taken');
+        },
+      );
+
+      it.each(['onChange', 'onBlur'] as const)(
+        'keeps a previously resolved error while revalidating in %s mode',
+        async (validationMode) => {
+          const resolvers: Array<(value: string | null) => void> = [];
+          const validate = vi.fn(
+            () =>
+              new Promise<string | null>((resolve) => {
+                resolvers.push(resolve);
+              }),
+          );
+
+          const onSubmit = vi.fn(preventDefault);
+
+          render(() => (
+            <Form onSubmit={onSubmit}>
+              <Field.Root
+                data-testid="root"
+                name="username"
+                validationMode={validationMode}
+                validate={validate}
+              >
+                <Field.Control data-testid="control" />
+                <Field.Error data-testid="error" />
+              </Field.Root>
+              <button type="submit">submit</button>
+            </Form>
+          ));
+
+          const root = screen.getByTestId('root');
+          const control = screen.getByTestId('control');
+
+          change(control, 'taken');
+          if (validationMode === 'onBlur') {
+            blur(control);
+          }
+
+          resolvers[0]('Username is taken');
+          await flushMicrotasks();
+
+          expect(root).toHaveAttribute('data-invalid', '');
+
+          // A keystroke would optimistically clear the error through the revalidate path, so
+          // re-trigger validation without changing the value.
+          if (validationMode === 'onBlur') {
+            focus(control);
+            blur(control);
+          } else {
+            change(control, 'taken2');
+          }
+
+          // The resolved error stays published mid-flight so it keeps blocking submission.
+          expect(root).toHaveAttribute('data-invalid', '');
+          expect(screen.getByTestId('error')).toHaveTextContent('Username is taken');
+
+          click(screen.getByText('submit'));
+
+          expect(onSubmit).not.toHaveBeenCalled();
+
+          resolvers[resolvers.length - 1](null);
+          await flushMicrotasks();
+
+          expect(root).not.toHaveAttribute('data-invalid');
+          expect(screen.queryByTestId('error')).toBe(null);
+        },
+      );
+
+      it('retires a stale native error to neutral once the constraint passes again', async () => {
+        const onSubmit = vi.fn(preventDefault);
+        const resolvers: Array<(value: string | null) => void> = [];
+        const validate = vi.fn(
+          () =>
+            new Promise<string | null>((resolve) => {
+              resolvers.push(resolve);
+            }),
+        );
+
+        render(() => (
+          <Form onSubmit={onSubmit}>
+            <Field.Root data-testid="root" name="email" validationMode="onChange" validate={validate}>
+              <Field.Control data-testid="control" type="email" />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+            <button type="submit">submit</button>
+          </Form>
+        ));
+
+        const root = screen.getByTestId('root');
+        const control = screen.getByTestId('control');
+
+        change(control, 'nope');
+
+        resolvers[resolvers.length - 1](null);
+        await flushMicrotasks();
+
+        expect(root).toHaveAttribute('data-invalid', '');
+
+        change(control, 'name@example.com');
+
+        // The previous native error must not survive the pending window.
+        expect(root).not.toHaveAttribute('data-invalid');
+        expect(root).not.toHaveAttribute('data-valid');
+        expect(screen.queryByTestId('error')).toBe(null);
+
+        click(screen.getByText('submit'));
+
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+
+        resolvers[resolvers.length - 1](null);
+        await flushMicrotasks();
+
+        expect(root).toHaveAttribute('data-valid', '');
+      });
+
+      it.each(['onSubmit', 'onChange', 'onBlur'] as const)(
+        'keeps a native constraint failure published while the validator is in flight in %s mode',
+        async (validationMode) => {
+          const onSubmit = vi.fn(preventDefault);
+          const validate = vi.fn(() => new Promise<string | null>(() => {}));
+
+          render(() => (
+            <Form onSubmit={onSubmit}>
+              <Field.Root
+                data-testid="root"
+                name="username"
+                validationMode={validationMode}
+                validate={validate}
+              >
+                <Field.Control data-testid="control" required />
+                <Field.Error data-testid="error" />
+              </Field.Root>
+              <button type="submit">submit</button>
+            </Form>
+          ));
+
+          click(screen.getByText('submit'));
+
+          // In `onBlur` mode a native failure short-circuits the validator.
+          expect(validate).toHaveBeenCalledTimes(validationMode === 'onBlur' ? 0 : 1);
+          expect(onSubmit).not.toHaveBeenCalled();
+          expect(screen.getByTestId('root')).toHaveAttribute('data-invalid', '');
+          expect(screen.getByTestId('control')).toHaveAttribute('aria-invalid', 'true');
+
+          await flushMicrotasks();
+        },
+      );
+
+      it('retires a resolved async error to neutral while revalidating in onSubmit mode', async () => {
+        const onSubmit = vi.fn(preventDefault);
+        const resolvers: Array<(value: string | null) => void> = [];
+        const validate = vi.fn(
+          () =>
+            new Promise<string | null>((resolve) => {
+              resolvers.push(resolve);
+            }),
+        );
+
+        render(() => (
+          <Form onSubmit={onSubmit}>
+            <Field.Root data-testid="root" name="username" validate={validate}>
+              <Field.Control data-testid="control" />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+            <button type="submit">submit</button>
+          </Form>
+        ));
+
+        const root = screen.getByTestId('root');
+        const control = screen.getByTestId('control');
+
+        click(screen.getByText('submit'));
+
+        resolvers[0]('Username is taken');
+        await flushMicrotasks();
+
+        expect(root).toHaveAttribute('data-invalid', '');
+
+        click(screen.getByText('submit'));
+
+        // An async result can't block submission in `onSubmit` mode.
+        expect(onSubmit).toHaveBeenCalledTimes(2);
+        expect(root).not.toHaveAttribute('data-valid');
+        expect(root).not.toHaveAttribute('data-invalid');
+        expect(control).not.toHaveAttribute('aria-invalid');
+        expect(screen.queryByTestId('error')).toBe(null);
+
+        resolvers[1](null);
+        await flushMicrotasks();
+
+        expect(root).toHaveAttribute('data-valid', '');
+        expect(screen.queryByTestId('error')).toBe(null);
+      });
+    });
+
+    it('accepts synchronous and async validators with no return value', () => {
+      render(() => (
+        <>
+          <Field.Root data-testid="sync" validate={() => {}} />
+          <Field.Root data-testid="async" validate={async () => {}} />
+        </>
+      ));
+
+      expect(screen.getByTestId('sync')).toBeInTheDocument();
+      expect(screen.getByTestId('async')).toBeInTheDocument();
+    });
+
+    it('should apply aria-invalid prop to control once validation finishes', () => {
+      render(() => (
+        <Form onSubmit={preventDefault}>
+          <Field.Root validate={() => 'error'}>
+            <Field.Control />
+            <Field.Error />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      const control = screen.getByRole('textbox');
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      click(screen.getByText('submit'));
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('receives all form values as the 2nd argument', () => {
+      // Reduced to the ported controls (upstream also covers Checkbox, NumberField, Radio, Select,
+      // Slider and Switch).
+      const validateSpy = vi.fn();
+      const onSubmit = vi.fn(preventDefault);
+
+      render(() => (
+        <Form onSubmit={onSubmit}>
+          <Field.Root name="input" validate={validateSpy}>
+            <Field.Control data-testid="input" type="url" defaultValue="https://base-ui.com" />
+          </Field.Root>
+          <Field.Root name="other">
+            <Field.Control defaultValue="value" />
+          </Field.Root>
+          <Field.Root name="toggle">
+            <Toggle defaultChecked />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+
+      expect(validateSpy.mock.calls.length).toBe(1);
+      expect(validateSpy.mock.calls[0][1]).toEqual({
+        input: 'https://base-ui.com',
+        other: 'value',
+        toggle: true,
+      });
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    it('unmounted fields are excluded from the validate fn', () => {
+      const validateSpy = vi.fn();
+      const onSubmit = vi.fn(preventDefault);
+      const [checked, setChecked] = createSignal(true);
+
+      render(() => (
+        <Form onSubmit={onSubmit}>
+          <input type="checkbox" checked={checked()} onChange={() => setChecked(!checked())} />
+          <Show when={checked()}>
+            <Field.Root name="input1">
+              <Field.Control defaultValue="one" />
+            </Field.Root>
+          </Show>
+          <Field.Root name="input2" validate={validateSpy}>
+            <Field.Control defaultValue="two" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+
+      expect(validateSpy.mock.calls.length).toBe(1);
+      expect(validateSpy.mock.calls[0][1]).toEqual({
+        input1: 'one',
+        input2: 'two',
+      });
+
+      click(screen.getByRole('checkbox'));
+      click(screen.getByText('submit'));
+
+      expect(validateSpy.mock.calls.length).toBe(2);
+      expect(validateSpy.mock.lastCall?.[1]).toEqual({
+        input2: 'two',
+      });
+      expect(onSubmit).toHaveBeenCalledTimes(2);
+    });
+
+    it('submits the replacement control value when swapping field-aware controls', () => {
+      // Upstream swaps Select for Slider; this uses Field.Control and the test Toggle.
+      const handleSubmit = vi.fn();
+      const [showToggle, setShowToggle] = createSignal(false);
+
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root name="value">
+            <Show when={showToggle()} fallback={<Field.Control defaultValue="sans" />}>
+              <Toggle defaultChecked />
+            </Show>
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+
+      expect(handleSubmit).toHaveBeenCalledTimes(1);
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: 'sans' });
+
+      setShowToggle(true);
+      flush();
+      click(screen.getByText('submit'));
+
+      expect(handleSubmit).toHaveBeenCalledTimes(2);
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ value: true });
+    });
+
+    // Skipped: 'excludes registration-gated controls ... when their field name is removed'
+    // (CheckboxGroup not ported).
+
+    it('uses the Field.Control name for form submission and form validation values', () => {
+      const handleSubmit = vi.fn();
+      const validate = vi.fn((_value: unknown, _formValues: Form.Values) => null);
+
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root>
+            <Field.Control name="email" defaultValue="one@example.com" />
+          </Field.Root>
+          <Field.Root name="confirmEmail" validate={validate}>
+            <Field.Control defaultValue="one@example.com" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+
+      expect(validate.mock.lastCall?.[1]).toEqual({
+        email: 'one@example.com',
+        confirmEmail: 'one@example.com',
+      });
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({
+        email: 'one@example.com',
+        confirmEmail: 'one@example.com',
+      });
+    });
+
+    it('updates the Field.Control name fallback when the name changes', () => {
+      const handleSubmit = vi.fn();
+      const [name, setName] = createSignal<string | undefined>('email');
+
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root>
+            <Field.Control name={name()} defaultValue="one@example.com" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ email: 'one@example.com' });
+
+      setName('alternateEmail');
+      flush();
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({
+        alternateEmail: 'one@example.com',
+      });
+
+      setName(undefined);
+      flush();
+      click(screen.getByText('submit'));
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({});
+    });
+
+    it('uses the Field.Control name fallback when the Field.Root name is removed', () => {
+      const [rootName, setRootName] = createSignal<string | undefined>('rootEmail');
+
+      render(() => (
+        <Form errors={{ email: 'Email is already taken' }}>
+          <Field.Root name={rootName()}>
+            <Field.Control name="email" />
+            <Field.Error data-testid="default-error" />
+          </Field.Root>
+        </Form>
+      ));
+
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-invalid');
+      expect(screen.queryByTestId('default-error')).toBe(null);
+
+      setRootName(undefined);
+      flush();
+
+      expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('default-error')).toHaveTextContent('Email is already taken');
+    });
+
+    // Skipped: 'updates field-aware control name fallbacks when the name changes'
+    // (NumberField not ported).
+  });
+
+  describe('prop: validationMode', () => {
+    describe('onSubmit', () => {
+      it('should validate the field on submit', () => {
+        render(() => (
+          <Form onSubmit={preventDefault}>
+            <Field.Root validate={() => 'error'}>
+              <Field.Control />
+              <Field.Error />
+            </Field.Root>
+            <button type="submit">submit</button>
+          </Form>
+        ));
+
+        expect(screen.queryByText('error')).toBe(null);
+
+        click(screen.getByText('submit'));
+
+        expect(screen.queryByText('error')).not.toBe(null);
+      });
+
+      it('revalidates on change', () => {
+        render(() => (
+          <Form onSubmit={preventDefault}>
+            <Field.Root>
+              <Field.Control type="url" required defaultValue="" />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+            <button type="submit">submit</button>
+          </Form>
+        ));
+
+        const control = screen.getByRole<HTMLInputElement>('textbox');
+
+        expect(screen.queryByTestId('error')).toBe(null);
+
+        click(screen.getByText('submit'));
+        expect(screen.queryByTestId('error')).not.toBe(null);
+
+        change(control, 'http://example');
+        expect(screen.queryByTestId('error')).toBe(null);
+      });
+    });
+
+    describe('onChange', () => {
+      it('validates the field on change', () => {
+        render(() => (
+          <Field.Root
+            validationMode="onChange"
+            validate={(value) => ((value as string).length < 3 ? 'error' : null)}
+          >
+            <Field.Control />
+            <Field.Error />
+          </Field.Root>
+        ));
+
+        const control = screen.getByRole<HTMLInputElement>('textbox');
+
+        expect(screen.queryByText('error')).toBe(null);
+
+        change(control, 't');
+
+        expect(control).toHaveAttribute('data-invalid', '');
+        expect(control).toHaveAttribute('aria-invalid', 'true');
+      });
+    });
+
+    describe('onBlur', () => {
+      it('validates the field on blur', () => {
+        render(() => (
+          <Field.Root
+            validationMode="onBlur"
+            validate={(value) => ((value as string).length < 3 ? 'error' : null)}
+          >
+            <Field.Control />
+            <Field.Error />
+          </Field.Root>
+        ));
+
+        const control = screen.getByRole<HTMLInputElement>('textbox');
+
+        expect(screen.queryByText('error')).toBe(null);
+
+        change(control, 't');
+
+        expect(control).not.toHaveAttribute('data-invalid');
+
+        blur(control);
+
+        expect(control).toHaveAttribute('data-invalid', '');
+        expect(control).toHaveAttribute('aria-invalid', 'true');
+      });
+
+      it('should not mark invalid if `valueMissing` is the only error and not yet dirtied', () => {
+        render(() => (
+          <Field.Root validationMode="onBlur">
+            <Field.Control data-testid="control" required />
+          </Field.Root>
+        ));
+
+        const control = screen.getByTestId('control');
+
+        focus(control);
+        blur(control);
+
+        expect(control).not.toHaveAttribute('data-invalid');
+        expect(control).not.toHaveAttribute('aria-invalid');
+      });
+
+      it('does not publish errors while `valueMissing` is suppressed', () => {
+        let latestValidity: Field.Validity.State | null = null;
+
+        render(() => (
+          <Field.Root validationMode="onBlur">
+            <Field.Control data-testid="control" required />
+            <Field.Validity>
+              {(validity) => {
+                latestValidity = validity;
+                return null;
+              }}
+            </Field.Validity>
+          </Field.Root>
+        ));
+
+        const control = screen.getByTestId('control');
+
+        focus(control);
+        blur(control);
+
+        expect(latestValidity!.validity.valid).toBe(true);
+        expect(latestValidity!.errors).toEqual([]);
+        expect(latestValidity!.error).toBe('');
+      });
+
+      it('should mark invalid if `valueMissing` is the only error and dirtied', () => {
+        render(() => (
+          <Field.Root validationMode="onBlur">
+            <Field.Control data-testid="control" required />
+          </Field.Root>
+        ));
+
+        const control = screen.getByTestId('control');
+
+        focus(control);
+        change(control, 'a');
+        change(control, '');
+        blur(control);
+
+        expect(control).toHaveAttribute('data-invalid', '');
+        expect(control).toHaveAttribute('aria-invalid', 'true');
+      });
+
+      it('supports async validation', async () => {
+        render(() => (
+          <Field.Root validationMode="onBlur" validate={() => Promise.resolve('error')}>
+            <Field.Control />
+            <Field.Error />
+          </Field.Root>
+        ));
+
+        const control = screen.getByRole('textbox');
+
+        expect(screen.queryByText('error')).toBe(null);
+
+        focus(control);
+        blur(control);
+
+        await flushMicrotasks();
+
+        await waitFor(() => {
+          expect(screen.queryByText('error')).not.toBe(null);
+        });
+      });
+
+      it('ignores stale async validation results', async () => {
+        const resolvers: Record<string, (value: string | null) => void> = {};
+        const validate = vi.fn(
+          (value: unknown) =>
+            new Promise<string | null>((resolve) => {
+              resolvers[value as string] = resolve;
+            }),
+        );
+
+        render(() => (
+          <Field.Root validationMode="onChange" validate={validate}>
+            <Field.Control />
+            <Field.Error />
+          </Field.Root>
+        ));
+
+        const control = screen.getByRole<HTMLInputElement>('textbox');
+
+        change(control, 'old');
+        change(control, 'new');
+
+        resolvers.new(null);
+        await flushMicrotasks();
+
+        expect(screen.queryByText('old error')).toBe(null);
+        expect(control).not.toHaveAttribute('aria-invalid');
+
+        resolvers.old('old error');
+        await flushMicrotasks();
+
+        expect(screen.queryByText('old error')).toBe(null);
+        expect(control).not.toHaveAttribute('aria-invalid');
+      });
+
+      it('should apply [data-field] style hooks to field components', () => {
+        render(() => (
+          <Field.Root validationMode="onBlur">
+            <Field.Label data-testid="label">Label</Field.Label>
+            <Field.Description data-testid="description">Description</Field.Description>
+            <Field.Error data-testid="error" />
+            <Field.Control data-testid="control" required />
+          </Field.Root>
+        ));
+
+        const control = screen.getByTestId<HTMLInputElement>('control');
+        const label = screen.getByTestId('label');
+        const description = screen.getByTestId('description');
+
+        expect(control).not.toHaveAttribute('data-valid');
+        expect(label).not.toHaveAttribute('data-valid');
+        expect(description).not.toHaveAttribute('data-valid');
+        expect(screen.queryByTestId('error')).toBe(null);
+
+        focus(control);
+        change(control, 'a');
+        change(control, '');
+        blur(control);
+
+        const error = screen.getByTestId('error');
+
+        expect(control).toHaveAttribute('data-invalid', '');
+        expect(label).toHaveAttribute('data-invalid', '');
+        expect(description).toHaveAttribute('data-invalid', '');
+        expect(error).toHaveAttribute('data-invalid', '');
+
+        control.value = 'value';
+        control.focus();
+        control.blur();
+        flush();
+
+        expect(control).toHaveAttribute('data-valid', '');
+        expect(label).toHaveAttribute('data-valid', '');
+        expect(description).toHaveAttribute('data-valid', '');
+        expect(screen.queryByTestId('error')).toBe(null);
+      });
+
+      describe('revalidation', () => {
+        it('revalidates on change for `valueMissing`', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control required />
+              <Field.Error />
+            </Field.Root>
+          ));
+
+          const control = screen.getByRole('textbox');
+
+          focus(control);
+          change(control, 't');
+          blur(control);
+
+          expect(control).not.toHaveAttribute('aria-invalid', 'true');
+
+          focus(control);
+          change(control, '');
+          blur(control);
+
+          expect(control).toHaveAttribute('aria-invalid');
+        });
+
+        it('handles both `required` and `typeMismatch`', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control type="email" required />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+          ));
+
+          const control = screen.getByRole('textbox');
+
+          expect(screen.queryByTestId('error')).toBe(null);
+
+          focus(control);
+          blur(control);
+
+          expect(control).not.toHaveAttribute('aria-invalid');
+
+          focus(control);
+          change(control, 'tt');
+          blur(control);
+
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+
+          focus(control);
+          change(control, '');
+          blur(control);
+
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+
+          focus(control);
+          change(control, 'email@email.com');
+          blur(control);
+
+          expect(control).not.toHaveAttribute('aria-invalid');
+        });
+
+        it('revalidates on change when clearing a type mismatch leaves only `valueMissing`', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control type="email" required data-testid="control" />
+              <Field.Error match="typeMismatch" data-testid="type-error">
+                Invalid email
+              </Field.Error>
+              <Field.Error match="valueMissing" data-testid="required-error">
+                Required
+              </Field.Error>
+            </Field.Root>
+          ));
+
+          const control = screen.getByTestId('control');
+
+          focus(control);
+          change(control, 'invalid');
+          blur(control);
+
+          expect(screen.getByTestId('type-error')).not.toBe(null);
+          expect(screen.queryByTestId('required-error')).toBe(null);
+
+          focus(control);
+          change(control, '');
+
+          expect(screen.queryByTestId('type-error')).toBe(null);
+          expect(screen.getByTestId('required-error')).not.toBe(null);
+        });
+
+        it('clears valueMissing on change but defers other native errors like typeMismatch until blur when both are active', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control type="email" required data-testid="control" />
+              <Field.Error data-testid="error" />
+            </Field.Root>
+          ));
+
+          const control = screen.getByTestId('control');
+
+          focus(control);
+          blur(control);
+          expect(control).not.toHaveAttribute('aria-invalid', 'true');
+          expect(screen.queryByTestId('error')).toBe(null);
+
+          focus(control);
+          change(control, 'a');
+          change(control, '');
+          blur(control);
+
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+          expect(screen.getByTestId('error')).not.toBe(null);
+
+          focus(control);
+          change(control, 't');
+
+          // Only 'valueMissing' is checked for immediate clearing; 'typeMismatch' is deferred.
+          expect(control).not.toHaveAttribute('aria-invalid', 'true');
+          expect(screen.queryByTestId('error')).toBe(null);
+
+          blur(control);
+
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+          expect(screen.getByTestId('error')).not.toBe(null);
+          expect(screen.getByTestId('error').textContent).not.toBe('');
+
+          focus(control);
+          change(control, 'test@example.com');
+
+          expect(control).not.toHaveAttribute('aria-invalid', 'true');
+          expect(screen.queryByTestId('error')).toBe(null);
+
+          blur(control);
+
+          expect(control).not.toHaveAttribute('aria-invalid', 'true');
+          expect(screen.queryByTestId('error')).toBe(null);
+        });
+      });
+
+      describe('computed validity state', () => {
+        it('should not mark field as invalid for valueMissing if not dirty', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control data-testid="control" required />
+            </Field.Root>
+          ));
+
+          const control = screen.getByTestId('control');
+
+          focus(control);
+          blur(control);
+
+          expect(control).not.toHaveAttribute('data-invalid');
+          expect(control).not.toHaveAttribute('aria-invalid');
+        });
+
+        it('should mark field as invalid for valueMissing if dirty', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control data-testid="control" required />
+            </Field.Root>
+          ));
+
+          const control = screen.getByTestId('control');
+
+          focus(control);
+          change(control, 'a');
+          change(control, '');
+          blur(control);
+
+          expect(control).toHaveAttribute('data-invalid', '');
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+        });
+
+        it('should mark field as invalid for other errors (e.g., typeMismatch) even if not dirty', () => {
+          render(() => (
+            <Field.Root validationMode="onBlur">
+              <Field.Control data-testid="control" type="email" defaultValue="not_an_email@" />
+            </Field.Root>
+          ));
+
+          const control = screen.getByTestId('control');
+
+          focus(control);
+          blur(control);
+
+          expect(control).toHaveAttribute('data-invalid', '');
+          expect(control).toHaveAttribute('aria-invalid', 'true');
+        });
+      });
+    });
+  });
+
+  describe('prop: validationDebounceTime', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function tick(ms: number) {
+      vi.advanceTimersByTime(ms);
+      flush();
+    }
+
+    it('should debounce validation', () => {
+      render(() => (
+        <Field.Root
+          validationDebounceTime={100}
+          validationMode="onChange"
+          validate={(value) => ((value as string).length < 3 ? 'error' : null)}
+        >
+          <Field.Control />
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      const control = screen.getByRole<HTMLInputElement>('textbox');
+
+      expect(screen.queryByText('error')).toBe(null);
+
+      change(control, 't');
+
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(99);
+
+      change(control, 'te');
+
+      tick(99);
+
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(1);
+
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByText('error')).not.toBe(null);
+    });
+
+    it('should debounce validation for field-aware controls', () => {
+      // Upstream uses Checkbox.Root; this uses the test Toggle.
+      const validate = vi.fn((value: unknown) => (value ? 'error' : null));
+
+      render(() => (
+        <Field.Root validationDebounceTime={100} validationMode="onChange" validate={validate}>
+          <Toggle data-testid="toggle" />
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId('toggle');
+
+      click(control);
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(99);
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(1);
+
+      expect(validate).toHaveBeenCalledTimes(1);
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.queryByText('error')).not.toBe(null);
+    });
+
+    // Skipped: 'should debounce validation for radio groups' (RadioGroup not ported).
+
+    it('drops a pending debounced validation when the control unmounts', () => {
+      const validate = vi.fn(() => 'error');
+      const [mounted, setMounted] = createSignal(true);
+
+      render(() => (
+        <Field.Root
+          data-testid="root"
+          validationDebounceTime={100}
+          validationMode="onChange"
+          validate={validate}
+        >
+          <Show when={mounted()}>
+            <Field.Control data-testid="control" />
+          </Show>
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      change(screen.getByTestId('control'), 'abc');
+
+      tick(99);
+
+      setMounted(false);
+      flush();
+
+      tick(100);
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('error')).toBe(null);
+      expect(screen.getByTestId('root')).not.toHaveAttribute('data-invalid');
+    });
+
+    it('ignores async validation results superseded during debounce', async () => {
+      const resolvers: Record<string, (value: string | null) => void> = {};
+      const validate = vi.fn(
+        (value: unknown) =>
+          new Promise<string | null>((resolve) => {
+            resolvers[value as string] = resolve;
+          }),
+      );
+
+      render(() => (
+        <Field.Root validationDebounceTime={100} validationMode="onChange" validate={validate}>
+          <Field.Control />
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      const control = screen.getByRole<HTMLInputElement>('textbox');
+
+      change(control, 'old');
+      tick(100);
+
+      expect(validate.mock.lastCall?.[0]).toBe('old');
+
+      change(control, 'new');
+
+      resolvers.old('old error');
+      await flushMicrotasks();
+
+      expect(screen.queryByText('old error')).toBe(null);
+      expect(control).not.toHaveAttribute('aria-invalid');
+
+      tick(100);
+
+      resolvers.new(null);
+      await flushMicrotasks();
+
+      expect(validate.mock.lastCall?.[0]).toBe('new');
+      expect(screen.queryByText('old error')).toBe(null);
+      expect(control).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('drops an in-flight async validation when the control unmounts', async () => {
+      let resolveValidate: ((value: string | null) => void) | undefined;
+      const validate = vi.fn(
+        () =>
+          new Promise<string | null>((resolve) => {
+            resolveValidate = resolve;
+          }),
+      );
+      const [mounted, setMounted] = createSignal(true);
+
+      render(() => (
+        <Field.Root data-testid="root" validationMode="onChange" validate={validate}>
+          <Show when={mounted()}>
+            <Field.Control data-testid="control" />
+          </Show>
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      change(screen.getByTestId('control'), 'abc');
+      expect(validate).toHaveBeenCalledTimes(1);
+
+      setMounted(false);
+      flush();
+
+      resolveValidate?.('error');
+      await flushMicrotasks();
+
+      expect(screen.queryByTestId('error')).toBe(null);
+      expect(screen.getByTestId('root')).not.toHaveAttribute('data-invalid');
+    });
+
+    it('keeps the published error when async validation rejects', async () => {
+      const onSubmit = vi.fn(preventDefault);
+      let commit: ((value: unknown) => Promise<void>) | undefined;
+
+      function ReadCommit() {
+        commit = useFieldRootContext().validation.commit;
+        return null;
+      }
+
+      let calls = 0;
+      const validate = async () => {
+        calls += 1;
+        if (calls === 2) {
+          throw new Error('network');
+        }
+        return 'Username is taken';
+      };
+
+      render(() => (
+        <Form onSubmit={onSubmit}>
+          <Field.Root name="username" validationMode="onBlur" validate={validate}>
+            <Field.Control data-testid="control" />
+            <Field.Error data-testid="error" />
+            <ReadCommit />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      const control = screen.getByTestId('control');
+
+      focus(control);
+      change(control, 'taken');
+      blur(control);
+      await flushMicrotasks();
+
+      expect(screen.getByTestId('error')).toHaveTextContent('Username is taken');
+
+      await expect(commit?.('taken')).rejects.toThrow('network');
+      flush();
+
+      expect(screen.getByTestId('error')).toHaveTextContent('Username is taken');
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+
+      click(screen.getByText('submit'));
+      await flushMicrotasks();
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('drops a pending validation when another field-aware control takes ownership', () => {
+      // Upstream adds a Switch; this adds the test Toggle.
+      const validate = vi.fn(() => 'error');
+      const [showToggle, setShowToggle] = createSignal(false);
+
+      render(() => (
+        <Field.Root
+          data-testid="root"
+          validationDebounceTime={100}
+          validationMode="onChange"
+          validate={validate}
+        >
+          <Field.Control data-testid="control" />
+          <Show when={showToggle()}>
+            <Toggle />
+          </Show>
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      change(screen.getByTestId('control'), 'abc');
+
+      tick(99);
+
+      setShowToggle(true);
+      flush();
+
+      tick(100);
+
+      expect(validate).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('error')).toBe(null);
+      expect(screen.getByTestId('root')).not.toHaveAttribute('data-invalid');
+    });
+
+    it('keeps a pending debounce armed across the first registration', () => {
+      const validate = vi.fn(() => 'error');
+
+      render(() => (
+        <Field.Root
+          data-testid="root"
+          validationDebounceTime={100}
+          validationMode="onChange"
+          validate={validate}
+        >
+          <Field.Control data-testid="control" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      change(screen.getByTestId('control'), 'abc');
+
+      tick(100);
+
+      expect(validate).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('error')).toHaveTextContent('error');
+    });
+  });
+
+  describe('custom validity ownership', () => {
+    it('keeps a message set outside the field when submitting', () => {
+      const onFormSubmit = vi.fn();
+
+      render(() => (
+        <Form onFormSubmit={onFormSubmit}>
+          <Field.Root name="external">
+            <Field.Control data-testid="control" />
+            <Field.Error data-testid="error" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+      control.setCustomValidity('external error');
+
+      click(screen.getByText('submit'));
+
+      expect(onFormSubmit).not.toHaveBeenCalled();
+      expect(control.validationMessage).toBe('external error');
+      expect(screen.getByTestId('error')).toHaveTextContent('external error');
+    });
+
+    it('keeps a message set outside the field when validating on change', () => {
+      render(() => (
+        <Field.Root validationMode="onChange">
+          <Field.Control data-testid="control" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+      control.setCustomValidity('external error');
+
+      change(control, 'abc');
+
+      expect(control.validationMessage).toBe('external error');
+      expect(control).toHaveAttribute('data-invalid', '');
+      expect(screen.getByTestId('error')).toHaveTextContent('external error');
+    });
+
+    it('keeps a message set outside the field when revalidating on change', () => {
+      render(() => (
+        <Field.Root validationMode="onBlur">
+          <Field.Control data-testid="control" required />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+
+      focus(control);
+      change(control, 'a');
+      change(control, '');
+      blur(control);
+      expect(control).toHaveAttribute('data-invalid', '');
+
+      control.setCustomValidity('external error');
+      change(control, 'abc');
+
+      expect(control.validationMessage).toBe('external error');
+      expect(control).toHaveAttribute('data-invalid', '');
+      expect(screen.getByTestId('error')).toHaveTextContent('external error');
+    });
+
+    it('keeps other native errors deferred while a message set outside the field survives', () => {
+      let latest: Field.Validity.State | undefined;
+      render(() => (
+        <Field.Root name="field" validationMode="onBlur">
+          <Field.Control type="email" required />
+          <Field.Error match="typeMismatch" data-testid="type-mismatch">
+            invalid email
+          </Field.Error>
+          <Field.Validity>
+            {(state) => {
+              latest = state;
+              return null;
+            }}
+          </Field.Validity>
+        </Field.Root>
+      ));
+
+      const control = screen.getByRole<HTMLInputElement>('textbox');
+
+      focus(control);
+      change(control, 'a');
+      change(control, '');
+      blur(control);
+      expect(control).toHaveAttribute('data-invalid', '');
+
+      control.setCustomValidity('external error');
+      change(control, 'abc');
+
+      // The validity state is live: read it after the update.
+      expect(screen.queryByTestId('type-mismatch')).toBe(null);
+      expect(latest!.validity.typeMismatch).toBe(false);
+      expect(latest!.validity.customError).toBe(true);
+      expect(latest!.validity.valid).toBe(false);
+      expect(latest!.errors).toEqual(['external error']);
+    });
+
+    it('clears the message it set itself', () => {
+      render(() => (
+        <Field.Root
+          validationMode="onChange"
+          validate={(value) => (value === 'bad' ? 'custom error\r\nmore' : null)}
+        >
+          <Field.Control data-testid="control" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+
+      change(control, 'bad');
+
+      expect(control.validationMessage).toBe('custom error\nmore');
+
+      change(control, 'good');
+
+      expect(control.validationMessage).toBe('');
+      expect(screen.queryByTestId('error')).toBe(null);
+    });
+
+    it('restores a message its own one displaced', () => {
+      render(() => (
+        <Field.Root
+          validationMode="onChange"
+          validate={(value) => (value === 'bad' ? 'custom error' : null)}
+        >
+          <Field.Control data-testid="control" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+      control.setCustomValidity('external error');
+
+      change(control, 'bad');
+
+      expect(control.validationMessage).toBe('custom error');
+
+      change(control, 'good');
+
+      expect(control.validationMessage).toBe('external error');
+      expect(screen.getByTestId('error')).toHaveTextContent('external error');
+    });
+
+    it('does not restore a message that was withdrawn while its own one was installed', () => {
+      render(() => (
+        <Field.Root
+          validationMode="onChange"
+          validate={(value) => (value === 'bad' ? 'custom error' : null)}
+        >
+          <Field.Control data-testid="control" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+      control.setCustomValidity('external error');
+
+      change(control, 'bad');
+
+      expect(control.validationMessage).toBe('custom error');
+
+      control.setCustomValidity('');
+
+      change(control, 'good');
+
+      expect(control.validationMessage).toBe('');
+      expect(screen.queryByTestId('error')).toBe(null);
+    });
+
+    it('clears its own message on an input that became disabled', () => {
+      const actionsRef = createRefObject<FieldRoot.Actions | null>(null);
+      const [disabled, setDisabled] = createSignal(false);
+      const [failing, setFailing] = createSignal(true);
+
+      render(() => (
+        <Field.Root
+          actionsRef={actionsRef}
+          validate={() => (failing() ? 'custom error' : null)}
+        >
+          <Field.Control data-testid="control" disabled={disabled()} />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+
+      actionsRef.current?.validate();
+      flush();
+
+      expect(control.validationMessage).toBe('custom error');
+
+      setDisabled((prev) => !prev);
+      flush();
+      setFailing(false);
+      flush();
+      actionsRef.current?.validate();
+      flush();
+      setDisabled((prev) => !prev);
+      flush();
+
+      expect(control.validationMessage).toBe('');
+    });
+
+    it('does not adopt a native message as the message it displaced', () => {
+      render(() => (
+        <Field.Root
+          validationMode="onChange"
+          validate={(value) => (value === 'bad' ? 'custom error' : null)}
+        >
+          <Field.Control data-testid="control" type="email" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId<HTMLInputElement>('control');
+
+      change(control, 'bad');
+      expect(control.validationMessage).toBe('custom error');
+
+      change(control, 'a@b.co');
+
+      expect(control.validity.customError).toBe(false);
+      expect(control.validationMessage).toBe('');
+    });
+
+    // Skipped: 'keeps a message set outside the field on another input of the same field'
+    // (RadioGroup not ported), and the two barred-control tests (upstream skips them in jsdom).
+  });
+
+  describe('style hooks', () => {
+    function renderParts(rootProps: Partial<FieldRoot.Props> = {}) {
+      render(() => (
+        <Field.Root data-testid="root" {...rootProps}>
+          <Field.Control data-testid="control" />
+          <Field.Label data-testid="label" />
+          <Field.Description data-testid="description" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+      return {
+        root: screen.getByTestId('root'),
+        control: screen.getByTestId('control'),
+        label: screen.getByTestId('label'),
+        description: screen.getByTestId('description'),
+      };
+    }
+
+    it('should apply [data-touched] style hook to all components when touched', () => {
+      const parts = renderParts();
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-touched');
+      }
+      expect(screen.queryByTestId('error')).toBe(null);
+
+      focus(parts.control);
+      blur(parts.control);
+
+      for (const part of Object.values(parts)) {
+        expect(part).toHaveAttribute('data-touched', '');
+      }
+      expect(screen.queryByTestId('error')).toBe(null);
+    });
+
+    it('should apply [data-dirty] style hook to all components when dirty', () => {
+      const parts = renderParts();
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-dirty');
+      }
+
+      change(parts.control, 'value');
+
+      for (const part of Object.values(parts)) {
+        expect(part).toHaveAttribute('data-dirty', '');
+      }
+
+      change(parts.control, '');
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-dirty');
+      }
+    });
+
+    // Skipped: dirty tests for NumberField / Select / RadioGroup (not ported).
+
+    describe('control remount', () => {
+      // Skipped: 'clears dirty after an empty text control returns to empty following a
+      // null-valued control' and 'captures the baseline only once in StrictMode' (NumberField).
+
+      it('keeps the original baseline when a controlled control remounts', async () => {
+        const [value, setValue] = createSignal('a');
+        const [mounted, setMounted] = createSignal(true);
+
+        render(() => (
+          <Field.Root data-testid="root">
+            <Show when={mounted()}>
+              <Field.Control data-testid="control" value={value()} onValueChange={setValue} />
+            </Show>
+          </Field.Root>
+        ));
+        const root = screen.getByTestId('root');
+
+        change(screen.getByTestId('control'), 'b');
+        await waitFor(() => {
+          expect(root).toHaveAttribute('data-dirty', '');
+        });
+
+        setMounted(false);
+        flush();
+        setMounted(true);
+        flush();
+
+        expect(root).toHaveAttribute('data-dirty', '');
+
+        change(screen.getByTestId('control'), 'a');
+        await waitFor(() => {
+          expect(root).not.toHaveAttribute('data-dirty');
+        });
+      });
+
+      it('keeps the field baseline when the control is swapped', async () => {
+        render(() => (
+          <SwappableField
+            data-testid="root"
+            firstControl={() => <Field.Control defaultValue="a" />}
+            secondControl={() => <Field.Control data-testid="control" defaultValue="x" />}
+          />
+        ));
+        const root = screen.getByTestId('root');
+
+        click(screen.getByText('swap'));
+        const control = screen.getByTestId('control');
+
+        change(control, 'y');
+        await waitFor(() => {
+          expect(root).toHaveAttribute('data-dirty', '');
+        });
+
+        // The baseline is still the field's original value, not the swapped-in control's default.
+        change(control, 'a');
+        await waitFor(() => {
+          expect(root).not.toHaveAttribute('data-dirty');
+        });
+      });
+    });
+
+    it('should apply [data-filled] style hook to all components when filled', () => {
+      const parts = renderParts();
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-filled');
+      }
+
+      change(parts.control, 'value');
+
+      for (const part of Object.values(parts)) {
+        expect(part).toHaveAttribute('data-filled', '');
+      }
+
+      change(parts.control, '');
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-filled');
+      }
+    });
+
+    it('changes [data-filled] when the value is changed externally', () => {
+      const [value, setValue] = createSignal('');
+      render(() => (
+        <div>
+          <Field.Root>
+            <Field.Control
+              value={value()}
+              onInput={(event) => setValue(event.currentTarget.value)}
+            />
+          </Field.Root>
+          <button onClick={() => setValue('test')}>change</button>
+          <button onClick={() => setValue('')}>reset</button>
+        </div>
+      ));
+
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('data-filled', '');
+
+      click(screen.getByRole('button', { name: 'change' }));
+      expect(screen.getByRole('textbox')).toHaveAttribute('data-filled', '');
+
+      click(screen.getByRole('button', { name: 'reset' }));
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('data-filled', '');
+    });
+
+    it('should apply [data-focused] style hook to all components when focused', () => {
+      const parts = renderParts();
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-focused');
+      }
+
+      focus(parts.control);
+
+      for (const part of Object.values(parts)) {
+        expect(part).toHaveAttribute('data-focused', '');
+      }
+
+      blur(parts.control);
+
+      for (const part of Object.values(parts)) {
+        expect(part).not.toHaveAttribute('data-focused');
+      }
+    });
+  });
+
+  describe('defaultValue behavior', () => {
+    it.each(['', 'abc'])(
+      'should not reset to defaultValue when input value is programmatically changed to %j and then focused',
+      (nextValue) => {
+        let inputRef: HTMLInputElement | undefined;
+
+        render(() => (
+          <Field.Root>
+            <Field.Control
+              ref={(el: HTMLInputElement) => {
+                inputRef = el;
+              }}
+              defaultValue="foo"
+              data-testid="input"
+            />
+          </Field.Root>
+        ));
+
+        const input = screen.getByTestId('input') as HTMLInputElement;
+
+        expect(input.value).toBe('foo');
+
+        inputRef!.value = nextValue;
+
+        expect(input.value).toBe(nextValue);
+
+        focus(input);
+
+        expect(input.value).toBe(nextValue);
+      },
+    );
+  });
+
+  describe('prop: dirty', () => {
+    it('controls the dirty state', () => {
+      render(() => (
+        <Field.Root data-testid="root" dirty>
+          <Field.Control data-testid="control" />
+          <Field.Label data-testid="label" />
+          <Field.Description data-testid="description" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      for (const part of ['root', 'control', 'label', 'description']) {
+        expect(screen.getByTestId(part)).toHaveAttribute('data-dirty');
+      }
+    });
+
+    it('uses the controlled dirty state for required validation', () => {
+      render(() => (
+        <Field.Root dirty validationMode="onBlur">
+          <Field.Control data-testid="control" required />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      const control = screen.getByTestId('control');
+
+      focus(control);
+      blur(control);
+
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByTestId('error')).not.toBe(null);
+    });
+
+    it('does not update controlled dirty state from user input', () => {
+      render(() => (
+        <Field.Root data-testid="root" dirty={false}>
+          <Field.Control />
+        </Field.Root>
+      ));
+
+      change(screen.getByRole('textbox'), 'changed');
+
+      expect(screen.getByTestId('root')).not.toHaveAttribute('data-dirty');
+    });
+  });
+
+  describe('prop: touched', () => {
+    it('controls the touched state', () => {
+      render(() => (
+        <Field.Root data-testid="root" touched>
+          <Field.Control data-testid="control" />
+          <Field.Label data-testid="label" />
+          <Field.Description data-testid="description" />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      for (const part of ['root', 'control', 'label', 'description']) {
+        expect(screen.getByTestId(part)).toHaveAttribute('data-touched');
+      }
+    });
+
+    it('does not update controlled touched state on blur', () => {
+      render(() => (
+        <Field.Root data-testid="root" touched={false}>
+          <Field.Control />
+        </Field.Root>
+      ));
+
+      focus(screen.getByRole('textbox'));
+      blur(screen.getByRole('textbox'));
+
+      expect(screen.getByTestId('root')).not.toHaveAttribute('data-touched');
+    });
+  });
+
+  describe('prop: actionsRef', () => {
+    it('validates the field when the `validate` method is called', () => {
+      const actionsRef = createRefObject<FieldRoot.Actions | null>(null);
+      render(() => (
+        <div>
+          <Field.Root name="username" actionsRef={actionsRef}>
+            <Field.Control defaultValue="" required />
+            <Field.Error data-testid="error" />
+          </Field.Root>
+          <button type="button" onClick={() => actionsRef.current?.validate()}>
+            validate
+          </button>
+        </div>
+      ));
+
+      expect(screen.queryByTestId('error')).toBe(null);
+
+      click(screen.getByText('validate'));
+
+      expect(screen.queryByTestId('error')).not.toBe(null);
+    });
+
+    it('accepts a callback ref', () => {
+      let actions: FieldRoot.Actions | null = null;
+      render(() => (
+        <Field.Root
+          actionsRef={(value) => {
+            actions = value;
+          }}
+        >
+          <Field.Control defaultValue="" required />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+
+      actions!.validate();
+      flush();
+
+      expect(screen.queryByTestId('error')).not.toBe(null);
+    });
+
+    it('validates a logical field without a mounted control', () => {
+      const actionsRef = createRefObject<FieldRoot.Actions | null>(null);
+      render(() => (
+        <Field.Root actionsRef={actionsRef} validate={() => 'Logical field error'}>
+          <Field.Error />
+        </Field.Root>
+      ));
+
+      actionsRef.current?.validate();
+      flush();
+
+      expect(screen.getByText('Logical field error')).toBeVisible();
+    });
+
+    it('validates the current control value when the `validate` method is called', () => {
+      const validate = vi.fn((value: unknown) => (value === 'valid' ? null : 'error'));
+      const actionsRef = createRefObject<FieldRoot.Actions | null>(null);
+
+      render(() => (
+        <Field.Root actionsRef={actionsRef} validate={validate}>
+          <Field.Control />
+          <Field.Error data-testid="error" />
+        </Field.Root>
+      ));
+      const control = screen.getByRole('textbox');
+
+      change(control, 'valid');
+      actionsRef.current?.validate();
+      flush();
+
+      expect(validate.mock.lastCall?.[0]).toBe('valid');
+      expect(screen.queryByTestId('error')).toBe(null);
+    });
+  });
+
+  describe('custom field-aware control (internal control-author API)', () => {
+    it('wires labels, registration, state attributes and validation', () => {
+      const handleSubmit = vi.fn();
+      render(() => (
+        <Form onFormSubmit={handleSubmit}>
+          <Field.Root
+            data-testid="root"
+            name="agree"
+            validate={(value) => (value ? null : 'Must agree')}
+          >
+            <Field.Label data-testid="label">Agree</Field.Label>
+            <Field.Description data-testid="description">Required</Field.Description>
+            <Toggle data-testid="toggle" />
+            <Field.Error data-testid="error" />
+          </Field.Root>
+          <button type="submit">submit</button>
+        </Form>
+      ));
+
+      const root = screen.getByTestId('root');
+      const toggle = screen.getByTestId('toggle');
+      const label = screen.getByTestId('label');
+      const input = document.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+
+      // Label association: the native label targets the hidden input, the switch is named by it.
+      expect(label).toHaveAttribute('for', input.id);
+      expect(toggle).toHaveAttribute('aria-labelledby', label.id);
+      expect(toggle).toHaveAttribute(
+        'aria-describedby',
+        screen.getByTestId('description').id,
+      );
+      expect(input).toHaveAttribute('name', 'agree');
+      expect(root).not.toHaveAttribute('data-filled');
+      expect(root).not.toHaveAttribute('data-dirty');
+
+      // Submitting validates the field with the registered value and focuses the control.
+      click(screen.getByText('submit'));
+      expect(handleSubmit).not.toHaveBeenCalled();
+      expect(toggle).toHaveAttribute('aria-invalid', 'true');
+      expect(toggle).toHaveAttribute('data-invalid', '');
+      expect(screen.getByTestId('error')).toHaveTextContent('Must agree');
+      expect(toggle).toHaveFocus();
+      expect(root).toHaveAttribute('data-focused', '');
+
+      // A change after submission revalidates (onSubmit mode) and updates filled/dirty.
+      click(toggle);
+      expect(toggle).toHaveAttribute('aria-checked', 'true');
+      expect(root).toHaveAttribute('data-filled', '');
+      expect(root).toHaveAttribute('data-dirty', '');
+      expect(toggle).toHaveAttribute('data-dirty', '');
+      expect(toggle).toHaveAttribute('data-checked', '');
+      expect(toggle).not.toHaveAttribute('aria-invalid');
+      expect(screen.queryByTestId('error')).toBe(null);
+
+      blur(toggle);
+      expect(root).toHaveAttribute('data-touched', '');
+      expect(root).not.toHaveAttribute('data-focused');
+
+      click(screen.getByText('submit'));
+      expect(handleSubmit).toHaveBeenCalledTimes(1);
+      expect(handleSubmit.mock.lastCall?.[0]).toEqual({ agree: true });
+    });
+
+    it('is disabled by a disabled field', () => {
+      render(() => (
+        <Field.Root data-testid="root" disabled>
+          <Toggle data-testid="toggle" />
+        </Field.Root>
+      ));
+
+      const toggle = screen.getByTestId('toggle');
+      expect(toggle).toHaveAttribute('data-disabled', '');
+
+      click(toggle);
+      expect(toggle).toHaveAttribute('aria-checked', 'false');
+    });
+  });
+});
+
