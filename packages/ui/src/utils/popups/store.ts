@@ -260,7 +260,11 @@ function syncAnchorState<State extends S>(previous: State, next: State): State {
   const previousAnchor = activeTriggerElementSelector(previous);
   // `mounted` is bound to the Root's transition status, which follows `open` synchronously
   // (`mounted = open || stillClosing`), but a snapshot can't see that yet: derive it.
-  const nextAnchor = next.mounted || openSelector(next) ? next.activeTriggerElement : null;
+  // In controlled mode, `next.open` is an accepted open request whose `open` prop may not have
+  // caught up yet (a signal written in `onOpenChange` lags): the popup mounts once it does, and
+  // no store write follows then, so anchor to the requesting trigger now.
+  const nextAnchor =
+    next.mounted || openSelector(next) || next.open ? next.activeTriggerElement : null;
 
   if (previousAnchor === nextAnchor) {
     return next;

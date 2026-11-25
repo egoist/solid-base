@@ -33,6 +33,7 @@ import type { PopupInteractionStore } from '../types';
 import { createChangeEventDetails } from '../../../internals/createBaseUIEventDetails';
 import { REASONS } from '../../../internals/reasons';
 import { createAttribute } from '../createAttribute';
+import { FOCUSABLE_ATTRIBUTE } from '../constants';
 import { enqueueFocus } from './enqueueFocus';
 import { markOthers } from './markOthers';
 import { usePortalContext } from '../portal/FloatingPortal';
@@ -280,7 +281,27 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   const open = () => store.select('open');
   const domReference = () => store.select('anchorElement');
   const floating = () => store.select('positionerElement');
-  const floatingFocusElement = createMemo(() => getFloatingFocusElement(floating()));
+  const floatingFocusElement = createMemo(() => {
+    const element = floating();
+    // A positioner registers before its popup child is attached: re-resolve once the popup
+    // element registers (popup stores track it; other stores return `undefined`).
+    const popupElement = (store.select as (key: string) => unknown)('popupElement');
+    const resolved = getFloatingFocusElement(element);
+    // The popup may register before it's attached inside the positioner (both mount in the same
+    // update): use it rather than falling back to the positioner, so the target doesn't change
+    // (re-arming return focus) once it is attached.
+    if (
+      element &&
+      resolved === element &&
+      isHTMLElement(popupElement) &&
+      popupElement !== element &&
+      !popupElement.isConnected &&
+      popupElement.hasAttribute(FOCUSABLE_ATTRIBUTE)
+    ) {
+      return popupElement;
+    }
+    return resolved;
+  });
 
   const storeContext = store.context;
   const { events } = storeContext;
@@ -683,10 +704,11 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
   // Focus the initial element when the floating element opens.
   createEffect(
     () => (open() && !disabled() ? floatingFocusElement() : null),
-    (focusElement) => {
-      if (!isHTMLElement(focusElement)) {
+    (initialFocusElement) => {
+      if (!isHTMLElement(initialFocusElement)) {
         return;
       }
+      let focusElement: HTMLElement = initialFocusElement;
 
       closeType = '';
       lastInteractionType = '';
@@ -696,6 +718,9 @@ export function FloatingFocusManager(props: FloatingFocusManagerProps): JSX.Elem
 
       // Wait for pending updates (such as `tabindex` writes) before resolving the target.
       queueMicrotask(() => {
+        // A popup that mounts in the same update as its positioner may not be attached when the
+        // effect runs, resolving the positioner itself: resolve the focus target again.
+        focusElement = getFloatingFocusElement(untrack(floating)) ?? focusElement;
         const initialFocusValueOrFn = untrack(initialFocus);
         const resolvedInitialFocus =
           typeof initialFocusValueOrFn === 'function'

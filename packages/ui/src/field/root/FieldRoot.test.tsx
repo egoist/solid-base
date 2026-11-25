@@ -10,6 +10,7 @@ import { RadioGroup } from '../../radio-group';
 import { Switch } from '../../switch';
 import { NumberField } from '../../number-field';
 import { Slider } from '../../slider';
+import { Select } from '../../select';
 import { createRefObject } from '@egoist/solid-base-utils/refObject';
 import {
   extendFieldRootState,
@@ -333,8 +334,88 @@ describe('<Field.Root />', () => {
     expect(label).toHaveAttribute('for', updatedId);
   });
 
-  // Skipped: SSR/hydration tests (jsdom-only run upstream skips them too) and React `<Activity>`
-  // tests (no equivalent in Solid); the remaining ones depend on Select/Checkbox (not ported).
+  // Skipped: SSR/hydration tests (jsdom-only run upstream skips them too) and the remaining React
+  // `<Activity>` tests (no equivalent in Solid). The two Select `<Activity>` tests below unmount
+  // and remount the Select with `<Show>` instead.
+
+  it('preserves label association when a control is unmounted and remounted', () => {
+    const [showSelect, setShowSelect] = createSignal(true);
+    render(() => (
+      <>
+        <Field.Root>
+          <Field.Label data-testid="label">Label</Field.Label>
+          <Show when={showSelect()}>
+            <Select.Root id="select">
+              <Select.Trigger data-testid="trigger">
+                <Select.Value placeholder="Select a model" />
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Positioner>
+                  <Select.Popup>
+                    <Select.Item value="model">Model</Select.Item>
+                  </Select.Popup>
+                </Select.Positioner>
+              </Select.Portal>
+            </Select.Root>
+          </Show>
+        </Field.Root>
+        <Checkbox.Root
+          checked={!showSelect()}
+          onCheckedChange={(checked) => {
+            setShowSelect(!checked);
+          }}
+        />
+      </>
+    ));
+    flush();
+
+    const checkbox = screen.getByRole('checkbox');
+    const label = screen.getByTestId('label');
+
+    expect(label).toHaveAttribute('for', screen.getByTestId('trigger').id);
+
+    click(checkbox);
+    click(checkbox);
+
+    expect(label).toHaveAttribute('for', screen.getByTestId('trigger').id);
+  });
+
+  it('preserves a non-native label association when a control is unmounted and remounted', () => {
+    const [showSelect, setShowSelect] = createSignal(true);
+    render(() => (
+      <>
+        <Field.Root>
+          <Field.Label nativeLabel={false} render="div" data-testid="label">
+            Label
+          </Field.Label>
+          <Show when={showSelect()}>
+            <Select.Root>
+              <Select.Trigger data-testid="trigger">
+                <Select.Value placeholder="Select a model" />
+              </Select.Trigger>
+            </Select.Root>
+          </Show>
+        </Field.Root>
+        <Checkbox.Root
+          checked={!showSelect()}
+          onCheckedChange={(checked) => {
+            setShowSelect(!checked);
+          }}
+        />
+      </>
+    ));
+    flush();
+
+    const checkbox = screen.getByRole('checkbox');
+    const labelId = screen.getByTestId('label').id;
+
+    expect(screen.getByTestId('trigger')).toHaveAttribute('aria-labelledby', labelId);
+
+    click(checkbox);
+    click(checkbox);
+
+    expect(screen.getByTestId('trigger')).toHaveAttribute('aria-labelledby', labelId);
+  });
 
   describe('prop: disabled', () => {
     it('should add data-disabled style hook to all components', () => {
@@ -798,7 +879,6 @@ describe('<Field.Root />', () => {
     });
 
     it('receives all form values as the 2nd argument', () => {
-      // Reduced to the ported controls (upstream also covers Select).
       const validateSpy = vi.fn();
       const onSubmit = vi.fn(preventDefault);
 
@@ -849,6 +929,18 @@ describe('<Field.Root />', () => {
               <Slider.Control />
             </Slider.Root>
           </Field.Root>
+          <Field.Root name="select">
+            <Select.Root defaultValue="sans">
+              <Select.Trigger />
+              <Select.Portal>
+                <Select.Positioner>
+                  <Select.Popup>
+                    <Select.Item value="sans" />
+                  </Select.Popup>
+                </Select.Positioner>
+              </Select.Portal>
+            </Select.Root>
+          </Field.Root>
           <button type="submit">submit</button>
         </Form>
       ));
@@ -867,6 +959,7 @@ describe('<Field.Root />', () => {
         'number-field': 13,
         slider: 12,
         'range-slider': [25, 70],
+        select: 'sans',
       });
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
@@ -910,14 +1003,27 @@ describe('<Field.Root />', () => {
     });
 
     it('submits the replacement control value when swapping field-aware controls', () => {
-      // Upstream swaps Select for Slider; Field.Control stands in for Select.
       const handleSubmit = vi.fn();
       const [showSlider, setShowSlider] = createSignal(false);
 
       render(() => (
         <Form onFormSubmit={handleSubmit}>
           <Field.Root name="value">
-            <Show when={showSlider()} fallback={<Field.Control defaultValue="sans" />}>
+            <Show
+              when={showSlider()}
+              fallback={
+                <Select.Root defaultValue="sans">
+                  <Select.Trigger />
+                  <Select.Portal>
+                    <Select.Positioner>
+                      <Select.Popup>
+                        <Select.Item value="sans" />
+                      </Select.Popup>
+                    </Select.Positioner>
+                  </Select.Portal>
+                </Select.Root>
+              }
+            >
               <Slider.Root defaultValue={12}>
                 <Slider.Control />
               </Slider.Root>
@@ -2227,7 +2333,44 @@ describe('<Field.Root />', () => {
       });
     });
 
-    // Skipped: dirty tests for Select (not ported).
+    it('should clear [data-dirty] when a Select returns to its null initial value', async () => {
+      const [value, setValue] = createSignal<string | null>(null);
+      render(() => (
+        <div>
+          <Field.Root data-testid="root">
+            <Select.Root value={value()} onValueChange={setValue}>
+              <Select.Trigger />
+              <Select.Portal>
+                <Select.Positioner>
+                  <Select.Popup>
+                    <Select.Item value="a" />
+                  </Select.Popup>
+                </Select.Positioner>
+              </Select.Portal>
+            </Select.Root>
+          </Field.Root>
+          <button type="button" onClick={() => setValue('a')}>
+            set
+          </button>
+          <button type="button" onClick={() => setValue(null)}>
+            clear
+          </button>
+        </div>
+      ));
+      const root = screen.getByTestId('root');
+
+      expect(root).not.toHaveAttribute('data-dirty');
+
+      click(screen.getByText('set'));
+      await waitFor(() => {
+        expect(root).toHaveAttribute('data-dirty', '');
+      });
+
+      click(screen.getByText('clear'));
+      await waitFor(() => {
+        expect(root).not.toHaveAttribute('data-dirty');
+      });
+    });
 
     describe('control remount', () => {
       // Skipped: 'captures the baseline only once in StrictMode' (no StrictMode in Solid).

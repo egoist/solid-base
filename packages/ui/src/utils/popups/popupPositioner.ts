@@ -1,4 +1,4 @@
-import { omit, onCleanup, untrack } from 'solid-js';
+import { merge, omit, onCleanup, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createAnchorPositioning } from '../../internals/anchorPositioning';
 import { POPUP_COLLISION_AVOIDANCE } from '../../internals/constants';
@@ -66,6 +66,14 @@ export interface CreatePopupPositionerOptions<State extends PopupPositionerState
    * @default !open
    */
   inert?: boolean | undefined;
+  /**
+   * Renders the positioner's children, such as the component's children wrapped in contexts that
+   * provide the positioning to the parts inside. Called when the children are created, which is
+   * before `createPopupPositioner` returns: contexts rendered around the returned element don't
+   * reach them. Read once.
+   * @default the component's children
+   */
+  renderChildren?: ((positioning: CreateAnchorPositioningReturnValue) => JSX.Element) | undefined;
 }
 
 export interface CreatePopupPositionerReturnValue {
@@ -231,6 +239,8 @@ export function createPopupPositioner<State extends PopupPositionerState>(
     }
   });
 
+  const renderChildren = options.renderChildren;
+
   const element = renderPositioner(componentProps, state, {
     get styles() {
       return positioning.positionerStyles;
@@ -238,7 +248,13 @@ export function createPopupPositioner<State extends PopupPositionerState>(
     get transitionStatus() {
       return store.select('transitionStatus');
     },
-    props: elementProps,
+    props: renderChildren
+      ? (merge(elementProps, {
+          get children() {
+            return renderChildren(positioning);
+          },
+        }) as HTMLProps)
+      : elementProps,
     ref: (element: HTMLDivElement) => {
       positionerElement = element;
       store.set('positionerElement', element);

@@ -101,6 +101,8 @@ Pitfalls learned while porting:
 - There are no `on*Capture` props: attach native capture listeners in `onSettled`/effects.
   `onFocus`/`onBlur` don't bubble; use `onFocusIn`/`onFocusOut` where React relied on bubbling.
 - Ref callbacks are never called with `null`: clear element references in `onCleanup`.
+- Context is captured when a node is created: a provider only reaches children created inside
+  it. Create the element (or resolve its children) inside the provider's JSX, not before it.
 
 ### Mapping React → Solid
 

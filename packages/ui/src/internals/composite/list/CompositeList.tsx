@@ -39,6 +39,12 @@ export interface CompositeListContextValue<Metadata = any> {
   map: Accessor<Map<HTMLElement, CompositeMetadata<Metadata>>>;
   /** Returns the index of a registered element (reactive), or `-1`. */
   indexOf: (element: HTMLElement | null | undefined) => number;
+  /**
+   * Subscribes to changes of the ordered map. Subscribers run before `onMapChange`. Only lists
+   * created with `onMapChange`, `elementsRef` or `labelsRef` notify them. Returns the unsubscribe
+   * function.
+   */
+  subscribeMapChange?: ((listener: () => void) => () => void) | undefined;
 }
 
 export interface CreateCompositeListParameters<Metadata> {
@@ -64,6 +70,7 @@ export function createCompositeList<Metadata = {}>(
   params: CreateCompositeListParameters<Metadata> = {},
 ): CompositeListContextValue<Metadata> {
   const entries = new Map<HTMLElement, Entry<Metadata>>();
+  const mapChangeListeners = new Set<() => void>();
   const [version, setVersion] = createSignal(0);
   let order = 0;
   let scheduled = false;
@@ -178,11 +185,18 @@ export function createCompositeList<Metadata = {}>(
       }
       return syncRefs().get(element)?.index ?? -1;
     },
+    subscribeMapChange(listener) {
+      mapChangeListeners.add(listener);
+      return () => {
+        mapChangeListeners.delete(listener);
+      };
+    },
   };
 
   if (params.onMapChange || params.elementsRef || params.labelsRef) {
     // Keep the refs in sync even when nothing reads the list reactively.
     createEffect(syncRefs, (currentMap) => {
+      mapChangeListeners.forEach((listener) => listener());
       params.onMapChange?.(currentMap);
     });
   }

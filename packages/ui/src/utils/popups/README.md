@@ -261,9 +261,16 @@ export function PopoverPositioner(componentProps: PopoverPositioner.Props) {
   const store = usePopoverRootContext();
   const keepMounted = usePopoverPortalContext();
   const nodeId = createFloatingNodeId();
-  const { element, positioning } = createPopupPositioner(store, componentProps, {
+  const { element } = createPopupPositioner(store, componentProps, {
     get keepMounted() { return keepMounted(); },
     positioning: { nodeId },
+    // The children are created while the positioner element is created (before this call
+    // returns), so contexts rendered around `element` would not reach them: provide them here.
+    renderChildren: (positioning) => (
+      <PopoverPositionerContext value={positioning}>
+        <FloatingNode id={nodeId}>{componentProps.children}</FloatingNode>
+      </PopoverPositionerContext>
+    ),
   });
   const trueModal = () =>
     store.select('modal') === true && store.select('openChangeReason') !== REASONS.triggerHover;
@@ -274,12 +281,12 @@ export function PopoverPositioner(componentProps: PopoverPositioner.Props) {
     () => store.select('activeTriggerElement'),
   );
   return (
-    <PopoverPositionerContext value={positioning}>
+    <>
       <Show when={store.select('mounted') && trueModal()}>
         <InternalBackdrop inert={!store.select('open')} cutout={store.select('activeTriggerElement')} />
       </Show>
-      <FloatingNode id={nodeId}>{element}</FloatingNode>
-    </PopoverPositionerContext>
+      {element}
+    </>
   );
 }
 // Popover.Arrow: renderElement('div', props, { ref: positioning.arrowRef,

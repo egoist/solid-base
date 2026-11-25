@@ -1,4 +1,4 @@
-import { createEffect, onCleanup } from 'solid-js';
+import { createEffect, createMemo, onCleanup } from 'solid-js';
 import { addEventListener } from '@egoist/solid-base-utils/addEventListener';
 import { mergeCleanups } from '@egoist/solid-base-utils/mergeCleanups';
 import { contains } from '@egoist/solid-base-utils/shadowDom';
@@ -104,11 +104,26 @@ export function createHoverTriggerInteraction(
   const mouseOnly = () => options.mouseOnly ?? false;
   const isActiveTrigger = () => options.isActiveTrigger ?? true;
 
-  const { events } = store.context;
+  // The store can be a proxy that follows another store (a detached trigger follows its handle
+  // as a Root attaches), so the context (events, hover intent) is resolved from the current store.
+  // Reading `open` tracks the store switch; the memo only notifies when the context changes.
+  const storeContext = createMemo(() => {
+    store.select('open');
+    return store.context;
+  });
 
   const tree = useFloatingTree(options.externalTree);
 
-  const intent = getHoverIntent(store);
+  let intent = getHoverIntent(store);
+  createEffect(storeContext, () => {
+    const next = getHoverIntent(store);
+    if (next !== intent) {
+      // A pending open or safe polygon started against the previous store is dropped.
+      intent.cancelPendingOpen();
+      intent.stopSafePolygon();
+      intent = next;
+    }
+  });
   const isHoverCloseActiveRef = { current: false };
 
   function checkShouldOpen() {
@@ -154,7 +169,10 @@ export function createHoverTriggerInteraction(
 
   // The active trigger publishes its safe polygon options to the popup.
   createEffect(
-    () => (isActiveTrigger() ? { options: options.handleClose?.__options } : null),
+    () => {
+      storeContext();
+      return isActiveTrigger() ? { options: options.handleClose?.__options } : null;
+    },
     (active) => {
       if (active) {
         intent.handleCloseOptions = active.options;
@@ -170,25 +188,28 @@ export function createHoverTriggerInteraction(
 
   // When closing before opening, clear the delay timeouts to cancel it
   // from showing.
-  createEffect(enabled, (isEnabled) => {
-    if (!isEnabled) {
-      return undefined;
-    }
-
-    function onOpenChangeLocal(details: FloatingUIOpenChangeDetails) {
-      if (!details.open) {
-        isHoverCloseActiveRef.current = details.reason === REASONS.triggerHover;
-        intent.cancel();
-      } else {
-        isHoverCloseActiveRef.current = false;
+  createEffect(
+    () => (enabled() ? storeContext().events : null),
+    (events) => {
+      if (!events) {
+        return undefined;
       }
-    }
 
-    events.on('openchange', onOpenChangeLocal);
-    return () => {
-      events.off('openchange', onOpenChangeLocal);
-    };
-  });
+      function onOpenChangeLocal(details: FloatingUIOpenChangeDetails) {
+        if (!details.open) {
+          isHoverCloseActiveRef.current = details.reason === REASONS.triggerHover;
+          intent.cancel();
+        } else {
+          isHoverCloseActiveRef.current = false;
+        }
+      }
+
+      events.on('openchange', onOpenChangeLocal);
+      return () => {
+        events.off('openchange', onOpenChangeLocal);
+      };
+    },
+  );
 
   createEffect(
     () => {

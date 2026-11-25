@@ -2,6 +2,7 @@ import {
   createEffect,
   createSignal,
   getObserver,
+  runWithOwner,
   untrack,
   type Accessor,
   type Setter,
@@ -68,7 +69,13 @@ export class ReactiveStore<
 
     const read = (key: PropertyKey) => {
       const binding = this.bindings.get(key);
-      return binding ? binding() : this.values[key];
+      if (!binding) {
+        return this.values[key];
+      }
+      // Untracked reads (snapshots in handlers, effect callbacks and ref callbacks) run without an
+      // owner: a compiled conditional prop (`open={a() && b()}`) creates a memo on every read that
+      // has an owner, which Solid forbids inside effect and ref callbacks.
+      return getObserver() ? binding() : runWithOwner(null, binding);
     };
 
     this.state = new Proxy(this.values, {

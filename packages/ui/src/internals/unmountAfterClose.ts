@@ -67,13 +67,23 @@ export function createUnmountAfterClose(
     }
   });
 
+  // `mounted` lags `setMounted(false)` until the next flush: remember the unmount so a second
+  // `unmount()` in the same batch doesn't complete closing twice.
+  let unmountPending = false;
+  createEffect(mounted, (isMounted) => {
+    if (isMounted) {
+      unmountPending = false;
+    }
+  });
+
   function unmount() {
+    unmountPending = true;
     setMounted(false);
     onUnmount();
   }
 
   function forceUnmount() {
-    if (!untrack(mounted)) {
+    if (!untrack(mounted) || unmountPending) {
       return;
     }
     if (untrack(open)) {

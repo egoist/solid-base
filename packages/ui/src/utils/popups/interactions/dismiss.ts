@@ -659,6 +659,17 @@ export function createDismiss(
           return;
         }
 
+        // A press in content portaled out of the floating element but rendered inside it in the
+        // component tree (a nested popup) is inside, like React's synthetic capture handlers see
+        // it: the click that ends the press must not dismiss this element.
+        const positionerElement = store.select('positionerElement');
+        if (
+          !contains(positionerElement, getTarget(event) as Element | null) &&
+          isEventInsideComponentTree(event, positionerElement)
+        ) {
+          markInsideReactTree();
+        }
+
         addTargetEventListenerOnce(event, (targetEvent) => {
           if (targetEvent.type === 'pointerdown') {
             handlePointerDown(targetEvent as PointerEvent);
