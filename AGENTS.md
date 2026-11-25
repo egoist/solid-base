@@ -1,4 +1,4 @@
-# solid-base — Base UI for SolidJS 2
+# Solid Base — Base UI for SolidJS 2
 
 This repository is a SolidJS 2 port of [Base UI](https://github.com/mui/base-ui) (`@base-ui/react`).
 It is a Bun workspace:
@@ -107,6 +107,13 @@ Pitfalls learned while porting:
 - There are no `on*Capture` props: attach native capture listeners in `onSettled`/effects.
   `onFocus`/`onBlur` don't bubble; use `onFocusIn`/`onFocusOut` where React relied on bubbling.
 - Ref callbacks are never called with `null`: clear element references in `onCleanup`.
+- Hydration claims server-rendered elements in render order. When a component returns siblings
+  (`<><Guard />{element}<Guard /></>`), create the element in place through a component
+  (`const Trigger = () => renderElement(...)`, then `<Trigger />`), not ahead of its siblings in
+  the body, or it can miss its event bindings after hydration.
+- Server and client must create the same reactive structure: never return early on `isServer`
+  (or `isHydrating()`) before creating primitives, or every following hydration id shifts. Wrap
+  client-only work in one memo created on both sides.
 - Context is captured when a node is created: a provider only reaches children created inside
   it. Create the element (or resolve its children) inside the provider's JSX, not before it.
 

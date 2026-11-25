@@ -8,6 +8,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['test/hydration/hydrate.client.test.tsx'],
+    include: ['test/hydration/*.client.test.tsx'],
   },
 });

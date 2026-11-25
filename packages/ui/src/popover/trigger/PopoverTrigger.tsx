@@ -199,7 +199,9 @@ export function PopoverTrigger<Payload = unknown>(
     },
   };
 
-  const element = renderElement('button', componentProps, {
+  // Created where it renders (between the guards), not ahead of them: hydration claims elements
+  // in render order, and an element built before its siblings misses its event bindings.
+  const TriggerElement = () => renderElement('button', componentProps, {
     state,
     ref: [buttonRef, registerState, registerTrigger],
     props: [
@@ -243,7 +245,7 @@ export function PopoverTrigger<Payload = unknown>(
           onFocus={handlePreFocusGuardFocus}
         />
       </Show>
-      {element}
+      <TriggerElement />
       <Show when={guardsVisible()}>
         <TriggerFocusGuard
           refObject={() => untrack(store).context.triggerFocusTargetRef}
