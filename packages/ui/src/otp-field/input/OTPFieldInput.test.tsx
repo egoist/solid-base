@@ -813,8 +813,12 @@ describe('<OTPField.Input />', () => {
             <OTPField.Input />
           </OTPField.Root>
         ));
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy.mock.calls[0]?.[0]).toContain(
+        // Only count Base UI's own warnings: Solid may log timing hints under load.
+        const baseUIWarnings = warnSpy.mock.calls.filter((call) =>
+          String(call[0]).startsWith('Base UI:'),
+        );
+        expect(baseUIWarnings).toHaveLength(1);
+        expect(baseUIWarnings[0]?.[0]).toContain(
           'Base UI: <OTPField.Input> ignores `aria-label` on the first input.',
         );
       } finally {

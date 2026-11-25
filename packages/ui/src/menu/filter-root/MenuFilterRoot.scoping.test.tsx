@@ -738,6 +738,52 @@ describe('<Menu.FilterProvider><Menu.Root/></Menu.FilterProvider>', () => {
       expect(input).not.toHaveAttribute('aria-activedescendant');
     });
 
+    it('moves on from a highlight reset by an inserted item to the index it replaced', async () => {
+      const [inserted, setInserted] = createSignal(false);
+
+      const { user } = renderWithUser(() => (
+        <Menu.FilterProvider autoHighlight="always">
+          <Menu.Root open>
+            <Menu.Portal>
+              <Menu.Positioner>
+                <Menu.Popup>
+                  <Menu.Input aria-label="Filter actions" />
+                  <Menu.List>
+                    <Show when={inserted()}>
+                      <Menu.Item>Archive</Menu.Item>
+                    </Show>
+                    <Menu.Item>Rename</Menu.Item>
+                    <Menu.Item>Delete</Menu.Item>
+                  </Menu.List>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        </Menu.FilterProvider>
+      ));
+      const input = screen.getByRole('searchbox', { name: 'Filter actions' });
+
+      await act(() => input.focus());
+      await user.keyboard('[ArrowDown]');
+      expect(input).toHaveAttribute(
+        'aria-activedescendant',
+        screen.getByRole('menuitem', { name: 'Delete' }).id,
+      );
+
+      await act(() => setInserted(true));
+      expect(input).toHaveAttribute(
+        'aria-activedescendant',
+        screen.getByRole('menuitem', { name: 'Archive' }).id,
+      );
+
+      // The next item sits at the index the reset highlight replaced.
+      await user.keyboard('[ArrowDown]');
+      expect(input).toHaveAttribute(
+        'aria-activedescendant',
+        screen.getByRole('menuitem', { name: 'Rename' }).id,
+      );
+    });
+
     it('keeps the highlight when an item the query filters out is appended', async () => {
       const [appended, setAppended] = createSignal(false);
       const onItemHighlighted = vi.fn();

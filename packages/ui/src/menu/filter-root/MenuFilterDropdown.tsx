@@ -1,4 +1,4 @@
-import { createEffect } from 'solid-js';
+import { createEffect, onCleanup } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { createControllableSignal } from '@egoist/solid-base-utils/controlled';
 import { useMenubarContext } from '../../menubar/MenubarContext';
@@ -6,6 +6,7 @@ import { isVirtualPointerEvent } from '../../utils/popups/event';
 import { FilterDropdownRoot } from '../../filter-dropdown/root/FilterDropdownRoot';
 import { createFilterDropdownCloseQuery } from '../../filter-dropdown/root/createFilterDropdownCloseQuery';
 import type { FilterDropdownFilter } from '../../filter-dropdown/root/FilterDropdownRootContext';
+import type { FilterDropdownActiveIndexConnection } from '../../filter-dropdown/root/FilterDropdownRoot';
 import { useMenuRootContext } from '../root/MenuRootContext';
 import { REASONS } from '../../internals/reasons';
 import type { BaseUIEvent, HTMLProps } from '../../internals/types';
@@ -64,6 +65,17 @@ export function MenuFilterDropdown(props: MenuFilterDropdownProps): JSX.Element 
     }
   });
 
+  // The menu shows the highlight the filter resolves. Every highlight write is reported, so a
+  // resolved highlight gives way to the next write even when it stores the index already stored.
+  function connectActiveIndex(connection: FilterDropdownActiveIndexConnection) {
+    const unsubscribe = store.subscribeActiveIndexWrites(connection.written);
+    const removeDerivation = store.derive('activeIndex', connection.resolve);
+    onCleanup(() => {
+      removeDerivation();
+      unsubscribe();
+    });
+  }
+
   // Trust the rendered element's id once it exists: an explicitly empty id must not fall back to a
   // registered id that no element carries.
   const triggerId = () => {
@@ -85,8 +97,9 @@ export function MenuFilterDropdown(props: MenuFilterDropdownProps): JSX.Element 
         onValueChange={handleValueChange}
         triggerId={triggerId()}
         listRef={store.context.itemDomElements}
-        getActiveIndex={() => store.state.activeIndex}
+        getActiveIndex={() => store.selectStored('activeIndex')}
         setActiveIndex={(index: number | null) => store.setActiveIndex(index, REASONS.none)}
+        connectActiveIndex={connectActiveIndex}
         focusOwnerRef={store.context.virtualFocusRef}
       >
         {props.children}

@@ -528,6 +528,12 @@ export function popupConformanceTests(config: PopupTestConfig) {
         async ({ closes, synchronous }) => {
           const onOpenChangeComplete = vi.fn();
           const handleClose = vi.fn();
+          // Resolved by the test once every close was requested, so the closes always arrive
+          // during the wait regardless of how long the key presses take.
+          let finishWait!: () => void;
+          const waitForCloses = new Promise<void>((resolve) => {
+            finishWait = resolve;
+          });
 
           function App() {
             const [open, setOpen] = createSignal(true);
@@ -552,7 +558,7 @@ export function popupConformanceTests(config: PopupTestConfig) {
                   if (synchronous) {
                     eventDetails.preventUnmountOnClose();
                   }
-                  await wait(50);
+                  await waitForCloses;
                   if (!synchronous) {
                     eventDetails.preventUnmountOnClose();
                   }
@@ -572,6 +578,7 @@ export function popupConformanceTests(config: PopupTestConfig) {
             await user.keyboard('[Escape]');
           }
           expect(handleClose).toHaveBeenCalledTimes(closes);
+          finishWait();
           await waitFor(() => {
             expect(getConformanceTrigger()).not.toHaveAttribute('data-popup-open');
           });

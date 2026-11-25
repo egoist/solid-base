@@ -177,13 +177,16 @@ export class ReactiveStore<
   /**
    * Derives what reading `key` returns from its stored value (tracked when selected), such as a
    * fallback computed from other state. Writes still go to the stored value, and snapshots taken
-   * for updates (`transformState`) see the stored value. Returns a function removing it.
+   * for updates (`transformState`) see the stored value. Readers of `key` are notified when the
+   * derivation is installed and removed. Returns a function removing it.
    */
   derive<Key extends keyof State>(key: Key, fn: (stored: State[Key]) => State[Key]) {
     this.derivations.set(key, fn);
+    this.notify(key);
     return () => {
       if (this.derivations.get(key) === fn) {
         this.derivations.delete(key);
+        this.notify(key);
       }
     };
   }

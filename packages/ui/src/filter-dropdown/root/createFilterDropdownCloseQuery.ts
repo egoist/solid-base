@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, untrack, type Accessor } from 'solid-js';
+import { createEffect, createMemo, onCleanup, untrack, type Accessor } from 'solid-js';
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import { REASONS } from '../../internals/reasons';
 import type { FilterDropdownRoot } from './FilterDropdownRootContext';
@@ -21,10 +21,20 @@ export function createFilterDropdownCloseQuery(
 ): Accessor<string> {
   const { open, mounted, value, onValueChange } = params;
 
-  const [closeQuery, setCloseQuery] = createSignal<string | null>(null);
+  // The query as of the last time the popup closed: `null` while open, `undefined` before it first
+  // opens.
+  const closedWith = createMemo<RetainedQuery | null | undefined>(
+    (previous) => {
+      if (open()) {
+        return null;
+      }
+      return previous !== null ? previous : { query: value() };
+    },
+    { name: 'createFilterDropdownCloseQuery.closedWith' },
+  );
 
-  let previousOpen = untrack(open);
   let pendingReset = false;
+  let lastClosedWith: RetainedQuery | undefined;
 
   function settlePendingReset() {
     pendingReset = false;
@@ -34,17 +44,16 @@ export function createFilterDropdownCloseQuery(
     }
   }
 
+  // Clears the committed value once the popup has unmounted. A reopen that interrupts the exit
+  // never unmounts, so it settles the pending reset too.
   createEffect(
-    () => [open(), mounted(), value(), closeQuery()] as const,
-    ([isOpen, isMounted, currentValue, currentCloseQuery]) => {
-      const wasOpen = previousOpen;
-      previousOpen = isOpen;
-      if (wasOpen && !isOpen && currentValue !== '') {
-        pendingReset = true;
-        setCloseQuery(currentValue);
-      } else if ((isOpen || !isMounted) && currentCloseQuery !== null) {
-        // A reopen that interrupts the exit never unmounts, so it settles the pending reset too.
-        setCloseQuery(null);
+    () => ({ closed: closedWith(), isMounted: mounted() }),
+    ({ closed, isMounted }) => {
+      if (closed && closed !== lastClosedWith) {
+        lastClosedWith = closed;
+        pendingReset = closed.query !== '';
+      }
+      if (pendingReset && (!closed || !isMounted)) {
         settlePendingReset();
       }
     },
@@ -56,8 +65,17 @@ export function createFilterDropdownCloseQuery(
     }
   });
 
-  return () => {
-    const currentCloseQuery = closeQuery();
-    return !open() && currentCloseQuery !== null ? currentCloseQuery : value();
-  };
+  // A memo: the popup unmounting hands the display from the retained query back to the value,
+  // which is still the same until the reset above lands.
+  return createMemo(
+    () => {
+      const closed = closedWith();
+      return closed && closed.query !== '' && mounted() ? closed.query : value();
+    },
+    { name: 'createFilterDropdownCloseQuery.query' },
+  );
+}
+
+interface RetainedQuery {
+  query: string;
 }

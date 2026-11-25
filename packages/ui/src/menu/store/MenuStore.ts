@@ -403,6 +403,19 @@ export class MenuStore<Payload> extends BasePopupStore<
     return { allowMouseEnter: false } as Partial<State<Payload>>;
   }
 
+  private readonly activeIndexWriteListeners = new Set<() => void>();
+
+  /**
+   * Subscribes to every highlight write, including one that stores the index already stored.
+   * Returns the unsubscribe function.
+   */
+  subscribeActiveIndexWrites(listener: () => void) {
+    this.activeIndexWriteListeners.add(listener);
+    return () => {
+      this.activeIndexWriteListeners.delete(listener);
+    };
+  }
+
   setActiveIndex(
     activeIndex: number | null,
     reason: MenuRoot.HighlightEventReason,
@@ -419,6 +432,7 @@ export class MenuStore<Payload> extends BasePopupStore<
       this.context.highlightEvent = isWriteBack ? undefined : event;
     }
     this.set('activeIndex', activeIndex);
+    this.activeIndexWriteListeners.forEach((listener) => listener());
   }
 
   highlightItem(

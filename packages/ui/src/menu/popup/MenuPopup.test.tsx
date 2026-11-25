@@ -226,6 +226,8 @@ describe('<Menu.Popup />', () => {
 
     const three = await screen.findByRole('menuitem', { name: 'Three' });
     await waitFor(() => expect(three).toHaveAttribute('data-highlighted'));
+    // Let the keyboard open's initial focus land before moving focus elsewhere in the popup.
+    await waitFor(() => expect(three).toHaveFocus());
     await act(() => screen.getByRole('link', { name: 'Profile' }).focus());
     expect(three).toHaveAttribute('data-highlighted');
 

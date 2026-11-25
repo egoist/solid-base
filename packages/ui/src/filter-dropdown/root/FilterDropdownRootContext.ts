@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'solid-js';
+import { createContext, useContext, type Accessor } from 'solid-js';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import type { BaseUIChangeEventDetails } from '../../internals/createBaseUIEventDetails';
 import type { REASONS } from '../../internals/reasons';
@@ -35,8 +35,11 @@ export interface FilterDropdownRootContext {
   focusOwnerRef: RefObject<HTMLElement | null>;
   /** Moves the host's highlight. */
   setActiveIndex: (index: number | null) => void;
-  /** Called with the previous items when the host's list changes after it first registered. */
-  onItemsChange: (previousItems: readonly (HTMLElement | null)[]) => void;
+  /**
+   * Registers the host's DOM-ordered item list, so a change that leaves another item at the
+   * highlighted index moves the highlight. Returns the function unregistering it.
+   */
+  registerItemList: (items: Accessor<readonly (HTMLElement | null)[]>) => () => void;
   /** Reports a query edit and resets the highlight it invalidates. */
   onValueChange: (value: string, eventDetails: FilterDropdownRoot.ChangeEventDetails) => void;
 }

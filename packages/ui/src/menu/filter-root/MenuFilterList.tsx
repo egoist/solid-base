@@ -28,7 +28,7 @@ export function MenuFilterList(componentProps: MenuList.Props): JSX.Element {
   const { store } = rootContext;
   const direction = useDirection();
   const filterContext = useFilterDropdownRootContext();
-  const { onItemsChange, focusOwnerRef } = filterContext;
+  const { registerItemList, focusOwnerRef } = filterContext;
   const { listRef } = useFilterDropdownItemContext();
   const compositeList = useCompositeListContext();
 
@@ -95,27 +95,8 @@ export function MenuFilterList(componentProps: MenuList.Props): JSX.Element {
     });
   }
 
-  // `null` distinguishes the initial registration from a list emptied by filtering.
-  let previousItems: readonly (HTMLElement | null)[] | null = null;
-
-  // The composite list notifies subscribers before its `onMapChange`, so the positioner reports
-  // the highlight against the settled registry only after the items change has been resolved.
-  function handleItemMapChange() {
-    const items = [...listRef.current];
-    const changed =
-      previousItems === null ||
-      previousItems.length !== items.length ||
-      items.some((item, index) => item !== previousItems![index]);
-
-    if (changed && previousItems !== null) {
-      onItemsChange(previousItems);
-    }
-    previousItems = items;
-  }
-
-  const unsubscribe = compositeList?.subscribeMapChange?.(handleItemMapChange);
-  if (unsubscribe) {
-    onCleanup(unsubscribe);
+  if (compositeList) {
+    onCleanup(registerItemList(compositeList.elements));
   }
 
   const listProps = mergeProps<MenuList.Props>(

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, untrack } from 'solid-js';
+import { createMemo, createSignal, untrack, type Accessor } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import type { RefObject } from '@egoist/solid-base-utils/refObject';
 import { getFilter } from '../../internals/filter';
@@ -17,9 +17,12 @@ import { FilterDropdownStore } from '../store';
 
 /**
  * Holds the filter query, matches it against the registered items, and publishes the result. The
- * host owns list navigation; this root moves the highlight through `setActiveIndex`.
+ * host owns list navigation; this root clears the highlight through `setActiveIndex` when the query
+ * is edited, and resolves where the filtering pass and item list changes move it, which the host
+ * shows through `connectActiveIndex`.
  *
- * `listRef`, `getActiveIndex`, `setActiveIndex` and `focusOwnerRef` are read once.
+ * `listRef`, `getActiveIndex`, `setActiveIndex`, `connectActiveIndex` and `focusOwnerRef` are read
+ * once.
  *
  * @internal
  */
@@ -29,6 +32,7 @@ export function FilterDropdownRoot(props: FilterDropdownRoot.Props): JSX.Element
   const listRef = untrack(() => props.listRef);
   const getActiveIndex = untrack(() => props.getActiveIndex);
   const setActiveIndex = untrack(() => props.setActiveIndex);
+  const connectActiveIndex = untrack(() => props.connectActiveIndex);
   const focusOwnerRef: RefObject<HTMLElement | null> = untrack(() => props.focusOwnerRef) ?? {
     current: null,
   };
@@ -66,8 +70,6 @@ export function FilterDropdownRoot(props: FilterDropdownRoot.Props): JSX.Element
   const defaultId = createBaseUiId()();
   const defaultListId = `${defaultId}-list`;
 
-  let lastFilterQuery: string | null = null;
-
   const autoHighlight = () => props.autoHighlight ?? false;
   const value = () => props.query ?? props.value;
   const filterQuery = () => value().trim();
@@ -94,96 +96,189 @@ export function FilterDropdownRoot(props: FilterDropdownRoot.Props): JSX.Element
     }
   }
 
-  function handleItemsChange(previousItems: readonly (HTMLElement | null)[]) {
-    const items = listRef.current;
-    const activeIndex = getActiveIndex();
+  // The filtering pass: matches the registered items against the committed query, because a
+  // controlled consumer can reject a proposed change. It runs again when the registry changes, and
+  // reports how the result moves the highlight.
+  const filterPass = createMemo<FilterPass>(
+    (previous = INITIAL_FILTER_PASS) => {
+      const open = props.open;
+      const queryDefined = props.query !== undefined;
+      const query = filterQuery();
+      registryVersion();
+      const match = matchItem();
+      const autoHighlightOn = autoHighlightEnabled();
 
-    // A positional highlight must not silently move to another item. A change that leaves the
-    // highlighted item in place keeps it, such as an item appended after it or one that renders
-    // once before the query filters it out. A query change already reset the highlight.
-    if (
-      activeIndex != null &&
-      items[activeIndex] != null &&
-      items[activeIndex] === previousItems[activeIndex]
-    ) {
-      return;
-    }
-
-    setActiveIndex(untrack(autoHighlightEnabled) && items.length > 0 ? 0 : null);
-  }
-
-  // Re-runs when the registry changes and on the committed query, because a controlled consumer
-  // can reject a proposed change.
-  createEffect(
-    () => ({
-      open: props.open,
-      queryDefined: props.query !== undefined,
-      filterQuery: filterQuery(),
-      version: registryVersion(),
-      matchItem: matchItem(),
-      autoHighlightEnabled: autoHighlightEnabled(),
-    }),
-    (current) => {
-      if (!current.open && !current.queryDefined) {
-        return;
+      if (!open && !queryDefined) {
+        return previous;
       }
 
-      const query = current.filterQuery;
-      const queryChanged = lastFilterQuery !== null && lastFilterQuery !== query;
-      lastFilterQuery = query;
+      const queryChanged = previous.query !== null && previous.query !== query;
 
       // With no query or external filtering, every registered item is visible. External
       // filtering still follows `autoHighlight`; otherwise the item set invalidates the highlight.
-      if (current.matchItem === null) {
-        store.update({ visibleItemIds: null, checkedItemIds: null });
-        // Registry updates, such as an item's text changing, keep the current highlight.
-        if (current.autoHighlightEnabled && liveItems.size > 0) {
-          if (queryChanged || getActiveIndex() == null) {
-            setActiveIndex(0);
-          }
+      if (match === null) {
+        let highlight: HighlightRequest | undefined;
+        if (autoHighlightOn && liveItems.size > 0) {
+          // Registry updates, such as an item's text changing, keep the current highlight.
+          highlight = { index: 0, onlyIfNone: !queryChanged };
         } else if (query === '' && queryChanged) {
-          setActiveIndex(null);
+          highlight = { index: null };
         }
-        return;
+        return nextFilterPass(previous, {
+          query,
+          visibleItemIds: null,
+          checkedItemIds: null,
+          highlight,
+        });
       }
 
-      const currentIds = store.state.visibleItemIds;
+      const currentIds = previous.visibleItemIds;
       // The popup's content mounts after the root opens. Publishing an empty result before
       // anything registered would hide every item as it arrives and remount the matches.
       if (currentIds === null && liveItems.size === 0) {
-        return;
+        return nextFilterPass(previous, { ...previous, query, highlight: undefined });
       }
 
-      const matchItem = current.matchItem;
       const nextIds = new Set<symbol>();
       let hasNewMatch = currentIds === null;
       liveItems.forEach(({ getText }, id) => {
         const text = getText();
-        if (text != null && matchItem(text, query)) {
+        if (text != null && match(text, query)) {
           nextIds.add(id);
           hasNewMatch ||= !currentIds?.has(id);
         }
       });
-      const checkedItemIds = new Set(liveItems.keys());
+      const checkedItemIds = sameIds(previous.checkedItemIds, liveItems)
+        ? previous.checkedItemIds
+        : new Set(liveItems.keys());
 
       // New matches or a smaller result set invalidate the previous item identities.
       if (hasNewMatch || currentIds?.size !== nextIds.size) {
+        let highlight: HighlightRequest | undefined;
         // The first filtered result has no prior result identity to invalidate, unless the
         // controlled query itself changed.
-        if (current.autoHighlightEnabled && nextIds.size > 0) {
-          setActiveIndex(0);
+        if (autoHighlightOn && nextIds.size > 0) {
+          highlight = { index: 0 };
         } else if (currentIds !== null || queryChanged) {
-          setActiveIndex(null);
+          highlight = { index: null };
         }
-        store.update({ visibleItemIds: nextIds, checkedItemIds });
-      } else {
-        if (current.autoHighlightEnabled && queryChanged && nextIds.size > 0) {
-          setActiveIndex(0);
-        }
-        store.set('checkedItemIds', checkedItemIds);
+        return nextFilterPass(previous, {
+          query,
+          visibleItemIds: nextIds,
+          checkedItemIds,
+          highlight,
+        });
       }
+
+      return nextFilterPass(previous, {
+        query,
+        visibleItemIds: currentIds,
+        checkedItemIds,
+        highlight: autoHighlightOn && queryChanged && nextIds.size > 0 ? { index: 0 } : undefined,
+      });
     },
+    { name: 'FilterDropdownRoot.filterPass' },
   );
+
+  store.bind('visibleItemIds', () => filterPass().visibleItemIds);
+  store.bind('checkedItemIds', () => filterPass().checkedItemIds);
+
+  // The host's DOM-ordered item list, registered by the list part.
+  const [itemList, setItemList] = createSignal<
+    Accessor<readonly (HTMLElement | null)[]> | undefined
+  >(undefined, { ownedWrite: true, name: 'FilterDropdownRoot.itemList' });
+
+  let registeredItemList: Accessor<readonly (HTMLElement | null)[]> | undefined;
+
+  function registerItemList(items: Accessor<readonly (HTMLElement | null)[]>) {
+    registeredItemList = items;
+    setItemList(() => items);
+    return () => {
+      if (registeredItemList === items) {
+        registeredItemList = undefined;
+        setItemList(undefined);
+      }
+    };
+  }
+
+  // Counts the host's highlight writes, including writes of the index it already stores, which a
+  // resolved highlight that differs from the stored one must give way to. `writeCount` is current
+  // right after a write; the signal tells the resolution below on the next flush.
+  let writeCount = 0;
+  const [activeIndexWrite, setActiveIndexWrite] = createSignal(0, {
+    ownedWrite: true,
+    name: 'FilterDropdownRoot.activeIndexWrite',
+  });
+
+  // Resolves the highlight from the host's stored index and the events that move it: a filtering
+  // pass that places or clears it, and a change of the item list that leaves another item at the
+  // highlighted index. The result overrides the stored index until the host writes it again.
+  const highlightResolution = createMemo<HighlightResolution>(
+    (previous) => {
+      const pass = filterPass();
+      const items = itemList()?.();
+      const write = activeIndexWrite();
+      const stored = getActiveIndex();
+
+      let override =
+        previous?.override != null &&
+        previous.override.write === write &&
+        previous.override.stored === stored
+          ? previous.override
+          : null;
+      let current = override ? override.index : stored;
+
+      function moveTo(index: number | null) {
+        if (index !== current) {
+          current = index;
+          override = index === stored ? null : { index, stored, write };
+        }
+      }
+
+      if (pass !== previous?.pass && pass.highlight) {
+        if (!pass.highlight.onlyIfNone || current == null) {
+          moveTo(pass.highlight.index);
+        }
+      }
+
+      const previousItems = previous?.items;
+      const itemsChanged = items !== undefined && !sameItems(items, previousItems);
+      if (itemsChanged && previousItems) {
+        // A positional highlight must not silently move to another item. A change that leaves the
+        // highlighted item in place keeps it, such as an item appended after it or one that
+        // renders once before the query filters it out.
+        if (current == null || items[current] == null || items[current] !== previousItems[current]) {
+          moveTo(autoHighlightEnabled() && items.length > 0 ? 0 : null);
+        }
+      }
+
+      const nextItems = itemsChanged ? items : previousItems;
+      return previous &&
+        previous.pass === pass &&
+        previous.items === nextItems &&
+        previous.override === override
+        ? previous
+        : { pass, items: nextItems, override };
+    },
+    { name: 'FilterDropdownRoot.highlightResolution' },
+  );
+
+  const highlightOverride = createMemo(() => highlightResolution().override, {
+    name: 'FilterDropdownRoot.highlightOverride',
+  });
+
+  connectActiveIndex?.({
+    resolve(stored) {
+      const override = highlightOverride();
+      return override !== null && override.write === writeCount && override.stored === stored
+        ? override.index
+        : stored;
+    },
+    written() {
+      writeCount += 1;
+      setActiveIndexWrite(writeCount);
+    },
+  });
 
   const context: FilterDropdownRootContext = {
     get open() {
@@ -223,7 +318,7 @@ export function FilterDropdownRoot(props: FilterDropdownRoot.Props): JSX.Element
     },
     focusOwnerRef,
     setActiveIndex,
-    onItemsChange: handleItemsChange,
+    registerItemList,
     onValueChange: handleValueChange,
   };
 
@@ -284,7 +379,8 @@ export interface FilterDropdownRootProps {
    */
   listRef: RefObject<Array<HTMLElement | null>>;
   /**
-   * Reads the host's highlighted index. Read once.
+   * Reads the index the host stores as highlighted. Read once; called in reactive scopes, so it
+   * should track the stored index.
    */
   getActiveIndex: () => number | null;
   /**
@@ -292,10 +388,88 @@ export interface FilterDropdownRootProps {
    */
   setActiveIndex: (index: number | null) => void;
   /**
+   * Hands the host the highlight this root resolves: the host shows `resolve(storedIndex)` as its
+   * highlighted index, and calls `written()` after each write to its highlight. Without it, the
+   * filtering pass doesn't move the host's highlight. Read once.
+   */
+  connectActiveIndex?: ((connection: FilterDropdownActiveIndexConnection) => void) | undefined;
+  /**
    * The host's ref for the input, which holds real focus while the list is navigated virtually.
    * Read once.
    */
   focusOwnerRef?: RefObject<HTMLElement | null> | undefined;
+}
+
+export interface FilterDropdownActiveIndexConnection {
+  /** Maps the host's stored highlighted index to the index it should show. Tracks what it reads. */
+  resolve: (stored: number | null) => number | null;
+  /** Reports a write to the host's highlight, even one that stores the index it already holds. */
+  written: () => void;
+}
+
+interface HighlightRequest {
+  index: number | null;
+  /** Places the highlight only when nothing is highlighted. */
+  onlyIfNone?: boolean | undefined;
+}
+
+interface FilterPass {
+  /** The query the pass matched, `null` before the first pass. */
+  query: string | null;
+  visibleItemIds: ReadonlySet<symbol> | null;
+  checkedItemIds: ReadonlySet<symbol> | null;
+  /** How this pass moves the highlight. */
+  highlight: HighlightRequest | undefined;
+}
+
+interface HighlightOverride {
+  index: number | null;
+  /** The stored index this overrides. */
+  stored: number | null;
+  /** The host write it follows. */
+  write: number;
+}
+
+interface HighlightResolution {
+  pass: FilterPass;
+  items: readonly (HTMLElement | null)[] | undefined;
+  override: HighlightOverride | null;
+}
+
+const INITIAL_FILTER_PASS: FilterPass = {
+  query: null,
+  visibleItemIds: null,
+  checkedItemIds: null,
+  highlight: undefined,
+};
+
+// A pass that changes nothing keeps the previous result, so its readers don't re-run.
+function nextFilterPass(previous: FilterPass, next: FilterPass): FilterPass {
+  return next.highlight === undefined &&
+    next.query === previous.query &&
+    next.visibleItemIds === previous.visibleItemIds &&
+    next.checkedItemIds === previous.checkedItemIds
+    ? previous
+    : next;
+}
+
+function sameIds(ids: ReadonlySet<symbol> | null, items: ReadonlyMap<symbol, unknown>) {
+  if (ids === null || ids.size !== items.size) {
+    return false;
+  }
+  for (const id of items.keys()) {
+    if (!ids.has(id)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function sameItems(
+  a: readonly (HTMLElement | null)[],
+  b: readonly (HTMLElement | null)[] | undefined,
+) {
+  return b !== undefined && a.length === b.length && a.every((item, index) => item === b[index]);
 }
 
 export namespace FilterDropdownRoot {

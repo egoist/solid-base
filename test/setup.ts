@@ -1,13 +1,17 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@solidjs/testing-library';
 import { afterEach, beforeEach } from 'vitest';
 import { attribution } from 'solid-js/attribution';
 
 // The dev server enables attribution, which reports effect write cycles
 // (`EFFECT_WRITES_OWN_SOURCE`, `EFFECT_RELAY_TEAR`, ...). Enable it here too.
-// Opt in with `ATTRIBUTION=on` while the remaining reports are being fixed.
-if (process.env.ATTRIBUTION === 'on') {
+// `ATTRIBUTION=off` skips it, e.g. to bisect a failure.
+if (process.env.ATTRIBUTION !== 'off') {
   attribution.enable({ log: false });
 }
+
+// The suite runs thousands of tests in parallel: give async queries headroom under load.
+configure({ asyncUtilTimeout: 3000 });
 
 /**
  * Solid dev builds report reactivity mistakes as `[CODE] message` diagnostics.
