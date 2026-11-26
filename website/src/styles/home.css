@@ -600,6 +600,8 @@ label.w-row {
     linear-gradient(var(--line) 1px, transparent 1px),
     linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 28px 28px;
+  /* Start the pattern just outside the cell so its first lines don't double the cell borders. */
+  background-position: -1px -1px;
 }
 
 .style-preview {
@@ -653,6 +655,8 @@ label.w-row {
   padding: 0;
   list-style: none;
   border-top: 1px solid var(--line);
+  /* The last row's bottom borders sit on the band's own bottom border instead of above it. */
+  margin-bottom: -1px;
 }
 
 .catalog-grid li {
