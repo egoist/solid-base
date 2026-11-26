@@ -12,6 +12,8 @@ export default defineConfig({
     tanstackStart({
       // Every page is static: prerender the site by crawling links from the home page.
       prerender: { enabled: true, crawlLinks: true },
+      // The host serves `404.html` for unknown URLs.
+      pages: [{ path: '/404', prerender: { outputPath: '/404.html' } }],
     }),
     solid({ ssr: true }),
   ],
