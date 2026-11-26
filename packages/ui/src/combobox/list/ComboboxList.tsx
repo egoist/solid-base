@@ -20,7 +20,7 @@ import { clickHighlightedItem } from '../utils/parts';
  * A list container for the items.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxList(componentProps: ComboboxList.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

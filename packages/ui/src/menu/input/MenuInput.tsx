@@ -18,7 +18,7 @@ import { useMenuRootContext } from '../root/MenuRootContext';
  * Requires the menu to be wrapped in `Menu.FilterProvider`.
  * Renders an `<input>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuInput(componentProps: MenuInput.Props): JSX.Element {
   useMenuFilterPart('Input');

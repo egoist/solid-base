@@ -45,7 +45,7 @@ function Popup(props: { children: JSX.Element }) {
 | `Accessor<TextDirection>` | The direction of the closest `<DirectionProvider>`, or `'ltr'` without one. |
 
 :::solid[An accessor, not a value]
-Base UI's `useDirection()` returns the direction. Here it returns an accessor: call it
+`useDirection()` returns an accessor, not the direction itself: call it
 (`direction()`) inside JSX or another tracking scope to react to changes of the provider's
 `direction` prop.
 :::

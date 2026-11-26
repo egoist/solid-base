@@ -7,7 +7,7 @@ import type { DialogPortalProps } from '../../dialog/portal/DialogPortal';
  * By default, the portal element is appended to `<body>`.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export const DrawerPortal = DialogPortal as DrawerPortal;
 

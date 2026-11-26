@@ -9,7 +9,7 @@ import type { BaseUIComponentProps } from '../../internals/types';
  * A paragraph with additional information about the popover.
  * Renders a `<p>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverDescription(componentProps: PopoverDescription.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

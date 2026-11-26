@@ -19,7 +19,7 @@ const stateAttributesMapping: StateAttributesMapping<AccordionItemState> = {
  * A button that opens and closes the corresponding panel.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Accordion](https://base-ui.com/react/components/accordion)
+ * Documentation: [Solid Base Accordion](https://base.egoist.dev/components/accordion)
  */
 export function AccordionTrigger(componentProps: AccordionTrigger.Props) {
   const elementProps = omit(

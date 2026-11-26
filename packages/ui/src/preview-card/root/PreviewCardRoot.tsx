@@ -54,7 +54,7 @@ function PreviewCardRootComponent<Payload>(props: PreviewCardRoot.Props<Payload>
  * Groups all parts of the preview card.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Preview Card](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base Preview Card](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardRoot<Payload = unknown>(
   props: PreviewCardRoot.Props<Payload>,

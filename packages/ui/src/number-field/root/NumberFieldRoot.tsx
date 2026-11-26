@@ -55,7 +55,7 @@ import { handleHiddenInputInvalid } from '../../internals/handleHiddenInputInval
  * Groups all parts of the number field and manages its state.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Number Field](https://base-ui.com/react/components/number-field)
+ * Documentation: [Solid Base Number Field](https://base.egoist.dev/components/number-field)
  */
 export function NumberFieldRoot(componentProps: NumberFieldRoot.Props) {
   const elementProps = omit(

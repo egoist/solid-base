@@ -7,7 +7,7 @@ import { resolveMultipleLabels, resolveSelectedLabel } from '../../internals/res
  * The current value of the combobox.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxValue(props: ComboboxValue.Props): JSX.Element {
   const store = useComboboxRootContext();

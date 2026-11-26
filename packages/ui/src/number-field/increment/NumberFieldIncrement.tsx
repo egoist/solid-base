@@ -6,7 +6,7 @@ import type { NumberFieldRootState } from '../root/NumberFieldRoot';
  * A stepper button that increases the field value when clicked.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Number Field](https://base-ui.com/react/components/number-field)
+ * Documentation: [Solid Base Number Field](https://base.egoist.dev/components/number-field)
  */
 export function NumberFieldIncrement(componentProps: NumberFieldIncrement.Props) {
   return createNumberFieldStepperButton(componentProps, true);

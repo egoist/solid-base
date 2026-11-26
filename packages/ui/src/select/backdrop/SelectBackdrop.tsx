@@ -10,7 +10,7 @@ import { renderElement } from '../../internals/renderElement';
  * An overlay displayed beneath the select popup.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectBackdrop(componentProps: SelectBackdrop.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

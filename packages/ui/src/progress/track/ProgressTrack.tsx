@@ -9,7 +9,7 @@ import type { ProgressRootState } from '../root/ProgressRoot';
  * Contains the progress bar indicator.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Progress](https://base-ui.com/react/components/progress)
+ * Documentation: [Solid Base Progress](https://base.egoist.dev/components/progress)
  */
 export function ProgressTrack(componentProps: ProgressTrack.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

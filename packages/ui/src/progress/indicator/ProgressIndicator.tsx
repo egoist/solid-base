@@ -10,7 +10,7 @@ import { progressStateAttributesMapping } from '../root/stateAttributesMapping';
  * Visualizes the completion status of the task.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Progress](https://base-ui.com/react/components/progress)
+ * Documentation: [Solid Base Progress](https://base.egoist.dev/components/progress)
  */
 export function ProgressIndicator(componentProps: ProgressIndicator.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

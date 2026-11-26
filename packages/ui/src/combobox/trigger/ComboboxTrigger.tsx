@@ -32,7 +32,7 @@ import { useListEmpty, usePopupSide } from '../utils/parts';
  * A button that opens the popup.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxTrigger(componentProps: ComboboxTrigger.Props): JSX.Element {
   const elementProps = omit(

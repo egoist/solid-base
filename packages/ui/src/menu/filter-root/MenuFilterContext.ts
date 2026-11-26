@@ -86,7 +86,7 @@ export function useMenuFilterPart(part: string) {
       `Base UI: <Menu.${part}> must be placed in a menu wrapped in <Menu.FilterProvider>. ` +
         'It reads the filter query and the matching items from the provider, which a plain menu ' +
         'does not have. Wrap the <Menu.Root> or <Menu.SubmenuRoot> it belongs to in ' +
-        '<Menu.FilterProvider>. See https://base-ui.com/react/components/menu#filtering',
+        '<Menu.FilterProvider>. See https://base.egoist.dev/components/menu#filtering',
     );
   }
 }

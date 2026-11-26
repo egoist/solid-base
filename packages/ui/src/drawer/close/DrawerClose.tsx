@@ -6,7 +6,7 @@ import type { DialogCloseProps } from '../../dialog/close/DialogClose';
  * A button that closes the drawer.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export const DrawerClose = DialogClose as DrawerClose;
 

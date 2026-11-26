@@ -100,7 +100,7 @@ export function MenuRadioGroupPlain(
  * Groups related radio items.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuRadioGroup<Value = any>(
   props: MenuRadioGroup.Props<Value>,

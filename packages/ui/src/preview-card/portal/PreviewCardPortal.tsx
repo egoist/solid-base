@@ -10,7 +10,7 @@ import { PreviewCardPortalContext } from './PreviewCardPortalContext';
  * By default, the portal element is appended to `<body>`.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI PreviewCard](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base PreviewCard](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardPortal(props: PreviewCardPortal.Props): JSX.Element {
   const portalProps = omit(props, 'keepMounted');

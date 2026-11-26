@@ -10,7 +10,7 @@ import { createBaseUiId } from '../../internals/baseUiId';
  * An individual navigation menu item.
  * Renders a `<li>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuItem(componentProps: NavigationMenuItem.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'value');

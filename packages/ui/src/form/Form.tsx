@@ -17,7 +17,7 @@ import { createActionsRef, type ActionsRef } from '../internals/actionsRef';
  * A native form element with consolidated error handling.
  * Renders a `<form>` element.
  *
- * Documentation: [Base UI Form](https://base-ui.com/react/components/form)
+ * Documentation: [Solid Base Form](https://base.egoist.dev/components/form)
  */
 export function Form<FormValues extends Record<string, any> = Record<string, any>>(
   componentProps: Form.Props<FormValues>,

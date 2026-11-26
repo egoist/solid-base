@@ -22,7 +22,7 @@ import type { PopupInteractionStore } from '../../utils/popups/types';
  * A button that opens the dialog.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Dialog](https://base-ui.com/react/components/dialog)
+ * Documentation: [Solid Base Dialog](https://base.egoist.dev/components/dialog)
  */
 export function DialogTrigger<Payload = unknown>(
   componentProps: DialogTrigger.Props<Payload>,

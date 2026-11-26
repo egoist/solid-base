@@ -10,7 +10,7 @@ import { renderElement } from '../../internals/renderElement';
  * An overlay displayed beneath the preview card.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Preview Card](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base Preview Card](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardBackdrop(componentProps: PreviewCardBackdrop.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

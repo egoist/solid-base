@@ -120,7 +120,7 @@ whether the popup is removed from the DOM when closed or kept mounted with `keep
 ```
 
 :::solid[No AnimatePresence]
-Base UI's React docs pair the popup with Motion's `<AnimatePresence>` and a controlled `open`
+In React, popups are often paired with Motion's `<AnimatePresence>` and a controlled `open`
 prop. You don't need either here: the `render` function is called once, its effect follows
 `state.open`, and the component itself keeps the popup mounted until the exit animation finishes.
 Animation libraries built on the Web Animations API work the same way as `element.animate()`.

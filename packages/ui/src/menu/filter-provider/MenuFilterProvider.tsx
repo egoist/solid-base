@@ -11,7 +11,7 @@ import type { FilterDropdownRoot } from '../../filter-dropdown/root/FilterDropdo
  * Wrap each searchable submenu in its own provider.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuFilterProvider(props: MenuFilterProvider.Props): JSX.Element {
   const context: MenuFilterProviderContext = {

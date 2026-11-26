@@ -8,7 +8,7 @@ import { createRegisteredLabelId } from '../../utils/createRegisteredLabelId';
  * An accessible label that is automatically associated with the fieldset.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Fieldset](https://base-ui.com/react/components/fieldset)
+ * Documentation: [Solid Base Fieldset](https://base.egoist.dev/components/fieldset)
  */
 export function FieldsetLegend(componentProps: FieldsetLegend.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

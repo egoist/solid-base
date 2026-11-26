@@ -12,7 +12,7 @@ import {
  * Used to display a custom message based on the field's validity.
  * Requires `children` to be a function that accepts field validity state as an argument.
  *
- * Documentation: [Base UI Field](https://base-ui.com/react/components/field)
+ * Documentation: [Solid Base Field](https://base.egoist.dev/components/field)
  */
 export function FieldValidity(props: FieldValidity.Props) {
   const field = useFieldRootContext(false);

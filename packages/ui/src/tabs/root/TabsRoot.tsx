@@ -22,7 +22,7 @@ type TabMap = Map<HTMLElement, CompositeMetadata<TabsTab.Metadata>>;
  * Groups the tabs and the corresponding panels.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Tabs](https://base-ui.com/react/components/tabs)
+ * Documentation: [Solid Base Tabs](https://base.egoist.dev/components/tabs)
  */
 export function TabsRoot(componentProps: TabsRoot.Props) {
   const elementProps = omit(

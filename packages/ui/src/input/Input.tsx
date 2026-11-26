@@ -8,10 +8,10 @@ import {
 } from '../field/control/FieldControl';
 
 /**
- * A native input element that automatically works with [Field](https://base-ui.com/react/components/field).
+ * A native input element that automatically works with [Field](https://base.egoist.dev/components/field).
  * Renders an `<input>` element.
  *
- * Documentation: [Base UI Input](https://base-ui.com/react/components/input)
+ * Documentation: [Solid Base Input](https://base.egoist.dev/components/input)
  */
 export function Input(props: Input.Props) {
   return <FieldControl {...props} />;

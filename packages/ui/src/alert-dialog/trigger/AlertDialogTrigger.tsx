@@ -7,7 +7,7 @@ import type { AlertDialogHandle } from '../handle';
  * A button that opens the alert dialog.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Alert Dialog](https://base-ui.com/react/components/alert-dialog)
+ * Documentation: [Solid Base Alert Dialog](https://base.egoist.dev/components/alert-dialog)
  */
 export const AlertDialogTrigger = DialogTrigger as AlertDialogTrigger;
 

@@ -34,7 +34,7 @@ export type WithBaseUIEvent<Props> = {
 };
 
 /**
- * The `class` prop of Base UI components: any Solid class value, or a function of the state.
+ * The `class` prop of Solid Base components: any Solid class value, or a function of the state.
  */
 export type ClassProp<State> = JSX.ClassValue | ((state: State) => JSX.ClassValue);
 
@@ -46,7 +46,7 @@ export type RenderProp<State, RenderFunctionProps = HTMLProps> =
   | ComponentRenderFn<RenderFunctionProps, State>;
 
 /**
- * Props shared by all Base UI components.
+ * Props shared by all Solid Base components.
  * Contains `class` (a class value or callback taking the component's state as an argument),
  * `style` and `render` (to customize rendering).
  */

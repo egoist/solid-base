@@ -44,7 +44,7 @@ import type { OTPValidationType } from '../utils/otp';
  * Groups all OTP field parts and manages their state.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI OTP Field](https://base-ui.com/react/components/otp-field)
+ * Documentation: [Solid Base OTP Field](https://base.egoist.dev/components/otp-field)
  */
 export function OTPFieldRoot(componentProps: OTPFieldRoot.Props) {
   const elementProps = omit(

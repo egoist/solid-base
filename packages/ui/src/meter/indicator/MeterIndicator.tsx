@@ -9,7 +9,7 @@ import { renderElement } from '../../internals/renderElement';
  * Visualizes the position of the value along the range.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Meter](https://base-ui.com/react/components/meter)
+ * Documentation: [Solid Base Meter](https://base.egoist.dev/components/meter)
  */
 export function MeterIndicator(componentProps: MeterIndicator.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

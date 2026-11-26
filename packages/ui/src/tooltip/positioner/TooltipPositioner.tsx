@@ -14,7 +14,7 @@ import { createPopupPositioner } from '../../utils/popups/popupPositioner';
  * Positions the tooltip against the trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Tooltip](https://base-ui.com/react/components/tooltip)
+ * Documentation: [Solid Base Tooltip](https://base.egoist.dev/components/tooltip)
  */
 export function TooltipPositioner(componentProps: TooltipPositioner.Props): JSX.Element {
   const store = useTooltipRootContext();

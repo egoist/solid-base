@@ -9,7 +9,7 @@ import type { AlertDialogHandle } from '../handle';
  * Groups all parts of the alert dialog.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Alert Dialog](https://base-ui.com/react/components/alert-dialog)
+ * Documentation: [Solid Base Alert Dialog](https://base.egoist.dev/components/alert-dialog)
  */
 export function AlertDialogRoot<Payload = unknown>(
   props: AlertDialogRoot.Props<Payload>,

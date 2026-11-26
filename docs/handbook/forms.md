@@ -164,7 +164,7 @@ import { Fieldset } from '@egoist/solid-base/fieldset';
 ```
 
 :::solid
-Base UI passes an element (`render={<RadioGroup />}`). Here, `render` takes a function that
+In React you would pass an element (`render={<RadioGroup />}`). Here, `render` takes a function that
 spreads the fieldset's props into the group component, as in the examples above.
 :::
 
@@ -417,8 +417,7 @@ integrate the same way: forward that state to `<Field.Root>`, the control and `<
 submit through the library's handler from `onSubmit`. Check that the library supports Solid 2.
 
 :::solid[React Hook Form and TanStack Form]
-Base UI's React docs integrate React Hook Form (React-only) and TanStack Form's React adapter.
-Their `Controller` and `form.Field` render props map onto the props above: `field.value` →
+React apps often use React Hook Form or TanStack Form's React adapter. Their `Controller` and `form.Field` render props map onto the props above: `field.value` →
 `value`, `field.onChange` → `onValueChange`, `field.onBlur` → `onBlur`, and `fieldState` →
 `invalid`, `touched`, `dirty` and `<Field.Error match>`. When a library hands you a `ref` to focus
 invalid fields, pass it to the control, or to the input part of composite controls such as

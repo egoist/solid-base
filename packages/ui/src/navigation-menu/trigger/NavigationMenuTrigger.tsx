@@ -63,7 +63,7 @@ type PointerType = 'mouse' | 'touch' | 'pen' | '';
  * associated content.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuTrigger(componentProps: NavigationMenuTrigger.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'nativeButton', 'disabled');

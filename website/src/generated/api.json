@@ -4375,7 +4375,7 @@
       {
         "name": "Input",
         "jsxName": "Input",
-        "description": "A native input element that automatically works with [Field](https://base-ui.com/react/components/field).\nRenders an `<input>` element.",
+        "description": "A native input element that automatically works with [Field](https://base.egoist.dev/components/field).\nRenders an `<input>` element.",
         "props": [
           {
             "name": "id",
@@ -5868,7 +5868,7 @@
       {
         "name": "CSPProvider",
         "jsxName": "CSPProvider",
-        "description": "Provides a default Content Security Policy (CSP) configuration for Base UI components that\nrequire inline `<style>` or `<script>` tags.",
+        "description": "Provides a default Content Security Policy (CSP) configuration for Solid Base components that\nrequire inline `<style>` or `<script>` tags.",
         "props": [
           {
             "name": "nonce",
@@ -5880,7 +5880,7 @@
             "name": "disableStyleElements",
             "type": "boolean",
             "default": "false",
-            "description": "Whether inline `<style>` elements created by Base UI components should not be rendered. Instead, components must specify the CSS styles via custom class names or other methods.",
+            "description": "Whether inline `<style>` elements created by Solid Base components should not be rendered. Instead, components must specify the CSS styles via custom class names or other methods.",
             "required": false
           }
         ],
@@ -6933,7 +6933,7 @@
             "name": "parent",
             "type": "boolean",
             "default": "false",
-            "description": "Whether the checkbox controls a group of child checkboxes.\n\nMust be used in a [Checkbox Group](https://base-ui.com/react/components/checkbox-group).",
+            "description": "Whether the checkbox controls a group of child checkboxes.\n\nMust be used in a [Checkbox Group](https://base.egoist.dev/components/checkbox-group).",
             "required": false
           },
           {
@@ -6945,7 +6945,7 @@
           {
             "name": "value",
             "type": "string",
-            "description": "The checkbox's value. Identifies it within a [Checkbox Group](https://base-ui.com/react/components/checkbox-group), falling back to `name` when omitted.\nWhen submitting a form, a checked box submits `value`; with no `value`, it submits the native \"on\".",
+            "description": "The checkbox's value. Identifies it within a [Checkbox Group](https://base.egoist.dev/components/checkbox-group), falling back to `name` when omitted.\nWhen submitting a form, a checked box submits `value`; with no `value`, it submits the native \"on\".",
             "required": false
           },
           {
@@ -8007,7 +8007,7 @@
       {
         "name": "Control",
         "jsxName": "Field.Control",
-        "description": "The form control to label and validate.\nRenders an `<input>` element.\n\nYou can omit this part and use any Base UI input component instead. For example,\n[Input](https://base-ui.com/react/components/input), [Checkbox](https://base-ui.com/react/components/checkbox),\nor [Select](https://base-ui.com/react/components/select), among others, will work with Field out of the box.",
+        "description": "The form control to label and validate.\nRenders an `<input>` element.\n\nYou can omit this part and use any Solid Base input component instead. For example,\n[Input](/components/input), [Checkbox](/components/checkbox),\nor [Select](/components/select), among others, will work with Field out of the box.",
         "props": [
           {
             "name": "id",
@@ -11619,7 +11619,7 @@
       {
         "name": "DirectionProvider",
         "jsxName": "DirectionProvider",
-        "description": "Enables RTL behavior for Base UI components.",
+        "description": "Enables RTL behavior for Solid Base components.",
         "props": [
           {
             "name": "direction",

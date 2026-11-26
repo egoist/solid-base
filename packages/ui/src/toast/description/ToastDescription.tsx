@@ -9,7 +9,7 @@ import { createToastLabelPart } from '../utils/toastLabelPart';
  * Can be used as the default message for the toast when no title is provided.
  * Renders a `<p>` element.
  *
- * Documentation: [Base UI Toast](https://base-ui.com/react/components/toast)
+ * Documentation: [Solid Base Toast](https://base.egoist.dev/components/toast)
  */
 export function ToastDescription(componentProps: ToastDescription.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id', 'children');

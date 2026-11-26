@@ -136,8 +136,8 @@ const demoPreviewCard = PreviewCard.createHandle<{ title: string }>();
 
 :::solid[Payloads are data, the function child runs once]
 The function child of `<PreviewCard.Root>` is called **once**, with an object whose `payload`
-property is a live getter: read `state.payload` inside JSX rather than destructuring it. Upstream
-demos pass prebuilt React elements as payloads; in Solid, JSX evaluates to real DOM nodes that can
+property is a live getter: read `state.payload` inside JSX rather than destructuring it. React
+apps often pass prebuilt elements as payloads; in Solid, JSX evaluates to real DOM nodes that can
 only be inserted in one place, so the demos below pass plain data (a topic key) and render the
 card content from it.
 :::

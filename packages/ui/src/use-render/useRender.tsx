@@ -16,7 +16,7 @@ const BUTTON_DEFAULTS = { type: 'button' };
 const IMG_DEFAULTS = { alt: '' };
 
 /**
- * Renders a Base UI element.
+ * Renders a Solid Base element.
  *
  * Returns the element to render: the `defaultTagName` element, or the element returned by the
  * `render` prop, with the given `props`, `ref`s and the `state` turned into `data-*` attributes.

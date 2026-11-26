@@ -12,11 +12,6 @@ APIs for configuration.
 This page highlights some of the key accessibility features of the library, as well as some ways
 you need to augment it to ensure that your application is accessible to everyone.
 
-:::solid
-The accessibility behavior is ported from Base UI as is: the same roles, ARIA attributes, keyboard
-interactions and focus management, verified by Base UI's ported test suites.
-:::
-
 ## Keyboard navigation
 
 Components adhere to the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/) to
@@ -77,6 +72,5 @@ serialized for you. On plain elements in your own JSX, write ARIA booleans as st
 
 ## Testing
 
-Base UI components are tested on a broad spectrum of browsers, devices, platforms, screen readers
-and environments. This port mirrors Base UI's test suites for ARIA attributes, keyboard
-interactions and focus management, and runs them against the Solid components.
+Every component has tests for its roles, ARIA attributes, keyboard interactions and focus
+management, and every demo is server-rendered and hydrated in the test suite.

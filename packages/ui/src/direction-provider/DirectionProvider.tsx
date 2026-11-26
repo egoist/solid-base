@@ -6,9 +6,9 @@ import {
 } from '../internals/direction-context/DirectionContext';
 
 /**
- * Enables RTL behavior for Base UI components.
+ * Enables RTL behavior for Solid Base components.
  *
- * Documentation: [Base UI Direction Provider](https://base-ui.com/react/utils/direction-provider)
+ * Documentation: [Solid Base Direction Provider](https://base.egoist.dev/utils/direction-provider)
  */
 export function DirectionProvider(props: DirectionProvider.Props) {
   const value: DirectionContextValue = {

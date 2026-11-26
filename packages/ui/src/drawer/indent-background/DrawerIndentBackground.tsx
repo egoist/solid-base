@@ -18,7 +18,7 @@ const stateAttributesMapping: StateAttributesMapping<DrawerIndentBackgroundState
  * An element placed before `<Drawer.Indent>` to render a background layer that can be styled based on whether any drawer is open.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export function DrawerIndentBackground(
   componentProps: DrawerIndentBackground.Props,

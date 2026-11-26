@@ -9,7 +9,7 @@ import { createRegisteredLabelId } from '../../utils/createRegisteredLabelId';
  * An accessible label that is automatically associated with its parent group.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxGroupLabel(componentProps: ComboboxGroupLabel.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

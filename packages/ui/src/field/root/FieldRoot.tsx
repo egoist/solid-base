@@ -231,7 +231,7 @@ function FieldRootInner(componentProps: FieldRoot.Props) {
  * Groups all parts of the field.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Field](https://base-ui.com/react/components/field)
+ * Documentation: [Solid Base Field](https://base.egoist.dev/components/field)
  */
 export function FieldRoot(componentProps: FieldRoot.Props) {
   return (

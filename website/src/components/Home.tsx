@@ -31,7 +31,7 @@ export function Home() {
       <section class="band hero">
         <div class="hero-copy">
           <p class="eyebrow hero-kicker">
-            Base UI <span aria-hidden="true">×</span> SolidJS 2
+            Headless UI <span aria-hidden="true">×</span> SolidJS 2
           </p>
           <h1 class="display hero-title">
             Unstyled components.
@@ -39,8 +39,8 @@ export function Home() {
             Finely reactive.
           </h1>
           <p class="hero-lede">
-            Accessible, headless building blocks for Solid. Every part, prop and interaction of Base
-            UI, rebuilt on signals. You bring the styles.
+            Accessible, headless building blocks for Solid. Every part, prop and interaction built
+            on signals. You bring the styles.
           </p>
           <div class="hero-actions">
             <DocLink class="button" data-variant="primary" route="/overview/quick-start">
@@ -63,10 +63,10 @@ export function Home() {
 
       <section class="band intro">
         <p class="eyebrow">@egoist/solid-base</p>
-        <h2 class="display intro-title">Every Base UI part, on signals</h2>
+        <h2 class="display intro-title">Every part, on signals</h2>
         <p class="intro-lede">
-          {components.length} components with the same parts, props, data attributes and keyboard
-          behavior as upstream — written for Solid 2, not translated from React.
+          {components.length} components with composable parts, data attributes for every state and
+          complete keyboard support — written for Solid 2 from the ground up.
         </p>
       </section>
 
@@ -169,12 +169,6 @@ export function Home() {
             <DocLink route="/components/accordion">Components</DocLink>
             <DocLink route="/utils/merge-props">Utilities</DocLink>
           </div>
-          <div>
-            <p class="eyebrow">Upstream</p>
-            <a href="https://base-ui.com">Base UI</a>
-            <a href="https://www.solidjs.com">SolidJS</a>
-            <a href="https://tanstack.com/start">TanStack Start</a>
-          </div>
           <div class="footer-social">
             <p class="eyebrow">Source</p>
             <a href={REPOSITORY_URL}>
@@ -183,7 +177,7 @@ export function Home() {
           </div>
         </div>
         <div class="footer-bottom">
-          MIT licensed. A port of Base UI by the MUI team.{' '}
+          MIT licensed.{' '}
           <Link to="/">Solid Base</Link>
         </div>
       </footer>

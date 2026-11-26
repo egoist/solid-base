@@ -33,7 +33,7 @@ import * as SelectPositionerCssVars from '../positioner/SelectPositionerCssVars'
  * A container for the select list.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectPopup(componentProps: SelectPopup.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'finalFocus');

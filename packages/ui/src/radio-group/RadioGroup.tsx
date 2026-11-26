@@ -29,7 +29,7 @@ const MODIFIER_KEYS: ModifierKey[] = [SHIFT];
  * Provides shared state to a series of radio buttons.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Radio Group](https://base-ui.com/react/components/radio-group)
+ * Documentation: [Solid Base Radio Group](https://base.egoist.dev/components/radio-group)
  */
 export function RadioGroup<Value>(componentProps: RadioGroup.Props<Value>) {
   const elementProps = omit(

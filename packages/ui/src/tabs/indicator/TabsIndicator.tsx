@@ -35,7 +35,7 @@ interface IndicatorMeasurement {
  * A visual indicator that can be styled to match the position of the currently active tab.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Tabs](https://base-ui.com/react/components/tabs)
+ * Documentation: [Solid Base Tabs](https://base.egoist.dev/components/tabs)
  */
 export function TabsIndicator(componentProps: TabsIndicator.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'renderBeforeHydration');

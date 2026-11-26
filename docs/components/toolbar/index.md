@@ -63,7 +63,7 @@ See [how props are merged](/handbook/composition#how-props-are-merged) for how t
 combine.
 
 :::solid[Composing with `render` functions]
-Base UI passes an element (`render={<Menu.Trigger />}`). In Solid, pass a function that renders
+In React you would pass an element (`render={<Menu.Trigger />}`). In Solid, pass a function that renders
 the other part and spreads the props it receives: `render={(props) => <Menu.Trigger {...props} />}`.
 It is called once, with a live `props` object.
 :::

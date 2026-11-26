@@ -18,7 +18,7 @@ import type { PreviewCardInstantType } from '../store/PreviewCardStore';
  * Positions the popup against the trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Preview Card](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base Preview Card](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardPositioner(componentProps: PreviewCardPositioner.Props): JSX.Element {
   const store = usePreviewCardRootContext();

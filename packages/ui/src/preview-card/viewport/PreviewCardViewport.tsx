@@ -16,7 +16,7 @@ import type { PreviewCardInstantType } from '../store/PreviewCardStore';
  * changes based on the trigger, and switching between them is animated.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI PreviewCard](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base PreviewCard](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardViewport(componentProps: PreviewCardViewport.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

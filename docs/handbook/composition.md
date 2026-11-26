@@ -37,8 +37,8 @@ undefined when a custom element is rendered, so a default written before the spr
 replaced.
 
 :::solid[A function, not an element]
-React's Base UI accepts an element (`render={<MyButton size="md" />}`) and clones it with the
-part's props. Solid has no element cloning, so `render` takes a tag name or a function receiving
+In React, `render` usually takes an element (`render={<MyButton size="md" />}`) and clones it
+with the part's props. Solid has no element cloning, so `render` takes a tag name or a function receiving
 the props to spread and the component state. The function is called **once**; `props` and `state`
 are live objects, so spread them and read them in JSX instead of destructuring.
 :::
@@ -104,7 +104,7 @@ The rendered `<button>` gets:
 - `style={{ color: 'blue', padding: '4px' }}`: style objects are merged, and the rightmost
   source's values win.
 - Both click handlers, starting with `handleMenuClick`. Calling
-  [`event.preventBaseUIHandler()`](/handbook/customization#preventing-base-ui-from-handling-an-event)
+  [`event.preventBaseUIHandler()`](/handbook/customization#preventing-a-component-from-handling-an-event)
   skips every handler that runs after it, so calling it in `handleMenuClick` also skips
   `handleToolbarClick`. Some parts call it internally.
 - Both refs: `toolbarButtonRef` and `menuTriggerRef` receive the same element.

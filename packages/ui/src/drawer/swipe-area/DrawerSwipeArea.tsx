@@ -73,7 +73,7 @@ function resolveTouchAction(direction: DrawerSwipeDirection) {
  * An invisible area that listens for swipe gestures to open the drawer.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export function DrawerSwipeArea(componentProps: DrawerSwipeArea.Props): JSX.Element {
   const elementProps = omit(

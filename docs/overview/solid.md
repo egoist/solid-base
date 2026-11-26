@@ -1,12 +1,12 @@
 ---
 title: Coming from React
-description: Every difference between Solid Base and Base UI's React API.
+description: Every difference from headless React component libraries.
 order: 4
 ---
 
-The component APIs follow [Base UI](https://base-ui.com): the same components, parts, props, data
-attributes, CSS variables and change event details. This page lists the Solid-specific
-adjustments, so you can translate Base UI's React examples with confidence.
+If you have used a headless component library in React, most of Solid Base will look familiar.
+This page lists where it follows Solid instead, so you can translate React examples with
+confidence.
 
 ## The rules of thumb
 
@@ -95,7 +95,7 @@ Ref callbacks are never called with `null`. Use `onCleanup` to clear a stored el
 ## Events
 
 Event handlers receive **native events** (there is no `event.nativeEvent`), use camelCase names
-(`onClick`, `onKeyDown`), and are bound once. As in Base UI, your handlers run before the
+(`onClick`, `onKeyDown`), and are bound once. Your handlers run before the
 internal ones and can call `event.preventBaseUIHandler()` to skip them:
 
 ```tsx
@@ -123,7 +123,7 @@ UI's signature:
 
 ### Change callbacks
 
-Change callbacks keep Base UI's signature — `onOpenChange(open, eventDetails)`,
+Change callbacks receive the new value and the event details — `onOpenChange(open, eventDetails)`,
 `onValueChange(value, eventDetails)`, `onCheckedChange(checked, eventDetails)` — with
 `eventDetails.reason`, `eventDetails.event`, `cancel()`, `allowPropagation()` and the rest. See
 [Customization](/handbook/customization).
@@ -162,7 +162,7 @@ const [open, setOpen] = createSignal(false);
 
 ## Hooks are Solid primitives
 
-Hooks keep their Base UI names, but return Solid values:
+Hooks keep familiar `use` names, but return Solid values:
 
 - [`useRender`](/utils/use-render) returns an element and runs once. Pass it live objects (a
   `render` getter, `omit(props, 'render')`, a `state` object with getters).

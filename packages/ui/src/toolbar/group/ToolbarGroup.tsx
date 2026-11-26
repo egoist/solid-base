@@ -9,7 +9,7 @@ import { ToolbarGroupContext, type ToolbarGroupContextValue } from './ToolbarGro
  * Groups several toolbar items or toggles.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Toolbar](https://base-ui.com/react/components/toolbar)
+ * Documentation: [Solid Base Toolbar](https://base.egoist.dev/components/toolbar)
  */
 export function ToolbarGroup(componentProps: ToolbarGroup.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'disabled');

@@ -41,7 +41,7 @@ function getTargetElement(event: Event): Element | null {
  * An element to attach the tooltip to.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Tooltip](https://base-ui.com/react/components/tooltip)
+ * Documentation: [Solid Base Tooltip](https://base.egoist.dev/components/tooltip)
  */
 export function TooltipTrigger<Payload = unknown>(
   componentProps: TooltipTrigger.Props<Payload>,

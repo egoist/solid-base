@@ -8,7 +8,7 @@ import { createToastLabelPart } from '../utils/toastLabelPart';
  * A title that labels the toast.
  * Renders an `<h2>` element.
  *
- * Documentation: [Base UI Toast](https://base-ui.com/react/components/toast)
+ * Documentation: [Solid Base Toast](https://base.egoist.dev/components/toast)
  */
 export function ToastTitle(componentProps: ToastTitle.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id', 'children');

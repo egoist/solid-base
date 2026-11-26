@@ -9,7 +9,7 @@ import type { BaseUIComponentProps } from '../../internals/types';
  * A heading that labels the popover.
  * Renders an `<h2>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverTitle(componentProps: PopoverTitle.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

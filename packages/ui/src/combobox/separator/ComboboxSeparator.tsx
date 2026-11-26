@@ -24,7 +24,7 @@ export interface ComboboxSeparatorState {
  * A separator element accessible to screen readers.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export const ComboboxSeparator = ListboxSeparator as (props: ComboboxSeparatorProps) => JSX.Element;
 

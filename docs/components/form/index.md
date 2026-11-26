@@ -35,7 +35,7 @@ to `errors`; each one is shown by the `<Field.Error>` of the field with the matc
 ::demo{src="./demos/action.tsx"}
 
 :::solid
-Upstream submits through React's `useActionState` and a Server Function passed to `action`.
+In React, forms often submit through `useActionState` and a Server Function passed to `action`.
 Solid has no `useActionState`: call your action (or a SolidStart server function) from `onSubmit`
 instead, as above.
 :::

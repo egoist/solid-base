@@ -10,7 +10,7 @@ import { NavigationMenuPortalContext } from './NavigationMenuPortalContext';
  * By default, the portal element is appended to `<body>`.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuPortal(props: NavigationMenuPortal.Props): JSX.Element {
   const portalProps = omit(props, 'keepMounted');

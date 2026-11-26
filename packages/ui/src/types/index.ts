@@ -6,7 +6,7 @@ export type {
 } from '../internals/createBaseUIEventDetails';
 
 /**
- * Props spread on a rendered element. Intentionally loose: Base UI builds them from several
+ * Props spread on a rendered element. Intentionally loose: Solid Base builds them from several
  * live sources, and `aria-*` booleans are serialized to `"true"`/`"false"` when merged.
  */
 export type HTMLProps<T = any> = {
@@ -29,11 +29,11 @@ export type HTMLProps<T = any> = {
 export type ComponentRenderFn<Props, State> = (props: Props, state: State) => JSX.Element;
 
 /**
- * An event that passed through a Base UI handler chain.
+ * An event that passed through a Solid Base handler chain.
  */
 export type BaseUIEvent<E extends Event> = E & {
   /**
-   * Prevents the Base UI handlers that run after this one (the component's internal logic).
+   * Prevents the Solid Base handlers that run after this one (the component's internal logic).
    */
   preventBaseUIHandler: () => void;
   readonly baseUIHandlerPrevented?: boolean | undefined;

@@ -115,7 +115,7 @@ closes, or to a function that returns the element to focus based on the interact
 ::demo{src="./demos/focus-management.tsx"}
 
 :::solid[Focus targets]
-Upstream passes React ref objects. Here a focus target is an element, a ref object
+A focus target is an element, a ref object
 (`{ current }`), `true`/`false`, or a function called when focus moves. A function that returns a
 variable assigned with `ref={el}` is the simplest form, since it is read only once the popup has
 rendered: `initialFocus={() => input}`.

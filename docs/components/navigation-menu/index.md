@@ -73,7 +73,7 @@ function Link(props: NavigationMenu.Link.Props) {
 ```
 
 :::solid
-Upstream passes an element (`render={<NextLink />}`). Here `render` is a tag name or a function
+In React you would pass an element (`render={<NextLink />}`). Here `render` is a tag name or a function
 `(props, state) => JSX.Element` that is called **once**: `props` and `state` are live objects, so
 spread them instead of reading values out of them. Since the default element is already an `<a>`,
 you don't need a wrapper for plain anchors: `<NavigationMenu.Link href="/docs">`.

@@ -41,7 +41,7 @@ const stateAttributesMapping: StateAttributesMapping<SelectTriggerState> = {
  * A button that opens the select popup.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectTrigger(componentProps: SelectTrigger.Props): JSX.Element {
   const elementProps = omit(

@@ -6,7 +6,7 @@ import { useComboboxInputValueContext } from '../../combobox/root/ComboboxRootCo
  * The current value of the autocomplete.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Autocomplete](https://base-ui.com/react/components/autocomplete)
+ * Documentation: [Solid Base Autocomplete](https://base.egoist.dev/components/autocomplete)
  */
 export function AutocompleteValue(props: AutocompleteValue.Props): JSX.Element {
   const inputValue = useComboboxInputValueContext();

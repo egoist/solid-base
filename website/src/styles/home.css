@@ -721,7 +721,7 @@ label.w-row {
 
 .footer-columns {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto 1fr;
   gap: 64px;
   padding: 48px 72px 96px;
 }

@@ -138,7 +138,7 @@ function MenuCheckboxItemPlain(
  * A menu item that toggles a setting on or off.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuCheckboxItem(props: MenuCheckboxItem.Props): JSX.Element {
   // Owned above the element so an uncontrolled item keeps its state while a filter hides it.

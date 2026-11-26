@@ -14,7 +14,7 @@ import * as CollapsiblePanelCssVars from './CollapsiblePanelCssVars';
  * A panel with the collapsible contents.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Collapsible](https://base-ui.com/react/components/collapsible)
+ * Documentation: [Solid Base Collapsible](https://base.egoist.dev/components/collapsible)
  */
 export function CollapsiblePanel(componentProps: CollapsiblePanel.Props) {
   const elementProps = omit(

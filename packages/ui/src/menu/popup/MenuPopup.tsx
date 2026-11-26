@@ -320,7 +320,7 @@ export function MenuPopupPlain(componentProps: MenuPopupPlainProps): JSX.Element
  * A container for the menu items.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuPopup(props: MenuPopup.Props): JSX.Element {
   const impl = useMenuFilterImpl();

@@ -51,7 +51,7 @@ function createFloatingRootStoreProxy(
  * Positions the navigation menu against the currently active trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuPositioner(
   componentProps: NavigationMenuPositioner.Props,

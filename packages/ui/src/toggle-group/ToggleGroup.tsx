@@ -13,7 +13,7 @@ import type { REASONS } from '../internals/reasons';
 /**
  * Provides a shared state to a series of toggle buttons.
  *
- * Documentation: [Base UI Toggle Group](https://base-ui.com/react/components/toggle-group)
+ * Documentation: [Solid Base Toggle Group](https://base.egoist.dev/components/toggle-group)
  */
 export function ToggleGroup<Value extends string>(componentProps: ToggleGroup.Props<Value>) {
   const elementProps = omit(

@@ -60,7 +60,7 @@ import type { PopupInteractionStore } from '../../utils/popups/types';
  * A button that opens the menu.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuTrigger<Payload = unknown>(
   componentProps: MenuTrigger.Props<Payload>,

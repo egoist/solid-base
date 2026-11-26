@@ -9,7 +9,7 @@ import { renderElement } from '../../internals/renderElement';
  * Groups the input with the increment and decrement buttons.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Number Field](https://base-ui.com/react/components/number-field)
+ * Documentation: [Solid Base Number Field](https://base.egoist.dev/components/number-field)
  */
 export function NumberFieldGroup(componentProps: NumberFieldGroup.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

@@ -86,7 +86,7 @@ function createPopoverInteractions(store: PopoverStore<any>) {
  * Groups all parts of the popover.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverRoot<Payload = unknown>(props: PopoverRoot.Props<Payload>): JSX.Element {
   if (usePopoverRootContext(true)) {

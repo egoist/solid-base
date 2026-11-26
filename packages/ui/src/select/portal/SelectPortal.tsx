@@ -9,7 +9,7 @@ import { useSelectRootContext } from '../root/SelectRootContext';
  * By default, the portal element is appended to `<body>`.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectPortal(portalProps: SelectPortal.Props): JSX.Element {
   const store = useSelectRootContext();

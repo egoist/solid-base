@@ -13,7 +13,7 @@ type Anchor = { getBoundingClientRect: () => DOMRect };
  * A component that creates a context menu activated by right clicking or long pressing.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Context Menu](https://base-ui.com/react/components/context-menu)
+ * Documentation: [Solid Base Context Menu](https://base.egoist.dev/components/context-menu)
  */
 export function ContextMenuRoot(props: ContextMenuRoot.Props): JSX.Element {
   const [anchor, setAnchor] = createSignal<Anchor>(

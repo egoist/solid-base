@@ -7,7 +7,7 @@ import { ToastStore } from '../store';
 /**
  * Provides a context for creating and managing toasts.
  *
- * Documentation: [Base UI Toast](https://base-ui.com/react/components/toast)
+ * Documentation: [Solid Base Toast](https://base.egoist.dev/components/toast)
  */
 export function ToastProvider(props: ToastProvider.Props): JSX.Element {
   const timeout = () => props.timeout ?? 5000;

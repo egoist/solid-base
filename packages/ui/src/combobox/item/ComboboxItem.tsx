@@ -21,7 +21,7 @@ import {
  * An individual item in the list.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxItem(componentProps: ComboboxItem.Props): JSX.Element {
   const elementProps = omit(

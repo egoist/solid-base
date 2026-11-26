@@ -42,7 +42,7 @@ import { mergeProps } from '../../merge-props/mergeProps';
  * Represents the switch itself.
  * Renders a `<span>` element and a hidden `<input>` beside.
  *
- * Documentation: [Base UI Switch](https://base-ui.com/react/components/switch)
+ * Documentation: [Solid Base Switch](https://base.egoist.dev/components/switch)
  */
 export function SwitchRoot(componentProps: SwitchRoot.Props) {
   const elementProps = omit(

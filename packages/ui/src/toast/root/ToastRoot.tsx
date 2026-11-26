@@ -56,7 +56,7 @@ const DEFAULT_SWIPE_DIRECTIONS: SwipeDirection[] = ['down', 'right'];
  * Groups all parts of an individual toast.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Toast](https://base-ui.com/react/components/toast)
+ * Documentation: [Solid Base Toast](https://base.egoist.dev/components/toast)
  */
 export function ToastRoot(componentProps: ToastRoot.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'toast', 'swipeDirection');

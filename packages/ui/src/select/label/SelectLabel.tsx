@@ -13,7 +13,7 @@ import { useSelectRootContext } from '../root/SelectRootContext';
  * An accessible label that is automatically associated with the select trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectLabel(componentProps: SelectLabel.Props): JSX.Element {
   // Keep the label id derived from the root and ignore runtime `id` overrides from untyped

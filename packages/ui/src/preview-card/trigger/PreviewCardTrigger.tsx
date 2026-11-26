@@ -23,7 +23,7 @@ import type { PopupInteractionStore } from '../../utils/popups/types';
  * A link that opens the preview card.
  * Renders an `<a>` element.
  *
- * Documentation: [Base UI Preview Card](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base Preview Card](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardTrigger<Payload = unknown>(
   componentProps: PreviewCardTrigger.Props<Payload>,

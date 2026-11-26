@@ -16,7 +16,7 @@ import type { PopoverInstantType } from '../store/PopoverStore';
  * changes based on the trigger, and switching between them is animated.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverViewport(componentProps: PopoverViewport.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

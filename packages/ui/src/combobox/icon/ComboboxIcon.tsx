@@ -7,7 +7,7 @@ import { renderElement } from '../../internals/renderElement';
  * An icon that indicates that the trigger button opens the popup.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxIcon(componentProps: ComboboxIcon.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

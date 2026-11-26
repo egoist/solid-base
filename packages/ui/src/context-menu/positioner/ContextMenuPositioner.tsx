@@ -12,7 +12,7 @@ export interface ContextMenuPositionerState extends MenuPositionerState {}
  * Positions the context menu popup against the pointer or a custom anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Context Menu](https://base-ui.com/react/components/context-menu)
+ * Documentation: [Solid Base Context Menu](https://base.egoist.dev/components/context-menu)
  */
 export const ContextMenuPositioner: (props: ContextMenuPositionerProps) => JSX.Element =
   MenuPositioner;

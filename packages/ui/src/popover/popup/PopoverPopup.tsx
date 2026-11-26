@@ -31,7 +31,7 @@ import type { PopupInteractionStore } from '../../utils/popups/types';
  * A container for the popover contents.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverPopup(componentProps: PopoverPopup.Props): JSX.Element {
   const elementProps = omit(

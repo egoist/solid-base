@@ -10,7 +10,7 @@ import { useGroupCollectionContext } from './GroupCollectionContext';
  * If rendering a flat list, pass a function child to the `List` component instead, which
  * implicitly wraps it.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxCollection(props: ComboboxCollection.Props): JSX.Element {
   const derivedItems = useComboboxDerivedItemsContext();

@@ -2,10 +2,10 @@ import type { JSX } from '@solidjs/web';
 import { CSPContext, type CSPContextValue } from '../internals/csp-context/CSPContext';
 
 /**
- * Provides a default Content Security Policy (CSP) configuration for Base UI components that
+ * Provides a default Content Security Policy (CSP) configuration for Solid Base components that
  * require inline `<style>` or `<script>` tags.
  *
- * Documentation: [Base UI CSP Provider](https://base-ui.com/react/utils/csp-provider)
+ * Documentation: [Solid Base CSP Provider](https://base.egoist.dev/utils/csp-provider)
  */
 export function CSPProvider(props: CSPProvider.Props) {
   const value: CSPContextValue = {
@@ -28,7 +28,7 @@ export interface CSPProviderProps {
    */
   nonce?: string | undefined;
   /**
-   * Whether inline `<style>` elements created by Base UI components should not be rendered. Instead, components must specify the CSS styles via custom class names or other methods.
+   * Whether inline `<style>` elements created by Solid Base components should not be rendered. Instead, components must specify the CSS styles via custom class names or other methods.
    * @default false
    */
   disableStyleElements?: boolean | undefined;

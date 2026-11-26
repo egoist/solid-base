@@ -11,7 +11,7 @@ import { REASONS } from '../../internals/reasons';
  * A button that closes the dialog.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Dialog](https://base-ui.com/react/components/dialog)
+ * Documentation: [Solid Base Dialog](https://base.egoist.dev/components/dialog)
  */
 export function DialogClose(componentProps: DialogClose.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'disabled', 'nativeButton');

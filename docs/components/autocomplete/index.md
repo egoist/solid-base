@@ -176,7 +176,7 @@ The demo windows a fixed-height list by hand. A virtualization library such as
 parts with their `index`, and scroll to the highlighted index from `onItemHighlighted`.
 
 :::solid[Memoizing items]
-Upstream recommends wrapping each item in `React.memo` for lists of up to roughly 1,000 items.
+In React, lists of up to roughly 1,000 items call for wrapping each item in `React.memo`.
 That isn't needed in Solid: the list's render function runs once per item, and typing only adds
 and removes the items that enter or leave the filtered list, without re-rendering the others.
 Opening the popup still mounts every item, so very large lists benefit from virtualization.

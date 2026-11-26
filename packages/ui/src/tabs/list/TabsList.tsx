@@ -16,7 +16,7 @@ import { TabsListContext } from './TabsListContext';
  * Groups the individual tab buttons.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Tabs](https://base-ui.com/react/components/tabs)
+ * Documentation: [Solid Base Tabs](https://base.egoist.dev/components/tabs)
  */
 export function TabsList(componentProps: TabsList.Props) {
   const elementProps = omit(

@@ -37,7 +37,7 @@ function in this library, it is called once with live `props` and `state` object
 ```
 
 :::solid[Render functions run once]
-In Base UI, `render={(props, state) => state.pressed ? <A /> : <B />}` re-runs on every state
+In React, `render={(props, state) => state.pressed ? <A /> : <B />}` re-runs on every state
 change. Here the function is called once; an `if` on `state.pressed` at the top of the function
 would only ever see the initial value.
 :::

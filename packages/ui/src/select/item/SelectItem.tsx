@@ -22,7 +22,7 @@ import { createDynamicPropsSource } from '../../utils/popups/popupStoreUtils';
  * An individual option in the select popup.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectItem(componentProps: SelectItem.Props): JSX.Element {
   const elementProps = omit(

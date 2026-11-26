@@ -73,7 +73,7 @@ function MenuItemPlain(componentProps: MenuItem.Props): JSX.Element {
  * An individual interactive item in the menu.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuItem(props: MenuItem.Props): JSX.Element {
   return renderFilteredItem(props, MenuItemPlain);

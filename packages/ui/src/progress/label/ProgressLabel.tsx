@@ -10,7 +10,7 @@ import type { ProgressRootState } from '../root/ProgressRoot';
  * An accessible label for the progress bar.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Progress](https://base-ui.com/react/components/progress)
+ * Documentation: [Solid Base Progress](https://base.egoist.dev/components/progress)
  */
 export function ProgressLabel(componentProps: ProgressLabel.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

@@ -18,7 +18,7 @@ import { NavigationMenuDismissContext } from './NavigationMenuDismissContext';
  * Contains a list of navigation menu items.
  * Renders a `<ul>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuList(componentProps: NavigationMenuList.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

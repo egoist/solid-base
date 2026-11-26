@@ -20,7 +20,7 @@ const LONG_PRESS_DELAY = 500;
  * An area that opens the menu on right click or long press.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Context Menu](https://base-ui.com/react/components/context-menu)
+ * Documentation: [Solid Base Context Menu](https://base.egoist.dev/components/context-menu)
  */
 export function ContextMenuTrigger(componentProps: ContextMenuTrigger.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

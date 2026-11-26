@@ -40,7 +40,7 @@ export function MenuGroupPlain(componentProps: MenuGroup.Props): JSX.Element {
  * Groups related menu items with the corresponding label.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuGroup(props: MenuGroup.Props): JSX.Element {
   const impl = useMenuFilterImpl();

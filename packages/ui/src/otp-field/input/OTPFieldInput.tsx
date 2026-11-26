@@ -32,7 +32,7 @@ type InputEventTarget = { currentTarget: HTMLInputElement };
  * An individual OTP character input.
  * Renders an `<input>` element.
  *
- * Documentation: [Base UI OTP Field](https://base-ui.com/react/components/otp-field)
+ * Documentation: [Solid Base OTP Field](https://base.egoist.dev/components/otp-field)
  */
 export function OTPFieldInput(componentProps: OTPFieldInput.Props) {
   const elementProps = omit(

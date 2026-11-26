@@ -10,7 +10,7 @@ import { TooltipPortalContext } from './TooltipPortalContext';
  * By default, the portal element is appended to `<body>`.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Tooltip](https://base-ui.com/react/components/tooltip)
+ * Documentation: [Solid Base Tooltip](https://base.egoist.dev/components/tooltip)
  */
 export function TooltipPortal(props: TooltipPortal.Props): JSX.Element {
   const portalProps = omit(props, 'keepMounted');

@@ -14,7 +14,7 @@ import { createOpenChangeComplete } from '../../internals/openChangeComplete';
  * Indicates whether the checkbox item is ticked.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuCheckboxItemIndicator(
   componentProps: MenuCheckboxItemIndicator.Props,

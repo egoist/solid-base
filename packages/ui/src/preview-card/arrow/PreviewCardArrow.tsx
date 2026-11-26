@@ -11,7 +11,7 @@ import { renderElement } from '../../internals/renderElement';
  * Displays an element positioned against the preview card anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI PreviewCard](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base PreviewCard](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardArrow(componentProps: PreviewCardArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

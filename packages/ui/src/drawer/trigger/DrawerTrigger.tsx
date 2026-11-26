@@ -7,7 +7,7 @@ import type { DrawerHandle } from '../handle';
  * A button that opens the drawer.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export const DrawerTrigger = DialogTrigger as DrawerTrigger;
 

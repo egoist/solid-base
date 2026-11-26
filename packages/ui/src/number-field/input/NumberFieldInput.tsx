@@ -44,7 +44,7 @@ const NAVIGATE_KEYS = new Set([
  * The native input control in the number field.
  * Renders an `<input>` element.
  *
- * Documentation: [Base UI Number Field](https://base-ui.com/react/components/number-field)
+ * Documentation: [Solid Base Number Field](https://base.egoist.dev/components/number-field)
  */
 export function NumberFieldInput(componentProps: NumberFieldInput.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

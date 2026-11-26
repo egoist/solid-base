@@ -88,7 +88,7 @@ interface NavigationMenuRootStoreState {
  * Groups all parts of the navigation menu.
  * Renders a `<nav>` element at the root, or `<div>` element when nested.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuRoot<Value = any>(
   componentProps: NavigationMenuRoot.Props<Value>,

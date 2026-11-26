@@ -11,7 +11,7 @@ import { renderElement } from '../../internals/renderElement';
  * Displays an element positioned against the popover anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverArrow(componentProps: PopoverArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

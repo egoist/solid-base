@@ -91,7 +91,7 @@ don't close simultaneously. This can also be customized with the `allowPropagati
 </Tooltip.Root>
 ```
 
-## Preventing Base UI from handling an event
+## Preventing a component from handling an event
 
 To prevent a component from handling a DOM event like `onClick`, call the
 `preventBaseUIHandler()` method on the event object in your handler:

@@ -8,7 +8,7 @@ import type { DrawerVisualState, DrawerVisualStateStore } from './DrawerProvider
  * Provides a shared context for coordinating global Drawer UI, such as indent/background effects based on whether any Drawer is open.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export function DrawerProvider(props: DrawerProvider.Props): JSX.Element {
   // Drawers marked open imperatively (`setDrawerOpen`), and the open states drawers register.

@@ -9,7 +9,7 @@ import { renderElement } from '../../internals/renderElement';
  * A text label of the select item.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectItemText(componentProps: SelectItemText.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

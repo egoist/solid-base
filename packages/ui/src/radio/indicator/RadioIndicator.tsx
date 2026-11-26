@@ -14,7 +14,7 @@ import {
  * Indicates whether the radio button is selected.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Radio](https://base-ui.com/react/components/radio-group)
+ * Documentation: [Solid Base Radio](https://base.egoist.dev/components/radio-group)
  */
 export function RadioIndicator(componentProps: RadioIndicator.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'keepMounted');

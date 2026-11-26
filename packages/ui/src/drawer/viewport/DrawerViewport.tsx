@@ -77,7 +77,7 @@ interface TouchScrollState {
  * A positioning container for the drawer popup that can be made scrollable.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export function DrawerViewport(componentProps: DrawerViewport.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

@@ -31,7 +31,7 @@ import type { PopupInteractionStore } from '../../utils/popups/types';
  * A button that opens the popover.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Popover](https://base-ui.com/react/components/popover)
+ * Documentation: [Solid Base Popover](https://base.egoist.dev/components/popover)
  */
 export function PopoverTrigger<Payload = unknown>(
   componentProps: PopoverTrigger.Props<Payload>,

@@ -13,7 +13,7 @@ export const Route = createRootRoute({
       { title: 'Solid Base — Unstyled UI components for Solid' },
       {
         name: 'description',
-        content: 'Unstyled, accessible UI components for SolidJS 2. A faithful port of Base UI.',
+        content: 'Unstyled, accessible UI components for SolidJS 2.',
       },
       { name: 'theme-color', content: '#16171b' },
     ],

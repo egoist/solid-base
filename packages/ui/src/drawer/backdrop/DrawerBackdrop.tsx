@@ -12,7 +12,7 @@ import * as DrawerBackdropCssVars from './DrawerBackdropCssVars';
  * An overlay displayed beneath the popup.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export function DrawerBackdrop(componentProps: DrawerBackdrop.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'forceRender');

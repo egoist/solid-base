@@ -8,7 +8,7 @@ import { renderElement } from '../../internals/renderElement';
  * Groups related select items with the corresponding label.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectGroup(componentProps: SelectGroup.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

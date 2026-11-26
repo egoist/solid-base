@@ -20,7 +20,7 @@ import type { PreviewCardInstantType } from '../store/PreviewCardStore';
  * A container for the preview card contents.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Preview Card](https://base-ui.com/react/components/preview-card)
+ * Documentation: [Solid Base Preview Card](https://base.egoist.dev/components/preview-card)
  */
 export function PreviewCardPopup(componentProps: PreviewCardPopup.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

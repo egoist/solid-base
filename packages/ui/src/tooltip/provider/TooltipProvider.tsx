@@ -6,7 +6,7 @@ import { TooltipProviderContext } from './TooltipProviderContext';
  * Provides a shared delay for multiple tooltips. The grouping logic ensures that
  * once a tooltip becomes visible, the adjacent tooltips will be shown instantly.
  *
- * Documentation: [Base UI Tooltip](https://base-ui.com/react/components/tooltip)
+ * Documentation: [Solid Base Tooltip](https://base.egoist.dev/components/tooltip)
  */
 export function TooltipProvider(props: TooltipProvider.Props): JSX.Element {
   const contextValue = {

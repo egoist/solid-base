@@ -88,7 +88,7 @@ type BaseUIChangeEventDetail<Reason extends string, CustomProperties extends obj
 } & CustomProperties;
 
 /**
- * Details of custom change events emitted by Base UI components.
+ * Details of custom change events emitted by Solid Base components.
  */
 export type BaseUIChangeEventDetails<
   Reason extends string,
@@ -96,7 +96,7 @@ export type BaseUIChangeEventDetails<
 > = Reason extends string ? BaseUIChangeEventDetail<Reason, CustomProperties> & {} : never;
 
 /**
- * Details of custom generic events emitted by Base UI components.
+ * Details of custom generic events emitted by Solid Base components.
  */
 type BaseUIGenericEventDetail<Reason extends string, CustomProperties extends object> = {
   /**

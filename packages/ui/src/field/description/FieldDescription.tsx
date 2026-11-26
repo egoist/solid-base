@@ -15,7 +15,7 @@ import { useFieldItemContext } from '../item/FieldItemContext';
  * A paragraph with additional information about the field.
  * Renders a `<p>` element.
  *
- * Documentation: [Base UI Field](https://base-ui.com/react/components/field)
+ * Documentation: [Solid Base Field](https://base.egoist.dev/components/field)
  */
 export function FieldDescription(componentProps: FieldDescription.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

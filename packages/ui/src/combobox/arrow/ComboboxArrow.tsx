@@ -11,7 +11,7 @@ import { renderElement } from '../../internals/renderElement';
  * Displays an element positioned against the anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxArrow(componentProps: ComboboxArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

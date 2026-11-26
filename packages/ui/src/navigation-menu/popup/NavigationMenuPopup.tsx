@@ -15,7 +15,7 @@ import { getDisabledMountTransitionStyles } from '../../internals/getDisabledMou
  * A container for the navigation menu contents.
  * Renders a `<nav>` element.
  *
- * Documentation: [Base UI Navigation Menu](https://base-ui.com/react/components/navigation-menu)
+ * Documentation: [Solid Base Navigation Menu](https://base.egoist.dev/components/navigation-menu)
  */
 export function NavigationMenuPopup(componentProps: NavigationMenuPopup.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

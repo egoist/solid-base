@@ -24,7 +24,7 @@ export interface AutocompleteSeparatorState {
  * A separator element accessible to screen readers.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Autocomplete](https://base-ui.com/react/components/autocomplete)
+ * Documentation: [Solid Base Autocomplete](https://base.egoist.dev/components/autocomplete)
  */
 export const AutocompleteSeparator = ListboxSeparator as (
   props: AutocompleteSeparatorProps,

@@ -20,7 +20,7 @@ import * as AccordionPanelCssVars from './AccordionPanelCssVars';
  * A collapsible panel with the accordion item contents.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Accordion](https://base-ui.com/react/components/accordion)
+ * Documentation: [Solid Base Accordion](https://base.egoist.dev/components/accordion)
  */
 export function AccordionPanel(componentProps: AccordionPanel.Props) {
   const elementProps = omit(

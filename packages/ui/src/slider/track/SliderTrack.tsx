@@ -9,7 +9,7 @@ import { sliderStateAttributesMapping } from '../root/stateAttributesMapping';
  * Contains the slider indicator and represents the entire range of the slider.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Slider](https://base-ui.com/react/components/slider)
+ * Documentation: [Solid Base Slider](https://base.egoist.dev/components/slider)
  */
 export function SliderTrack(componentProps: SliderTrack.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

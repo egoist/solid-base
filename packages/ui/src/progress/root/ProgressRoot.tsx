@@ -19,7 +19,7 @@ interface ProgressValues {
  * Groups all parts of the progress bar and provides the task completion status to screen readers.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Progress](https://base-ui.com/react/components/progress)
+ * Documentation: [Solid Base Progress](https://base.egoist.dev/components/progress)
  */
 export function ProgressRoot(componentProps: ProgressRoot.Props) {
   const elementProps = omit(

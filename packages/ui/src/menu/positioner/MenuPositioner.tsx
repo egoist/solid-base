@@ -28,7 +28,7 @@ import { createAnchoredPopupScrollLock } from '../../utils/popups/anchoredPopupS
  * Positions the menu popup against the trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuPositioner(componentProps: MenuPositioner.Props): JSX.Element {
   const { store, virtualFocus, syncHighlightedItem } = useMenuRootContext();

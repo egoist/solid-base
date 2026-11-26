@@ -202,13 +202,13 @@ Selection chips are rendered with `<Combobox.Chip>` inside the input that can be
 
 In order for screen readers to announce how to reach and remove the chips, add
 `aria-description` to `<Combobox.Chip>` and `<Combobox.Input>`, alongside the `aria-label` on
-`<Combobox.Chips>` and `<Combobox.ChipRemove>`. Base UI does not ship these strings. Translate
+`<Combobox.Chips>` and `<Combobox.ChipRemove>`. The library does not ship these strings. Translate
 them together with the rest of your interface.
 
 :::solid[Rendering chips]
 `<Combobox.Value>` accepts a function child that receives the selected value, but the function is
-called again **every time the selection changes**, recreating everything it returns. Upstream's
-pattern of rendering the chips _and_ `<Combobox.Input>` from that function would therefore
+called again **every time the selection changes**, recreating everything it returns. Rendering
+the chips _and_ `<Combobox.Input>` from that function would therefore
 recreate the input (and drop its focus) on every selection. Instead, control the value with a
 signal and render the chips with a keyed `<For>`, keeping the input outside it, as the demo above
 does. Each chip then stays mounted while others are added or removed.
@@ -345,8 +345,7 @@ load items upfront.
 ::demo{src="./demos/async-single.tsx"}
 
 :::solid[Pending state]
-Upstream's demo tracks the request with `React.useTransition`. Here a `pending` signal is set
-when a request starts and cleared when the latest one settles; an `AbortController` discards
+A `pending` signal is set when a request starts and cleared when the latest one settles; an `AbortController` discards
 responses to superseded queries. `items` is derived from the results and the selection with
 `createMemo`.
 :::
@@ -369,7 +368,7 @@ highlighted item into view when it is outside the rendered window.
 ::demo{src="./demos/virtualized.tsx"}
 
 :::solid[Virtualization libraries]
-Upstream's demo uses `@tanstack/react-virtual`. The demo above implements fixed-height windowing
+The demo above implements fixed-height windowing
 by hand so it has no dependencies; a Solid virtualizer such as `@tanstack/solid-virtual` works the
 same way: render its virtual items with their `index`, and call its `scrollToIndex` from
 `onItemHighlighted`. Note that `Combobox.useFilteredItems()` returns an **accessor** here, not an
@@ -378,7 +377,7 @@ array.
 
 #### Rendering cost without virtualization
 
-Upstream recommends wrapping each item in `React.memo` for datasets up to roughly 1,000 items.
+In React, datasets up to roughly 1,000 items call for wrapping each item in `React.memo`.
 That isn't needed in Solid: the list is rendered with a keyed `<For>`, so typing a query only
 inserts and removes the items whose match changed, and the remaining items are never re-rendered.
 Virtualization is still worth it for very large datasets, where the cost of mounting every item

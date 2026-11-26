@@ -6,7 +6,7 @@ import type { BaseUIComponentProps } from '../../internals/types';
  * A paragraph with additional information about the drawer.
  * Renders a `<p>` element.
  *
- * Documentation: [Base UI Drawer](https://base-ui.com/react/components/drawer)
+ * Documentation: [Solid Base Drawer](https://base.egoist.dev/components/drawer)
  */
 export const DrawerDescription = DialogDescription as DrawerDescription;
 

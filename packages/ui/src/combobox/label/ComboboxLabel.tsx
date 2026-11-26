@@ -14,7 +14,7 @@ import { useComboboxRootContext } from '../root/ComboboxRootContext';
  * An accessible label that is automatically associated with the combobox trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxLabel(componentProps: ComboboxLabel.Props): JSX.Element {
   // Keep label id derived from the root and ignore runtime `id` overrides from untyped consumers.

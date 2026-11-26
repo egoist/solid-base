@@ -14,7 +14,7 @@ export default function ExampleAccordionMultiple() {
         <Accordion.Panel class={styles.Panel}>
           <div class={styles.Content}>
             A library of high-quality unstyled SolidJS components for design systems and web
-            apps, ported from Base UI.
+            apps.
           </div>
         </Accordion.Panel>
       </Accordion.Item>

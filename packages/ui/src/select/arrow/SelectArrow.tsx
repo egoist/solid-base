@@ -11,7 +11,7 @@ import { renderElement } from '../../internals/renderElement';
  * Displays an element positioned against the select popup anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectArrow(componentProps: SelectArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

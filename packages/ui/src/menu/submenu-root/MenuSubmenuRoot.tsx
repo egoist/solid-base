@@ -14,7 +14,7 @@ const EMPTY_SUBMENU_ROOT_CONTEXT: MenuSubmenuRootContext = {};
  * Groups all parts of a submenu.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuSubmenuRoot(props: MenuSubmenuRoot.Props): JSX.Element {
   // Throws when the submenu isn't inside a menu.

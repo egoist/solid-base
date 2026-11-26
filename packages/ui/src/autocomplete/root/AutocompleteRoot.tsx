@@ -13,7 +13,7 @@ import type { ActionsRef } from '../../utils/popups/popupRoot';
  * Groups all parts of the autocomplete.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Autocomplete](https://base-ui.com/react/components/autocomplete)
+ * Documentation: [Solid Base Autocomplete](https://base.egoist.dev/components/autocomplete)
  */
 export function AutocompleteRoot<Items extends readonly { items: readonly any[] }[]>(
   props: Omit<AutocompleteRoot.Props<Items[number]['items'][number]>, 'items'> & {

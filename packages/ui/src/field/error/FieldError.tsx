@@ -43,7 +43,7 @@ function FieldErrorMessage(props: { error: ErrorValue }) {
  * An error message displayed if the field control fails validation.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Field](https://base-ui.com/react/components/field)
+ * Documentation: [Solid Base Field](https://base.egoist.dev/components/field)
  */
 export function FieldError(componentProps: FieldError.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id', 'match');

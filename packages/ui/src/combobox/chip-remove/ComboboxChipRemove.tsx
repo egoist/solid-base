@@ -15,7 +15,7 @@ import { findItemIndex } from '../../internals/itemEquality';
  * A button to remove a chip.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxChipRemove(componentProps: ComboboxChipRemove.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'disabled', 'nativeButton');

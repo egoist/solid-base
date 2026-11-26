@@ -10,7 +10,7 @@ import { createElementRegistration } from '../utils/createElementRegistration';
  * The draggable part of the scrollbar that indicates the current scroll position.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Scroll Area](https://base-ui.com/react/components/scroll-area)
+ * Documentation: [Solid Base Scroll Area](https://base.egoist.dev/components/scroll-area)
  */
 export function ScrollAreaThumb(componentProps: ScrollAreaThumb.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

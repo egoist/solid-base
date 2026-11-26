@@ -11,7 +11,7 @@ import { popupStateMapping } from '../../utils/popups/popupStateMapping';
  * Displays an element positioned against the menu anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuArrow(componentProps: MenuArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

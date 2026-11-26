@@ -68,7 +68,7 @@ function areFieldValuesEqual(
  * Groups all parts of the slider.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Slider](https://base-ui.com/react/components/slider)
+ * Documentation: [Solid Base Slider](https://base.egoist.dev/components/slider)
  */
 export function SliderRoot<Value extends number | readonly number[]>(
   componentProps: SliderRoot.Props<Value>,

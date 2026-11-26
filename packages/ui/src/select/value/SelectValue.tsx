@@ -14,7 +14,7 @@ const stateAttributesMapping: StateAttributesMapping<SelectValueState> = {
  * A text label of the currently selected item.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectValue(componentProps: SelectValue.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children', 'placeholder');

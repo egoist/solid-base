@@ -30,7 +30,7 @@ function attributeValue<T>(value: T | false | undefined): T | undefined {
  * The image to be displayed in the avatar.
  * Renders an `<img>` element.
  *
- * Documentation: [Base UI Avatar](https://base-ui.com/react/components/avatar)
+ * Documentation: [Solid Base Avatar](https://base.egoist.dev/components/avatar)
  */
 export function AvatarImage(componentProps: AvatarImage.Props) {
   const elementProps = omit(

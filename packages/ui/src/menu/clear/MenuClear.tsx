@@ -11,7 +11,7 @@ import { useMenuFilterPart } from '../filter-root/MenuFilterContext';
  * Requires the menu to be wrapped in `Menu.FilterProvider`.
  * Renders a `<button>` element when the input has text.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuClear(props: MenuClear.Props): JSX.Element {
   useMenuFilterPart('Clear');

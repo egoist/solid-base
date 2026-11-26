@@ -53,7 +53,7 @@ import type { HTMLProps } from '../../internals/types';
  * Groups all parts of the select.
  * Doesn't render its own HTML element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectRoot<Value, Multiple extends boolean | undefined = false>(
   props: SelectRoot.Props<Value, Multiple>,

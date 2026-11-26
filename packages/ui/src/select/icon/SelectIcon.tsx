@@ -9,7 +9,7 @@ import { triggerOpenStateMapping } from '../../utils/popups/popupStateMapping';
  * An icon that indicates that the trigger button opens a select popup.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Select](https://base-ui.com/react/components/select)
+ * Documentation: [Solid Base Select](https://base.egoist.dev/components/select)
  */
 export function SelectIcon(componentProps: SelectIcon.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

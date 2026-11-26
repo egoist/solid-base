@@ -10,7 +10,7 @@ import { CompositeItem } from '../../internals/composite/item/CompositeItem';
  * A button that can be used as-is or as a trigger for other components.
  * Renders a `<button>` element.
  *
- * Documentation: [Base UI Toolbar](https://base-ui.com/react/components/toolbar)
+ * Documentation: [Solid Base Toolbar](https://base.egoist.dev/components/toolbar)
  */
 export function ToolbarButton(componentProps: ToolbarButton.Props) {
   const elementProps = omit(

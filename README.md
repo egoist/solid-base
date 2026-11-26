@@ -1,11 +1,10 @@
 # Solid Base
 
-Unstyled, accessible UI components for **SolidJS 2** — a faithful port of
-[Base UI](https://base-ui.com) (`@base-ui/react`).
+Unstyled, accessible UI components for **SolidJS 2**. Documentation: https://base.egoist.dev
 
-Same components, parts, props, data attributes, ARIA semantics, keyboard and focus behavior as
-Base UI, rewritten with idiomatic Solid 2 primitives: fine-grained reactivity, live props views
-instead of re-renders, `createX` primitives instead of hooks, and no virtual DOM.
+Composable parts, data attributes for every state, complete keyboard and focus behavior, built
+with idiomatic Solid 2 primitives: fine-grained reactivity, live props views instead of
+re-renders, `createX` primitives instead of hooks, and no virtual DOM.
 
 ```sh
 bun add @egoist/solid-base solid-js @solidjs/web
@@ -26,10 +25,10 @@ function Airplane() {
 }
 ```
 
-## Differences from the React API
+## Coming from React
 
-The component APIs follow Base UI's documentation at https://base-ui.com, with the following
-Solid-specific adjustments:
+If you have used a headless component library in React, most of the API will look familiar. Where
+Solid and React differ, it follows Solid:
 
 - **`class`, not `className`.** It accepts any Solid class value (string, array, object) or a
   function of the component state: `class={(state) => (state.checked ? 'on' : 'off')}`.
@@ -40,9 +39,8 @@ Solid-specific adjustments:
   is called once; `props` and `state` are live objects, so read them in JSX to stay reactive and
   don't destructure them.
 - **Refs** are Solid ref callbacks (`ref={el => ...}` or `let el; ref={el}`).
-- **Event handlers** receive native events. Like in Base UI, user handlers run before the
-  internal ones and can call `event.preventBaseUIHandler()` to skip them.
-- Change callbacks keep Base UI's signature: `onOpenChange(open, eventDetails)`,
+- **Event handlers** receive native events. User handlers run before the internal ones and can call `event.preventBaseUIHandler()` to skip them.
+- Change callbacks receive the value and the event details: `onOpenChange(open, eventDetails)`,
   `onValueChange(value, eventDetails)`, … with `eventDetails.cancel()` and friends.
 - Hooks are Solid primitives: `useRender` returns an element, `useDirection()` and the media query
   helper return accessors, and `useToastManager().toasts` is a reactive getter
@@ -50,16 +48,16 @@ Solid-specific adjustments:
 - Function children (such as a Root's `{({ payload }) => ...}` or `Field.Validity`) are called once
   with live objects, like `render` functions.
 - `actionsRef` accepts a `{ current }` object or a callback.
-- Attribute-like props use Solid's lowercase names where Base UI uses React's camelCase
+- Attribute-like props use Solid's lowercase names where React uses camelCase
   (`tabindex`, `autocomplete`, `inputmode`, …).
 
 ## Status
 
-The port mirrors Base UI's test suites: about 6,700 tests ported from upstream pass in jsdom.
-Upstream tests that need real layout, CSS animations or a real browser are skipped with a comment,
-as are React-specific ones (StrictMode, render counts). A separate suite server-renders every
-playground demo (`bun run test:ssr`); like React portals, popups render nothing on the server.
-Hydration is not covered by tests yet.
+About 6,700 tests pass in jsdom, with Solid's dev diagnostics turned into failures. Tests that
+need real layout, CSS animations or a real browser are skipped with a comment. A separate suite
+server-renders every demo (`bun run test:ssr`); popups render nothing on the server. Another
+hydrates every demo and checks that it behaves like a client-rendered one
+(`bun run test:hydration`).
 
 Known differences:
 
@@ -68,7 +66,7 @@ Known differences:
 
 ## Components
 
-Every Base UI module is ported, with the same parts and props:
+Components:
 
 Accordion · Alert Dialog · Autocomplete · Avatar · Button · Checkbox · Checkbox Group ·
 Collapsible · Combobox · Context Menu · Dialog · Drawer · Field · Fieldset · Form · Input · Menu ·
@@ -112,7 +110,7 @@ bun run website:build
 bun run build       # build the packages
 ```
 
-See [AGENTS.md](AGENTS.md) for the porting conventions.
+See [AGENTS.md](AGENTS.md) for the codebase conventions.
 
 ## License
 

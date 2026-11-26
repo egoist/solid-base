@@ -297,7 +297,7 @@ function MenuSubmenuTriggerPlain(componentProps: MenuSubmenuTrigger.Props): JSX.
  * A menu item that opens a submenu.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Menu](https://base-ui.com/react/components/menu)
+ * Documentation: [Solid Base Menu](https://base.egoist.dev/components/menu)
  */
 export function MenuSubmenuTrigger(props: MenuSubmenuTrigger.Props): JSX.Element {
   return renderFilteredItem(props, MenuSubmenuTriggerPlain, 'submenu-trigger');

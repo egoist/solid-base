@@ -11,7 +11,7 @@ import { createFormatLocale } from '../../utils/createFormatLocale';
  * A text element displaying the current value.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Meter](https://base-ui.com/react/components/meter)
+ * Documentation: [Solid Base Meter](https://base.egoist.dev/components/meter)
  */
 export function MeterValue(componentProps: MeterValue.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

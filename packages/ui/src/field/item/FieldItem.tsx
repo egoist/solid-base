@@ -14,7 +14,7 @@ import { LabelableProvider } from '../../internals/labelable-provider/LabelableP
  * Groups individual items in a checkbox group or radio group with a label and description.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Field](https://base-ui.com/react/components/field)
+ * Documentation: [Solid Base Field](https://base.egoist.dev/components/field)
  */
 export function FieldItem(componentProps: FieldItem.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'disabled');

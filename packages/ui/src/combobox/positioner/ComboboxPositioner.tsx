@@ -19,7 +19,7 @@ import { createAnchoredPopupScrollLock } from '../../utils/popups/anchoredPopupS
  * Positions the popup against the input or trigger.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Combobox](https://base-ui.com/react/components/combobox)
+ * Documentation: [Solid Base Combobox](https://base.egoist.dev/components/combobox)
  */
 export function ComboboxPositioner(componentProps: ComboboxPositioner.Props): JSX.Element {
   const store = useComboboxRootContext();

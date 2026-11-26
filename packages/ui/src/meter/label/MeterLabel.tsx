@@ -9,7 +9,7 @@ import { createRegisteredLabelId } from '../../utils/createRegisteredLabelId';
  * An accessible label for the meter.
  * Renders a `<span>` element.
  *
- * Documentation: [Base UI Meter](https://base-ui.com/react/components/meter)
+ * Documentation: [Solid Base Meter](https://base.egoist.dev/components/meter)
  */
 export function MeterLabel(componentProps: MeterLabel.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'id');

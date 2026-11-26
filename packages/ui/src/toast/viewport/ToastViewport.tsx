@@ -25,7 +25,7 @@ import * as ToastViewportCssVars from './ToastViewportCssVars';
  * A container viewport for toasts.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Toast](https://base-ui.com/react/components/toast)
+ * Documentation: [Solid Base Toast](https://base.egoist.dev/components/toast)
  */
 export function ToastViewport(componentProps: ToastViewport.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'children');

@@ -105,7 +105,7 @@ export default function NotificationsPopover() {
 :::solid
 Use `class`, not `className`. Event handlers receive native events, and attributes use their
 lowercase HTML names (`tabindex`, `for`). See [Coming from React](/overview/solid) for every
-difference from Base UI's React API.
+difference from React.
 :::
 
 ## Next steps

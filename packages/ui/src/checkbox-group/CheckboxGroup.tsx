@@ -26,7 +26,7 @@ import { useFormContext } from '../internals/form-context/FormContext';
 /**
  * Provides a shared state to a series of checkboxes.
  *
- * Documentation: [Base UI Checkbox Group](https://base-ui.com/react/components/checkbox-group)
+ * Documentation: [Solid Base Checkbox Group](https://base.egoist.dev/components/checkbox-group)
  */
 export function CheckboxGroup(componentProps: CheckboxGroup.Props) {
   const elementProps = omit(

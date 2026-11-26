@@ -156,7 +156,7 @@ export function AriaCombobox<Value = any, Mode extends SelectionMode = 'none', I
         'Base UI: the `items` prop received an object that is not a collection, ' +
           'so its items cannot be read. Pass an array of items, an array of groups with items, ' +
           'or the result of `createItems()`. ' +
-          'See https://base-ui.com/react/components/combobox#createitems',
+          'See https://base.egoist.dev/components/combobox#createitems',
       );
     }
     return result ?? null;

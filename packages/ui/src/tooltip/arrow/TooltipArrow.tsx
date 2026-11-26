@@ -11,7 +11,7 @@ import { renderElement } from '../../internals/renderElement';
  * Displays an element positioned against the tooltip anchor.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Tooltip](https://base-ui.com/react/components/tooltip)
+ * Documentation: [Solid Base Tooltip](https://base.egoist.dev/components/tooltip)
  */
 export function TooltipArrow(componentProps: TooltipArrow.Props): JSX.Element {
   const elementProps = omit(componentProps, 'render', 'class', 'style');

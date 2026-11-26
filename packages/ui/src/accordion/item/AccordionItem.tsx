@@ -20,7 +20,7 @@ import { accordionStateAttributesMapping } from './stateAttributesMapping';
  * Groups an accordion header with the corresponding panel.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Accordion](https://base-ui.com/react/components/accordion)
+ * Documentation: [Solid Base Accordion](https://base.egoist.dev/components/accordion)
  */
 export function AccordionItem(componentProps: AccordionItem.Props) {
   const elementProps = omit(

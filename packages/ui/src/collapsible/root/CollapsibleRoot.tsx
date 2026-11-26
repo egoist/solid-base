@@ -12,7 +12,7 @@ import { collapsibleStateAttributesMapping } from './stateAttributesMapping';
  * Groups all parts of the collapsible.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Collapsible](https://base-ui.com/react/components/collapsible)
+ * Documentation: [Solid Base Collapsible](https://base.egoist.dev/components/collapsible)
  */
 export function CollapsibleRoot(componentProps: CollapsibleRoot.Props) {
   const elementProps = omit(

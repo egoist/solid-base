@@ -11,7 +11,7 @@ import {
  * Groups a shared legend with related controls.
  * Renders a `<fieldset>` element.
  *
- * Documentation: [Base UI Fieldset](https://base-ui.com/react/components/fieldset)
+ * Documentation: [Solid Base Fieldset](https://base.egoist.dev/components/fieldset)
  */
 export function FieldsetRoot(componentProps: FieldsetRoot.Props) {
   const elementProps = omit(componentProps, 'render', 'class', 'style', 'disabled');

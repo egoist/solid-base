@@ -12,7 +12,7 @@ import { MeterRootContext } from './MeterRootContext';
  * Groups all parts of the meter and provides the value for screen readers.
  * Renders a `<div>` element.
  *
- * Documentation: [Base UI Meter](https://base-ui.com/react/components/meter)
+ * Documentation: [Solid Base Meter](https://base.egoist.dev/components/meter)
  */
 export function MeterRoot(componentProps: MeterRoot.Props) {
   const elementProps = omit(

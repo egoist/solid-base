@@ -44,11 +44,11 @@ import { mergeProps } from '@egoist/solid-base/merge-props';
 :::solid[A live view, not a copy]
 The result is a proxy that reads from the sources when a key is accessed, so getters in the
 sources (`get disabled() { return props.disabled }`) stay reactive. Spread it in JSX
-(`<button {...merged} />`) rather than destructuring it. Unlike Base UI, every `ref` is called,
-not only the rightmost one.
+(`<button {...merged} />`) rather than destructuring it. Every `ref` is called, not only the
+rightmost one.
 :::
 
-### Preventing Base UI's default behavior
+### Preventing the default behavior
 
 When using the function form of the `render` prop, you spread the props yourself. Use
 `mergeProps` to combine the component's props with your own, and call `preventBaseUIHandler()`
