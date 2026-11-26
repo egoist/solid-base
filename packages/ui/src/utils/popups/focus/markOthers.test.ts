@@ -327,3 +327,52 @@ test('uses shadow root host as avoid element when parent chain includes anchor',
 
   expect(outside.getAttribute('aria-hidden')).toBe(null);
 });
+
+test.each(['open', 'closed'] as const)(
+  'hides siblings inside the %s shadow root that contains the target',
+  (mode) => {
+    const outside = document.createElement('div');
+    const host = document.createElement('div');
+    const slotted = document.createElement('span');
+    host.appendChild(slotted);
+    document.body.append(outside, host);
+
+    const shadowRoot = host.attachShadow({ mode });
+    const app = document.createElement('div');
+    const portal = document.createElement('div');
+    const target = document.createElement('div');
+    portal.appendChild(target);
+    shadowRoot.append(app, portal);
+
+    const cleanup = markOthers([target], { ariaHidden: true });
+
+    expect(outside.getAttribute('aria-hidden')).toBe('true');
+    expect(host.getAttribute('aria-hidden')).toBe(null);
+    expect(slotted.getAttribute('aria-hidden')).toBe('true');
+    expect(app.getAttribute('aria-hidden')).toBe('true');
+    expect(app).toHaveAttribute('data-base-ui-inert');
+    expect(portal.getAttribute('aria-hidden')).toBe(null);
+    expect(target.getAttribute('aria-hidden')).toBe(null);
+
+    cleanup();
+
+    expect(outside.getAttribute('aria-hidden')).toBe(null);
+    expect(app.getAttribute('aria-hidden')).toBe(null);
+    expect(app).not.toHaveAttribute('data-base-ui-inert');
+  },
+);
+
+test('leaves unrelated shadow roots untouched', () => {
+  const other = document.createElement('div');
+  const otherContent = document.createElement('div');
+  other.attachShadow({ mode: 'open' }).appendChild(otherContent);
+  const target = document.createElement('div');
+  document.body.append(other, target);
+
+  const cleanup = markOthers([target], { ariaHidden: true });
+
+  expect(other.getAttribute('aria-hidden')).toBe('true');
+  expect(otherContent.getAttribute('aria-hidden')).toBe(null);
+
+  cleanup();
+});

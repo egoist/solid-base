@@ -17,54 +17,62 @@ let uncontrolledElementsSet = new WeakSet<Element>();
 let markerCounterMap = new WeakMap<Element, number>();
 let lockCount = 0;
 
-function unwrapHost(node: Node | null): Element | null {
-  if (!node) {
-    return null;
-  }
+/** The parent in the composed tree: a shadow root's parent is its host. */
+function composedParent(node: Node): Node | null {
+  return node.parentNode ?? (isShadowRoot(node) ? node.host : null);
+}
 
-  return isShadowRoot(node) ? node.host : unwrapHost(node.parentNode);
+function composedContains(parent: Node, target: Node) {
+  let node: Node | null = target;
+  while (node) {
+    if (node === parent) {
+      return true;
+    }
+    node = composedParent(node);
+  }
+  return false;
 }
 
 const correctElements = (parent: HTMLElement, targets: Element[]): Element[] =>
-  targets
-    .map((target) => {
-      if (parent.contains(target)) {
-        return target;
-      }
+  targets.filter((target) => composedContains(parent, target));
 
-      const correctedTarget = unwrapHost(target);
+interface KeepSet {
+  nodes: Set<Node>;
+  /** Shadow roots on the way to a kept element, by host. Includes closed roots. */
+  shadowRoots: Map<Element, ShadowRoot>;
+}
 
-      if (parent.contains(correctedTarget)) {
-        return correctedTarget;
-      }
-
-      return null;
-    })
-    .filter((x): x is Element => x != null);
-
-const buildKeepSet = (targets: Element[]): Set<Node> => {
-  const keep = new Set<Node>();
+const buildKeepSet = (targets: Element[]): KeepSet => {
+  const nodes = new Set<Node>();
+  const shadowRoots = new Map<Element, ShadowRoot>();
 
   targets.forEach((target) => {
     let node: Node | null = target;
-    while (node && !keep.has(node)) {
-      keep.add(node);
-      node = node.parentNode;
+    while (node && !nodes.has(node)) {
+      nodes.add(node);
+      if (isShadowRoot(node)) {
+        shadowRoots.set(node.host, node);
+      }
+      node = composedParent(node);
     }
   });
 
-  return keep;
+  return { nodes, shadowRoots };
 };
 
+/**
+ * Collects the elements outside the kept elements, descending into the shadow roots that contain
+ * a kept element, so a popup rendered inside a shadow root hides its siblings there as well.
+ */
 const collectOutsideElements = (
   root: HTMLElement,
-  keepElements: Set<Node>,
+  keep: KeepSet,
   stopElements: Set<Node>,
 ): Element[] => {
   const outside: Element[] = [];
 
-  const walk = (parent: Element | null) => {
-    if (!parent || stopElements.has(parent)) {
+  const walk = (parent: Element | ShadowRoot) => {
+    if (stopElements.has(parent)) {
       return;
     }
 
@@ -73,8 +81,12 @@ const collectOutsideElements = (
         return;
       }
 
-      if (keepElements.has(node)) {
+      if (keep.nodes.has(node)) {
         walk(node);
+        const shadowRoot = keep.shadowRoots.get(node);
+        if (shadowRoot) {
+          walk(shadowRoot);
+        }
       } else {
         outside.push(node);
       }
