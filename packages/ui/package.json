@@ -1,8 +1,29 @@
 {
   "name": "@egoist/solid-base",
   "version": "0.1.0",
-  "description": "Unstyled, accessible UI components for SolidJS 2 \u2014 a port of Base UI.",
+  "description": "Unstyled, accessible UI components for SolidJS 2.",
   "license": "MIT",
+  "author": "EGOIST",
+  "homepage": "https://base.egoist.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/egoist/solid-base.git",
+    "directory": "packages/ui"
+  },
+  "bugs": "https://github.com/egoist/solid-base/issues",
+  "keywords": [
+    "solid",
+    "solidjs",
+    "headless",
+    "ui",
+    "components",
+    "accessibility",
+    "a11y",
+    "unstyled"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
